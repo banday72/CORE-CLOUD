@@ -78,7 +78,7 @@
                         <td>{{ emp.email }}</td>
                         <td>{{ emp.phone|default:"-" }}</td>
                         <td>{{ emp.department|default:"-" }}</td>
-                        <td>{{ emp.designation|default:"-" }}</td>
+                        <td>{{ emp.designation|default:"-" }}{% if emp.support_team %}<br><span class="badge bg-info text-dark" style="font-size:0.6rem;">{{ emp.get_support_team_display }}</span>{% endif %}</td>
                         <td>
                             {% if emp.reports_to %}
                             <a href="{% url 'employee_detail' emp.reports_to.pk %}" class="text-decoration-none">

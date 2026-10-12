@@ -176,6 +176,20 @@ class NetworkTicket(models.Model):
         ('security', 'Security / Access'),
         ('other', 'Other'),
     ]
+    TEAM_CHOICES = [
+        ('networks', 'Networks Team'),
+        ('software', 'Software Team'),
+        ('hardware', 'Hardware Team'),
+    ]
+    CATEGORY_TEAM = {
+        'networks': 'networks',
+        'security': 'networks',
+        'email': 'networks',
+        'other': 'networks',
+        'software': 'software',
+        'hardware': 'hardware',
+        'peripherals': 'hardware',
+    }
     PRIORITY_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
@@ -191,6 +205,7 @@ class NetworkTicket(models.Model):
     ]
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='network_tickets')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='networks')
+    assigned_team = models.CharField(max_length=20, choices=TEAM_CHOICES, default='networks')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
     subject = models.CharField(max_length=200)
     description = models.TextField()
@@ -200,6 +215,10 @@ class NetworkTicket(models.Model):
     resolution_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def team_for_category(cls, category):
+        return cls.CATEGORY_TEAM.get(category, 'networks')
 
     def __str__(self):
         return f"#{self.pk} {self.subject} - {self.get_status_display()}"

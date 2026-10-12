@@ -24,6 +24,7 @@ urlpatterns = [
     path('overtime/create/', views.overtime_create, name='overtime_create'),
     path('overtime/<int:pk>/action/', views.overtime_action, name='overtime_action'),
     path('networks/', views.networks_ticket_list, name='networks_ticket_list'),
+    path('networks/teams/', views.network_teams, name='network_teams'),
     path('networks/create/', views.networks_ticket_create, name='networks_ticket_create'),
     path('networks/<int:pk>/', views.networks_ticket_detail, name='networks_ticket_detail'),
     path('networks/<int:pk>/action/', views.networks_ticket_action, name='networks_ticket_action'),

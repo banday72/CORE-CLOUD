@@ -13,6 +13,16 @@
         <a href="{% url 'networks_ticket_list' %}?status=rejected" class="btn btn-{% if status_filter == 'rejected' %}danger{% else %}outline-danger{% endif %} btn-sm">Rejected</a>
     </div>
     <div>
+        {% if is_resolver %}
+        <form method="get" class="d-inline-block me-2">
+            <select name="team" class="form-select form-select-sm d-inline-block" style="width:auto;" onchange="this.form.submit()">
+                <option value="">All teams</option>
+                <option value="networks" {% if team_filter == 'networks' %}selected{% endif %}>Networks Team</option>
+                <option value="software" {% if team_filter == 'software' %}selected{% endif %}>Software Team</option>
+                <option value="hardware" {% if team_filter == 'hardware' %}selected{% endif %}>Hardware Team</option>
+            </select>
+        </form>
+        {% endif %}
         <a href="{% url 'networks_ticket_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i> New Ticket</a>
     </div>
 </div>
@@ -26,6 +36,7 @@
                         <th>Ticket</th>
                         <th>Employee</th>
                         <th>Category</th>
+                        <th>Team</th>
                         <th>Priority</th>
                         <th>Status</th>
                         <th>Date</th>
@@ -51,6 +62,11 @@
                             </div>
                         </td>
                         <td><i class="fas fa-{% if ticket.category == 'networks' %}wifi{% elif ticket.category == 'software' %}code{% elif ticket.category == 'hardware' %}desktop{% elif ticket.category == 'peripherals' %}print{% elif ticket.category == 'email' %}envelope{% elif ticket.category == 'security' %}shield-alt{% else %}tools{% endif %} me-1"></i> {{ ticket.get_category_display }}</td>
+                        <td>
+                            {% if ticket.assigned_team == 'networks' %}<span class="badge bg-primary">Networks</span>
+                            {% elif ticket.assigned_team == 'software' %}<span class="badge bg-success">Software</span>
+                            {% else %}<span class="badge bg-warning text-dark">Hardware</span>{% endif %}
+                        </td>
                         <td>
                             {% if ticket.priority == 'urgent' %}
                             <span class="badge bg-danger">Urgent</span>
@@ -83,7 +99,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-4 text-muted">
+                    <tr><td colspan="8" class="text-center py-4 text-muted">
                         <i class="fas fa-ticket-alt fa-2x mb-2 d-block"></i> No tickets found.
                     </td></tr>
                     {% endfor %}

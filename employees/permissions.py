@@ -37,11 +37,15 @@ ALL_PERMISSIONS = {
     'approve_travel',
     'approve_overtime',
     'approve_networks',
-    'manage_networks',
+    'resolve_networks',
+    'resolve_software',
+    'resolve_hardware',
     'manage_announcements',
 }
 
-HR_PERMISSIONS = set(ALL_PERMISSIONS)
+IT_RESOLVE_PERMISSIONS = {'resolve_networks', 'resolve_software', 'resolve_hardware'}
+
+HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS
 
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
@@ -95,7 +99,11 @@ def permission_group(employee):
 
 
 def permissions_for(employee):
-    return PERMISSION_GROUPS[permission_group(employee)]
+    perms = set(PERMISSION_GROUPS[permission_group(employee)])
+    team = getattr(employee, 'support_team', '')
+    if team in ('networks', 'software', 'hardware'):
+        perms.add('resolve_' + team)
+    return perms
 
 
 def permissions_for_user(user):

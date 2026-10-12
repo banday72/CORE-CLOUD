@@ -69,8 +69,12 @@
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <strong>Department:</strong> {{ employee.department|default:"-" }}
+                        <strong>Designation:</strong> {{ employee.designation|default:"-" }}
                     </div>
+                    <div class="col-md-6">
+                        <strong>Support Team:</strong> {{ employee.get_support_team_display|default:"-" }}
+                    </div>
+                </div>
                     <div class="col-md-6">
                         <strong>Designation:</strong> {{ employee.designation|default:"-" }}
                     </div>

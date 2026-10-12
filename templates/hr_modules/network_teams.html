@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}IT Teams{% endblock %}
+{% block page_title %}<i class="fas fa-people-group me-2"></i>IT Teams Assignment{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-bold small mb-1">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="ID, name or designation" value="{{ search }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold small mb-1">Filter by Team</label>
+                <select name="team" class="form-select">
+                    <option value="">All employees</option>
+                    {% for val, label in team_choices %}
+                    <option value="{{ val }}" {% if team_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                    <option value="none" {% if team_filter == 'none' %}selected{% endif %}>Not assigned</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="alert alert-info small">
+    <i class="fas fa-info-circle me-1"></i>
+    Assign each employee to the support team that should handle their IT tickets. Ticket categories route automatically:
+    <strong>Networks</strong> (networks, email, security), <strong>Software</strong>, <strong>Hardware</strong> (hardware, printers).
+    Only the assigned team (plus the employee's manager for approval) can see and resolve those tickets.
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card shadow">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary" style="font-size:0.85rem;"><i class="fas fa-users-cog me-1"></i> Employees ({{ employees|length }})</h6>
+            <button type="submit" class="btn btn-sm btn-success"><i class="fas fa-save me-1"></i> Save Assignments</button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th style="width:220px;">Support Team</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold" style="font-size:0.85rem;">{{ emp.full_name }}</div>
+                                <div class="text-muted" style="font-size:0.7rem;">{{ emp.employee_id }}</div>
+                            </td>
+                            <td>{{ emp.department|default:"-" }}</td>
+                            <td>{{ emp.designation|default:"-" }}</td>
+                            <td>
+                                <select name="team_{{ emp.pk }}" class="form-select form-select-sm">
+                                    <option value="" {% if not emp.support_team %}selected{% endif %}>— None —</option>
+                                    {% for val, label in team_choices %}
+                                    <option value="{{ val }}" {% if emp.support_team == val %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center py-4 text-muted">No employees found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

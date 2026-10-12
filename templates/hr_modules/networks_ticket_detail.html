@@ -17,6 +17,7 @@
                     <div class="col-md-6">
                         <p class="mb-2"><strong><i class="fas fa-user me-1 text-primary"></i> Employee:</strong> {{ ticket.employee.full_name }} ({{ ticket.employee.employee_id }})</p>
                         <p class="mb-2"><strong><i class="fas fa-tag me-1 text-primary"></i> Category:</strong> {{ ticket.get_category_display }}</p>
+                        <p class="mb-2"><strong><i class="fas fa-people-group me-1 text-primary"></i> Assigned Team:</strong> {{ ticket.get_assigned_team_display }}</p>
                         <p class="mb-0"><strong><i class="fas fa-exclamation-circle me-1 text-primary"></i> Priority:</strong> {{ ticket.get_priority_display }}</p>
                     </div>
                     <div class="col-md-6">

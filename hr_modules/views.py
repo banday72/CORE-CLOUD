@@ -432,12 +432,17 @@ def overtime_action(request, pk):
 
 
 # ============ IT & NETWORKS HELP DESK ============
-def notify_support_team(title, message, notif_type='info', link=''):
+IT_TEAMS = ('networks', 'software', 'hardware')
+
+
+def notify_team(team, title, message, notif_type='info', link=''):
     from employees.models import Employee
-    from employees.permissions import permission_group
-    for emp in Employee.objects.filter(status='active', user__isnull=False).exclude(role='employee'):
-        if permission_group(emp) in ('hr', 'executive'):
-            create_notification(emp, title, message, notif_type, link)
+    for emp in Employee.objects.filter(status='active', user__isnull=False, support_team=team):
+        create_notification(emp, title, message, notif_type, link)
+
+
+def resolvable_teams(user):
+    return [t for t in IT_TEAMS if has_any_permission(user, 'resolve_' + t)]
 
 
 @login_required
@@ -447,18 +452,22 @@ def networks_ticket_list(request):
     emp = Employee.objects.filter(user=request.user).first()
     tickets = NetworkTicket.objects.none()
     if emp:
-        if has_any_permission(request.user, 'manage_networks'):
-            tickets = NetworkTicket.objects.all()
-        elif has_any_permission(request.user, 'approve_networks'):
-            tickets = NetworkTicket.objects.filter(
-                employee__reports_to=emp) | NetworkTicket.objects.filter(employee=emp)
-        else:
-            tickets = NetworkTicket.objects.filter(employee=emp)
+        mine = NetworkTicket.objects.filter(employee=emp)
+        if has_any_permission(request.user, 'approve_networks'):
+            mine = mine | NetworkTicket.objects.filter(employee__reports_to=emp)
+        teams = resolvable_teams(request.user)
+        if teams:
+            mine = mine | NetworkTicket.objects.filter(assigned_team__in=teams)
+        tickets = mine.distinct()
     status_filter = request.GET.get('status', '')
+    team_filter = request.GET.get('team', '')
     if status_filter:
         tickets = tickets.filter(status=status_filter)
+    if team_filter:
+        tickets = tickets.filter(assigned_team=team_filter)
     return render(request, 'hr_modules/networks_ticket_list.html', {
-        'tickets': tickets, 'status_filter': status_filter,
+        'tickets': tickets, 'status_filter': status_filter, 'team_filter': team_filter,
+        'is_resolver': bool(resolvable_teams(request.user)),
     })
 
 
@@ -468,9 +477,11 @@ def networks_ticket_create(request):
     from .models import NetworkTicket
     emp = Employee.objects.filter(user=request.user).first()
     if request.method == 'POST':
+        category = request.POST.get('category', 'networks')
         ticket = NetworkTicket.objects.create(
             employee=emp,
-            category=request.POST.get('category', 'networks'),
+            category=category,
+            assigned_team=NetworkTicket.team_for_category(category),
             priority=request.POST.get('priority', 'medium'),
             subject=request.POST.get('subject'),
             description=request.POST.get('description'),
@@ -481,8 +492,8 @@ def networks_ticket_create(request):
                 f'{emp.first_name} {emp.last_name} raised ticket "{ticket.subject}"',
                 'warning', 'networks_ticket_list')
         else:
-            notify_support_team('IT/Network Ticket',
-                f'New ticket "{ticket.subject}" from {emp} - no manager to approve.',
+            notify_team(ticket.assigned_team, 'IT/Network Ticket',
+                f'New {ticket.get_assigned_team_display()} ticket "{ticket.subject}" from {emp} - no manager to approve.',
                 'warning', 'networks_ticket_list')
         messages.success(request, 'Ticket submitted. Your manager will review it.')
         return redirect('networks_ticket_list')
@@ -492,19 +503,20 @@ def networks_ticket_create(request):
 @login_required
 def networks_ticket_detail(request, pk):
     from .models import NetworkTicket
+    from django.core.exceptions import PermissionDenied
     ticket = get_object_or_404(NetworkTicket, pk=pk)
     from employees.models import Employee
     emp = Employee.objects.filter(user=request.user).first()
-    can_approve = has_any_permission(request.user, 'approve_networks')
-    can_manage = has_any_permission(request.user, 'manage_networks')
+    is_manager_of_owner = bool(emp) and ticket.employee.reports_to_id == emp.pk
+    can_approve = is_manager_of_owner and has_any_permission(request.user, 'approve_networks')
+    can_resolve = has_any_permission(request.user, 'resolve_' + ticket.assigned_team)
     is_owner = bool(emp) and ticket.employee_id == emp.pk
-    if not (can_manage or can_approve or is_owner):
-        from django.core.exceptions import PermissionDenied
+    if not (can_resolve or can_approve or is_owner or request.user.is_superuser):
         raise PermissionDenied
     return render(request, 'hr_modules/networks_ticket_detail.html', {
         'ticket': ticket,
         'can_approve': can_approve,
-        'can_manage': can_manage,
+        'can_manage': can_resolve,
         'is_owner': is_owner,
         'emp': emp,
     })
@@ -514,13 +526,16 @@ def networks_ticket_detail(request, pk):
 def networks_ticket_action(request, pk):
     from employees.models import Employee
     from .models import NetworkTicket
+    from django.core.exceptions import PermissionDenied
     ticket = get_object_or_404(NetworkTicket, pk=pk)
     if request.method == 'POST':
         action = request.POST.get('action')
         reviewer = Employee.objects.filter(user=request.user).first()
         if action in ('approved', 'rejected'):
-            if not has_any_permission(request.user, 'approve_networks'):
-                from django.core.exceptions import PermissionDenied
+            allowed = has_any_permission(request.user, 'approve_networks')
+            if allowed and reviewer and ticket.employee.reports_to_id != reviewer.pk and not request.user.is_superuser:
+                allowed = False
+            if not allowed:
                 raise PermissionDenied
             ticket.status = action
             ticket.approved_by = reviewer
@@ -529,13 +544,12 @@ def networks_ticket_action(request, pk):
                 f'Your ticket "{ticket.subject}" was {action} by {reviewer}.',
                 'success' if action == 'approved' else 'danger', 'networks_ticket_list')
             if action == 'approved':
-                notify_support_team('IT/Network Ticket',
-                    f'Ticket "{ticket.subject}" from {ticket.employee.employee_id} needs your attention.',
+                notify_team(ticket.assigned_team, 'IT/Network Ticket',
+                    f'{ticket.get_assigned_team_display()} ticket "{ticket.subject}" from {ticket.employee.employee_id} needs your attention.',
                     'info', 'networks_ticket_list')
             messages.success(request, f'Ticket {action}.')
         elif action in ('in_progress', 'resolved'):
-            if not has_any_permission(request.user, 'manage_networks'):
-                from django.core.exceptions import PermissionDenied
+            if not has_any_permission(request.user, 'resolve_' + ticket.assigned_team):
                 raise PermissionDenied
             ticket.status = action
             ticket.resolved_by = reviewer if action == 'resolved' else ticket.resolved_by
@@ -549,6 +563,41 @@ def networks_ticket_action(request, pk):
             messages.success(request, f'Ticket marked {action.replace("_", " ")}.')
         return redirect('networks_ticket_list')
     return redirect('networks_ticket_detail', pk=ticket.pk)
+
+
+# ============ IT TEAMS (assignment) ============
+@login_required
+@permission_required('manage_employees', 'approve_networks')
+def network_teams(request):
+    from employees.models import Employee
+    from django.db.models import Q
+    search = request.GET.get('search', '')
+    team_filter = request.GET.get('team', '')
+    employees = Employee.objects.filter(status='active').select_related('department').order_by('first_name', 'last_name')
+    if search:
+        employees = employees.filter(
+            Q(employee_id__icontains=search) | Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) | Q(designation__icontains=search))
+    if team_filter == 'none':
+        employees = employees.filter(support_team='')
+    elif team_filter:
+        employees = employees.filter(support_team=team_filter)
+    if request.method == 'POST':
+        changed = 0
+        for emp in Employee.objects.filter(status='active'):
+            key = 'team_%s' % emp.pk
+            if key in request.POST:
+                val = request.POST.get(key, '')
+                if val in ('', 'networks', 'software', 'hardware') and emp.support_team != val:
+                    emp.support_team = val
+                    emp.save(update_fields=['support_team'])
+                    changed += 1
+        messages.success(request, f'Team assignments updated ({changed} change(s)).')
+        return redirect('network_teams')
+    return render(request, 'hr_modules/network_teams.html', {
+        'employees': employees, 'search': search, 'team_filter': team_filter,
+        'team_choices': Employee.SUPPORT_TEAM_CHOICES,
+    })
 
 
 # ============ ANNOUNCEMENTS / NOTICE BOARD ============

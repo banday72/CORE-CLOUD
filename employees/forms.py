@@ -16,7 +16,7 @@ class DepartmentForm(forms.ModelForm):
 class EmployeeForm(forms.ModelForm):
     FIELD_ORDER = [
         'employee_id_preview', 'first_name', 'last_name', 'email', 'phone',
-        'department', 'designation', 'reports_to', 'salary', 'role', 'status',
+        'department', 'designation', 'reports_to', 'salary', 'role', 'support_team', 'status',
     ]
 
     employee_id_preview = forms.CharField(
@@ -29,7 +29,7 @@ class EmployeeForm(forms.ModelForm):
         model = Employee
         fields = ['first_name', 'last_name', 'email', 'phone',
                   'date_of_birth', 'gender', 'address', 'city', 'department', 'designation',
-                  'date_of_joining', 'salary', 'reports_to', 'role', 'status', 'profile_picture']
+                  'date_of_joining', 'salary', 'reports_to', 'role', 'support_team', 'status', 'profile_picture']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -45,6 +45,7 @@ class EmployeeForm(forms.ModelForm):
             'salary': forms.NumberInput(attrs={'class': 'form-control'}),
             'reports_to': forms.Select(attrs={'class': 'form-control'}),
             'role': forms.Select(attrs={'class': 'form-control'}),
+            'support_team': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }

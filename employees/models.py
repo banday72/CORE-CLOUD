@@ -62,6 +62,11 @@ class Employee(models.Model):
     GENDER_CHOICES = [('M', 'Male'), ('F', 'Female'), ('O', 'Other')]
     STATUS_CHOICES = [('active', 'Active'), ('inactive', 'Inactive'), ('terminated', 'Terminated')]
     ROLE_CHOICES = [('employee', 'Employee'), ('hr', 'HR'), ('manager', 'Manager')]
+    SUPPORT_TEAM_CHOICES = [
+        ('networks', 'Networks Team'),
+        ('software', 'Software Team'),
+        ('hardware', 'Hardware Team'),
+    ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     employee_id = models.CharField(max_length=20, unique=True)
@@ -82,6 +87,7 @@ class Employee(models.Model):
     profile_picture_b64 = models.TextField(blank=True, help_text='Base64 encoded profile picture for Vercel')
     reports_to = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subordinates', help_text='Direct manager this employee reports to')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
+    support_team = models.CharField(max_length=20, choices=SUPPORT_TEAM_CHOICES, blank=True, help_text='IT/Networks support team this employee belongs to')
     is_authorized = models.BooleanField(default=False, help_text='Only authorized users can login')
     approved_by_manager = models.BooleanField(default=False, help_text='Manager must approve authorization')
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_employees')
