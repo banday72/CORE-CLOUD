@@ -22,7 +22,6 @@
                     </div>
                     <div class="col-md-6">
                         <p class="mb-2"><strong><i class="fas fa-calendar-alt me-1 text-primary"></i> Raised On:</strong> {{ ticket.created_at|date:"M d, Y H:i" }}</p>
-                        <p class="mb-2"><strong><i class="fas fa-user-check me-1 text-primary"></i> Approved By:</strong> {{ ticket.approved_by.full_name|default:"-" }}</p>
                         <p class="mb-2"><strong><i class="fas fa-user-cog me-1 text-primary"></i> Resolved By:</strong> {{ ticket.resolved_by.full_name|default:"-" }}</p>
                         <p class="mb-0">
                             <strong><i class="fas fa-clock me-1 text-primary"></i> SLA:</strong>
@@ -130,16 +129,7 @@
 
                 <hr>
 
-                {% if ticket.status == 'pending' and can_approve %}
-                <form method="post" action="{% url 'networks_ticket_action' ticket.pk %}">
-                    {% csrf_token %}
-                    <div class="d-flex gap-3 mb-3">
-                        <button type="submit" name="action" value="rejected" class="btn btn-danger flex-fill"><i class="fas fa-times me-1"></i> Reject</button>
-                        <button type="submit" name="action" value="approved" class="btn btn-success flex-fill"><i class="fas fa-check me-1"></i> Approve &amp; Open</button>
-                    </div>
-                    <a href="{% url 'networks_ticket_list' %}" class="btn btn-secondary w-100"><i class="fas fa-arrow-left me-1"></i> Back</a>
-                </form>
-                {% elif ticket.status == 'approved' and can_manage %}
+                {% if ticket.status == 'approved' and can_manage %}
                 <form method="post" action="{% url 'networks_ticket_action' ticket.pk %}">
                     {% csrf_token %}
                     <div class="d-flex gap-3 mb-3">

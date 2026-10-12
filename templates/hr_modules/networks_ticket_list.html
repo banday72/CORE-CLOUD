@@ -6,7 +6,6 @@
 <div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
     <div>
         <a href="{% url 'networks_ticket_list' %}" class="btn btn-{% if not status_filter %}primary{% else %}outline-primary{% endif %} btn-sm">All</a>
-        <a href="{% url 'networks_ticket_list' %}?status=pending" class="btn btn-{% if status_filter == 'pending' %}warning{% else %}outline-warning{% endif %} btn-sm">Pending</a>
         <a href="{% url 'networks_ticket_list' %}?status=approved" class="btn btn-{% if status_filter == 'approved' %}secondary{% else %}outline-secondary{% endif %} btn-sm">Open</a>
         <a href="{% url 'networks_ticket_list' %}?status=in_progress" class="btn btn-{% if status_filter == 'in_progress' %}info{% else %}outline-info{% endif %} btn-sm">In Progress</a>
         <a href="{% url 'networks_ticket_list' %}?status=resolved" class="btn btn-{% if status_filter == 'resolved' %}success{% else %}outline-success{% endif %} btn-sm">Resolved</a>

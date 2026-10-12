@@ -36,7 +36,6 @@ ALL_PERMISSIONS = {
     'view_all_overtime',
     'approve_travel',
     'approve_overtime',
-    'approve_networks',
     'resolve_networks',
     'resolve_software',
     'resolve_hardware',
@@ -64,8 +63,6 @@ MANAGER_PERMISSIONS = {
     'view_all_overtime',
     'approve_travel',
     'approve_overtime',
-    'approve_networks',
-    'manage_it_teams',
 }
 
 EMPLOYEE_PERMISSIONS = set()
@@ -105,6 +102,8 @@ def permissions_for(employee):
     team = getattr(employee, 'support_team', '')
     if team in ('networks', 'software', 'hardware'):
         perms.add('resolve_' + team)
+    if getattr(employee, 'is_it_manager', False) or getattr(employee, 'it_role', ''):
+        perms.add('manage_it_teams')
     return perms
 
 

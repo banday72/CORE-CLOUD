@@ -67,6 +67,11 @@ class Employee(models.Model):
         ('software', 'Software Team'),
         ('hardware', 'Hardware Team'),
     ]
+    IT_ROLE_CHOICES = [
+        ('', 'No IT role'),
+        ('manager', 'Team Manager'),
+        ('assistant_manager', 'Assistant Manager'),
+    ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     employee_id = models.CharField(max_length=20, unique=True)
@@ -88,6 +93,8 @@ class Employee(models.Model):
     reports_to = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='subordinates', help_text='Direct manager this employee reports to')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
     support_team = models.CharField(max_length=20, choices=SUPPORT_TEAM_CHOICES, blank=True, help_text='IT/Networks support team this employee belongs to')
+    it_role = models.CharField(max_length=20, choices=IT_ROLE_CHOICES, blank=True, help_text='IT team managerial role (team via support_team)')
+    is_it_manager = models.BooleanField(default=False, help_text='Overall IT manager: can manage IT teams and view analytics')
     is_authorized = models.BooleanField(default=False, help_text='Only authorized users can login')
     approved_by_manager = models.BooleanField(default=False, help_text='Manager must approve authorization')
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_employees')
