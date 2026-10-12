@@ -51,8 +51,11 @@ class EmployeeForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        kwargs.pop('user', None)
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+        from .permissions import permissions_for_user
+        if 'support_team' in self.fields and 'manage_it_teams' not in permissions_for_user(user):
+            del self.fields['support_team']
         self.order_fields([f for f in self.FIELD_ORDER if f in self.fields])
         if 'reports_to' in self.fields:
             instance = self.instance.pk if self.instance and self.instance.pk else None

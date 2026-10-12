@@ -155,7 +155,7 @@
             <a class="nav-link {% if request.resolver_match.url_name == 'notification_list' %}active{% endif %}" href="{% url 'notification_list' %}">
                 <i class="fas fa-bell nav-icon" style="color:#f39c12;"></i> Notifications {% if unread_notif_count > 0 %}<span class="nav-badge" style="background:#e74a3b;color:#fff;">{{ unread_notif_count }}</span>{% endif %}
             </a>
-            {% if can.manage_employees or can.approve_networks %}
+            {% if can.manage_it_teams %}
             <a class="nav-link {% if request.resolver_match.url_name == 'network_teams' %}active{% endif %}" href="{% url 'network_teams' %}">
                 <i class="fas fa-people-group nav-icon" style="color:#5dade2;"></i> IT Teams
             </a>

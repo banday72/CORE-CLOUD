@@ -567,7 +567,7 @@ def networks_ticket_action(request, pk):
 
 # ============ IT TEAMS (assignment) ============
 @login_required
-@permission_required('manage_employees', 'approve_networks')
+@permission_required('manage_it_teams')
 def network_teams(request):
     from employees.models import Employee
     from django.db.models import Q

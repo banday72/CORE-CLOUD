@@ -40,12 +40,13 @@ ALL_PERMISSIONS = {
     'resolve_networks',
     'resolve_software',
     'resolve_hardware',
+    'manage_it_teams',
     'manage_announcements',
 }
 
 IT_RESOLVE_PERMISSIONS = {'resolve_networks', 'resolve_software', 'resolve_hardware'}
 
-HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS
+HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - {'manage_it_teams'}
 
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
@@ -64,6 +65,7 @@ MANAGER_PERMISSIONS = {
     'approve_travel',
     'approve_overtime',
     'approve_networks',
+    'manage_it_teams',
 }
 
 EMPLOYEE_PERMISSIONS = set()
