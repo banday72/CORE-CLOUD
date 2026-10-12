@@ -159,6 +159,9 @@
             <a class="nav-link {% if request.resolver_match.url_name == 'network_teams' %}active{% endif %}" href="{% url 'network_teams' %}">
                 <i class="fas fa-people-group nav-icon" style="color:#5dade2;"></i> IT Teams
             </a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'network_analytics' %}active{% endif %}" href="{% url 'network_analytics' %}">
+                <i class="fas fa-chart-pie nav-icon" style="color:#5dade2;"></i> IT Analytics
+            </a>
             {% endif %}
         </nav>
 

@@ -1,5 +1,7 @@
 from django.db import models
+from django.utils import timezone
 from employees.models import Employee
+from datetime import timedelta
 import uuid
 
 
@@ -203,6 +205,7 @@ class NetworkTicket(models.Model):
         ('resolved', 'Resolved'),
         ('rejected', 'Rejected'),
     ]
+    SLA_HOURS = {'urgent': 4, 'high': 8, 'medium': 24, 'low': 48}
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='network_tickets')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='networks')
     assigned_team = models.CharField(max_length=20, choices=TEAM_CHOICES, default='networks')
@@ -214,12 +217,37 @@ class NetworkTicket(models.Model):
     approved_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='network_tickets_approved')
     resolved_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='network_tickets_resolved')
     resolution_notes = models.TextField(blank=True)
+    sla_due_at = models.DateTimeField(null=True, blank=True)
+    first_response_at = models.DateTimeField(null=True, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod
     def team_for_category(cls, category):
         return cls.CATEGORY_TEAM.get(category, 'networks')
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.sla_due_at:
+            self.sla_due_at = timezone.now() + timedelta(hours=self.SLA_HOURS.get(self.priority, 24))
+        super().save(*args, **kwargs)
+
+    @property
+    def is_overdue(self):
+        return bool(self.sla_due_at and self.status not in ('resolved', 'rejected')
+                    and timezone.now() > self.sla_due_at)
+
+    @property
+    def sla_hours_left(self):
+        if not self.sla_due_at:
+            return None
+        return round((self.sla_due_at - timezone.now()).total_seconds() / 3600, 1)
+
+    @property
+    def resolution_hours(self):
+        if not self.resolved_at:
+            return None
+        return round((self.resolved_at - self.created_at).total_seconds() / 3600, 1)
 
     def __str__(self):
         return f"#{self.pk} {self.subject} - {self.get_status_display()}"
@@ -233,6 +261,7 @@ class TicketReply(models.Model):
     author = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='ticket_replies')
     team = models.CharField(max_length=20, blank=True, help_text='Support team of the responder')
     message = models.TextField()
+    is_internal = models.BooleanField(default=False, help_text='Internal note visible only to the assigned team')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

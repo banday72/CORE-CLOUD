@@ -16,6 +16,11 @@
             <i class="fas fa-user-check me-1"></i> Assigned to me{% if assigned_to_me_count %} <span class="badge bg-danger">{{ assigned_to_me_count }}</span>{% endif %}
         </a>
         {% endif %}
+        {% if is_resolver %}
+        <a href="{% url 'networks_ticket_list' %}?overdue=1" class="btn btn-{% if overdue %}danger{% else %}outline-danger{% endif %} btn-sm">
+            <i class="fas fa-clock me-1"></i> Overdue{% if overdue_count %} <span class="badge bg-light text-dark">{{ overdue_count }}</span>{% endif %}
+        </a>
+        {% endif %}
     </div>
     <div>
         {% if is_resolver %}
@@ -96,6 +101,11 @@
                             <span class="badge bg-success">Resolved</span>
                             {% else %}
                             <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                            {% if ticket.is_overdue %}
+                            <div class="mt-1"><span class="badge bg-danger" style="font-size:0.6rem;"><i class="fas fa-clock me-1"></i>Overdue</span></div>
+                            {% elif ticket.sla_due_at and ticket.status != 'resolved' and ticket.status != 'rejected' %}
+                            <div class="text-muted" style="font-size:0.65rem;">SLA {{ ticket.sla_hours_left }}h left</div>
                             {% endif %}
                         </td>
                         <td><small>{{ ticket.created_at|date:"M d, Y" }}</small></td>

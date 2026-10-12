@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}IT Analytics{% endblock %}
+{% block page_title %}<i class="fas fa-chart-pie me-2"></i>IT Help Desk Analytics{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card shadow h-100"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-bold">Total</div>
+            <div class="h4 mb-0 fw-bold">{{ totals.total }}</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card shadow h-100"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-bold">Open</div>
+            <div class="h4 mb-0 fw-bold text-secondary">{{ totals.open }}</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card shadow h-100"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-bold">In Progress</div>
+            <div class="h4 mb-0 fw-bold text-info">{{ totals.in_progress }}</div>
+        </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card shadow h-100"><div class="card-body">
+            <div class="text-muted small text-uppercase fw-bold">Overdue</div>
+            <div class="h4 mb-0 fw-bold text-danger">{{ totals.overdue }}</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow mb-3">
+            <div class="card-header py-2"><h6 class="m-0 fw-bold text-primary" style="font-size:0.9rem;"><i class="fas fa-people-group me-1"></i> By Team</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-bordered align-middle mb-0">
+                    <thead class="table-light"><tr><th>Team</th><th class="text-center">Open</th><th class="text-center">Resolved</th><th class="text-center">Overdue</th><th class="text-center">Avg Resolution</th></tr></thead>
+                    <tbody>
+                        {% for t in teams %}
+                        <tr>
+                            <td class="fw-bold">{{ t.label }}</td>
+                            <td class="text-center">{{ t.open }}</td>
+                            <td class="text-center text-success">{{ t.resolved }}</td>
+                            <td class="text-center {% if t.overdue %}text-danger fw-bold{% endif %}">{{ t.overdue }}</td>
+                            <td class="text-center">{% if t.avg_hours is not None %}{{ t.avg_hours }} h{% else %}-{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-header py-2"><h6 class="m-0 fw-bold text-primary" style="font-size:0.9rem;"><i class="fas fa-tags me-1"></i> Top Categories</h6></div>
+            <div class="card-body">
+                {% for c in categories %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small"><span>{{ c.label }}</span><span class="fw-bold">{{ c.count }}</span></div>
+                    <div class="progress" style="height:8px;">
+                        <div class="progress-bar bg-info" style="width:{% widthratio c.count max_cat 100 %}%"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted mb-0">No tickets yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-primary" style="font-size:0.9rem;"><i class="fas fa-user-cog me-1"></i> Member Workload (open)</h6>
+                <a href="{% url 'network_teams' %}" class="btn btn-sm btn-outline-primary">Manage Teams</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light"><tr><th>Member</th><th>Team</th><th class="text-center">Open</th></tr></thead>
+                    <tbody>
+                        {% for m in members %}
+                        <tr>
+                            <td><div class="fw-bold" style="font-size:0.85rem;">{{ m.full_name }}</div><div class="text-muted" style="font-size:0.7rem;">{{ m.designation }}</div></td>
+                            <td>
+                                {% if m.support_team == 'networks' %}<span class="badge bg-primary">Networks</span>
+                                {% elif m.support_team == 'software' %}<span class="badge bg-success">Software</span>
+                                {% else %}<span class="badge bg-warning text-dark">Hardware</span>{% endif %}
+                            </td>
+                            <td class="text-center fw-bold {% if m.open_load %}text-primary{% else %}text-muted{% endif %}">{{ m.open_load }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-muted">No team members assigned. <a href="{% url 'network_teams' %}">Assign teams</a>.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

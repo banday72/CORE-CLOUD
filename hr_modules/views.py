@@ -7,7 +7,7 @@ from datetime import date, timedelta
 
 from employees.decorators import permission_required
 from employees.permissions import permissions_for_user
-
+from .emails import send_ticket_email, email_team_members
 
 def has_any_permission(user, *perms):
     return user.is_superuser or bool(perms and permissions_for_user(user) & set(perms))
@@ -435,10 +435,12 @@ def overtime_action(request, pk):
 IT_TEAMS = ('networks', 'software', 'hardware')
 
 
-def notify_team(team, title, message, notif_type='info', link=''):
+def notify_team(team, title, message, notif_type='info', link='', email=True):
     from employees.models import Employee
     for emp in Employee.objects.filter(status='active', user__isnull=False, support_team=team):
         create_notification(emp, title, message, notif_type, link)
+    if email:
+        email_team_members(team, f'[IT Help Desk] {title}', message)
 
 
 def resolvable_teams(user):
@@ -462,20 +464,27 @@ def networks_ticket_list(request):
     status_filter = request.GET.get('status', '')
     team_filter = request.GET.get('team', '')
     assigned_me = request.GET.get('assigned') == 'me'
+    overdue = request.GET.get('overdue') == '1'
     assigned_to_me_count = 0
+    overdue_count = 0
     if emp:
         assigned_to_me_count = tickets.filter(assigned_to=emp).exclude(status__in=['resolved', 'rejected']).count()
+        overdue_count = tickets.filter(sla_due_at__lt=timezone.now()).exclude(status__in=['resolved', 'rejected']).count()
     if status_filter:
         tickets = tickets.filter(status=status_filter)
     if team_filter:
         tickets = tickets.filter(assigned_team=team_filter)
     if assigned_me and emp:
         tickets = tickets.filter(assigned_to=emp)
+    if overdue:
+        tickets = tickets.filter(sla_due_at__lt=timezone.now()).exclude(status__in=['resolved', 'rejected'])
     return render(request, 'hr_modules/networks_ticket_list.html', {
         'tickets': tickets, 'status_filter': status_filter, 'team_filter': team_filter,
         'is_resolver': bool(resolvable_teams(request.user)),
         'assigned_me': assigned_me,
         'assigned_to_me_count': assigned_to_me_count,
+        'overdue': overdue,
+        'overdue_count': overdue_count,
         'my_emp_id': emp.pk if emp else None,
     })
 
@@ -503,6 +512,10 @@ def networks_ticket_create(request):
             create_notification(emp.reports_to, 'IT/Network Ticket (CC)',
                 f'{emp.first_name} {emp.last_name} raised ticket "{ticket.subject}" - routed to {ticket.get_assigned_team_display()}.',
                 'info', 'networks_ticket_list')
+        send_ticket_email(emp, f'[IT Help Desk] Ticket #{ticket.pk} received',
+            f'Hi {emp.first_name},\n\nYour ticket "{ticket.subject}" has been received and routed to the '
+            f'{ticket.get_assigned_team_display()} (Priority: {ticket.get_priority_display()}).\n'
+            f'We will get back to you soon.\n\n- CoreCloud IT Help Desk')
         messages.success(request, 'Ticket submitted and routed to the IT team.')
         return redirect('networks_ticket_list')
     return render(request, 'hr_modules/networks_ticket_form.html')
@@ -527,13 +540,22 @@ def networks_ticket_detail(request, pk):
             if not (can_resolve or request.user.is_superuser):
                 raise PermissionDenied
             message = (request.POST.get('message') or '').strip()
+            is_internal = request.POST.get('visibility') == 'internal'
             if message:
-                TicketReply.objects.create(ticket=ticket, author=emp, team=ticket.assigned_team, message=message)
-                if ticket.employee_id != (emp.pk if emp else None):
-                    create_notification(ticket.employee, 'Ticket Reply',
-                        f'{ticket.get_assigned_team_display()} replied on your ticket "{ticket.subject}".',
-                        'info', 'networks_ticket_list')
-                messages.success(request, 'Reply posted.')
+                TicketReply.objects.create(ticket=ticket, author=emp, team=ticket.assigned_team,
+                                           message=message, is_internal=is_internal)
+                if not is_internal:
+                    if not ticket.first_response_at:
+                        ticket.first_response_at = timezone.now()
+                        ticket.save(update_fields=['first_response_at', 'updated_at'])
+                    if ticket.employee_id != (emp.pk if emp else None):
+                        create_notification(ticket.employee, 'Ticket Reply',
+                            f'{ticket.get_assigned_team_display()} replied on your ticket "{ticket.subject}".',
+                            'info', 'networks_ticket_list')
+                        send_ticket_email(ticket.employee, f'[IT Help Desk] Reply on ticket #{ticket.pk}',
+                            f'{ticket.get_assigned_team_display()} replied on your ticket "{ticket.subject}":\n\n{message}\n\n'
+                            f'- CoreCloud IT Help Desk')
+                messages.success(request, 'Internal note added.' if is_internal else 'Reply posted.')
             else:
                 messages.warning(request, 'Reply cannot be empty.')
         elif action == 'assign':
@@ -544,13 +566,20 @@ def networks_ticket_detail(request, pk):
             member = team_members.filter(pk=member_id).first() if member_id else None
             ticket.assigned_to = member
             ticket.save(update_fields=['assigned_to', 'updated_at'])
-            if member and member.user_id and member.pk != (emp.pk if emp else None):
-                create_notification(member, 'Ticket Assigned',
-                    f'Ticket "{ticket.subject}" ({ticket.get_assigned_team_display()}) has been assigned to you.',
-                    'warning', 'networks_ticket_list')
+            if member and member.pk != (emp.pk if emp else None):
+                if member.user_id:
+                    create_notification(member, 'Ticket Assigned',
+                        f'Ticket "{ticket.subject}" ({ticket.get_assigned_team_display()}) has been assigned to you.',
+                        'warning', 'networks_ticket_list')
+                send_ticket_email(member, f'[IT Help Desk] Ticket #{ticket.pk} assigned to you',
+                    f'You have been assigned ticket "{ticket.subject}" (Priority: {ticket.get_priority_display()}).\n'
+                    f'Please review it in the IT Help Desk.\n\n- CoreCloud IT Help Desk')
             messages.success(request, 'Ticket assigned.' if member else 'Assignment cleared.')
         return redirect('networks_ticket_detail', pk=ticket.pk)
     team_members = Employee.objects.filter(status='active', support_team=ticket.assigned_team).order_by('first_name')
+    replies = ticket.replies.select_related('author')
+    if not (can_resolve or request.user.is_superuser):
+        replies = replies.filter(is_internal=False)
     return render(request, 'hr_modules/networks_ticket_detail.html', {
         'ticket': ticket,
         'can_approve': can_approve,
@@ -558,7 +587,7 @@ def networks_ticket_detail(request, pk):
         'can_reply': can_resolve or request.user.is_superuser,
         'is_owner': is_owner,
         'emp': emp,
-        'replies': ticket.replies.select_related('author'),
+        'replies': replies,
         'team_members': team_members,
     })
 
@@ -593,14 +622,22 @@ def networks_ticket_action(request, pk):
             if not has_any_permission(request.user, 'resolve_' + ticket.assigned_team):
                 raise PermissionDenied
             ticket.status = action
+            if not ticket.first_response_at:
+                ticket.first_response_at = timezone.now()
             ticket.resolved_by = reviewer if action == 'resolved' else ticket.resolved_by
             if action == 'resolved':
                 ticket.resolution_notes = request.POST.get('resolution_notes', '')
+                ticket.resolved_at = timezone.now()
             ticket.save()
             create_notification(ticket.employee, f'Ticket {action.title().replace("_", " ")}',
                 f'Your ticket "{ticket.subject}" is now {action.replace("_", " ")}.'
                 + (f' Notes: {ticket.resolution_notes}' if ticket.resolution_notes else ''),
                 'success' if action == 'resolved' else 'info', 'networks_ticket_list')
+            if action == 'resolved':
+                send_ticket_email(ticket.employee, f'[IT Help Desk] Ticket #{ticket.pk} resolved',
+                    f'Your ticket "{ticket.subject}" has been resolved.\n'
+                    + (f'Notes: {ticket.resolution_notes}\n' if ticket.resolution_notes else '')
+                    + '\nIf the issue persists, please reply in the IT Help Desk.\n\n- CoreCloud IT Help Desk')
             messages.success(request, f'Ticket marked {action.replace("_", " ")}.')
         return redirect('networks_ticket_list')
     return redirect('networks_ticket_detail', pk=ticket.pk)
@@ -679,6 +716,54 @@ def network_teams(request):
     return render(request, 'hr_modules/network_teams.html', {
         'employees': employees, 'search': search, 'team_filter': team_filter,
         'team_choices': Employee.SUPPORT_TEAM_CHOICES,
+    })
+
+
+# ============ IT HELP DESK ANALYTICS ============
+@login_required
+@permission_required('manage_it_teams')
+def network_analytics(request):
+    from employees.models import Employee
+    from .models import NetworkTicket
+    from django.db.models import Q, Count, Avg, F, ExpressionWrapper, DurationField
+    now = timezone.now()
+    all_tickets = NetworkTicket.objects.all()
+    totals = {
+        'total': all_tickets.count(),
+        'open': all_tickets.filter(status__in=['pending', 'approved']).count(),
+        'in_progress': all_tickets.filter(status='in_progress').count(),
+        'resolved': all_tickets.filter(status='resolved').count(),
+        'overdue': all_tickets.filter(sla_due_at__lt=now).exclude(status__in=['resolved', 'rejected']).count(),
+    }
+
+    teams = []
+    for value, label in NetworkTicket.TEAM_CHOICES:
+        qs = all_tickets.filter(assigned_team=value)
+        resolved = qs.filter(resolved_at__isnull=False)
+        res = resolved.annotate(
+            dur=ExpressionWrapper(F('resolved_at') - F('created_at'), output_field=DurationField())
+        ).aggregate(avg=Avg('dur'))['avg']
+        avg_hours = round(res.total_seconds() / 3600, 1) if res else None
+        teams.append({
+            'label': label, 'value': value,
+            'open': qs.exclude(status__in=['resolved', 'rejected']).count(),
+            'resolved': resolved.count(),
+            'overdue': qs.filter(sla_due_at__lt=now).exclude(status__in=['resolved', 'rejected']).count(),
+            'avg_hours': avg_hours,
+        })
+
+    members = (Employee.objects.filter(status='active', support_team__in=['networks', 'software', 'hardware'])
+               .annotate(open_load=Count('network_tickets_assigned',
+                                         filter=~Q(network_tickets_assigned__status__in=['resolved', 'rejected'])))
+               .order_by('-open_load', 'first_name'))
+
+    categories = (all_tickets.values('category').annotate(c=Count('id')).order_by('-c'))
+    cat_map = dict(NetworkTicket.CATEGORY_CHOICES)
+    categories = [{'label': cat_map.get(c['category'], c['category']), 'count': c['c']} for c in categories]
+
+    return render(request, 'hr_modules/network_analytics.html', {
+        'totals': totals, 'teams': teams, 'members': members,
+        'categories': categories, 'max_cat': max([c['count'] for c in categories], default=1),
     })
 
 

@@ -23,7 +23,17 @@
                     <div class="col-md-6">
                         <p class="mb-2"><strong><i class="fas fa-calendar-alt me-1 text-primary"></i> Raised On:</strong> {{ ticket.created_at|date:"M d, Y H:i" }}</p>
                         <p class="mb-2"><strong><i class="fas fa-user-check me-1 text-primary"></i> Approved By:</strong> {{ ticket.approved_by.full_name|default:"-" }}</p>
-                        <p class="mb-0"><strong><i class="fas fa-user-cog me-1 text-primary"></i> Resolved By:</strong> {{ ticket.resolved_by.full_name|default:"-" }}</p>
+                        <p class="mb-2"><strong><i class="fas fa-user-cog me-1 text-primary"></i> Resolved By:</strong> {{ ticket.resolved_by.full_name|default:"-" }}</p>
+                        <p class="mb-0">
+                            <strong><i class="fas fa-clock me-1 text-primary"></i> SLA:</strong>
+                            {% if ticket.is_overdue %}
+                            <span class="badge bg-danger">Overdue since {{ ticket.sla_due_at|date:"M d, H:i" }}</span>
+                            {% elif ticket.sla_due_at and ticket.status != 'resolved' and ticket.status != 'rejected' %}
+                            <span class="badge bg-info text-dark">Due {{ ticket.sla_due_at|date:"M d, H:i" }} ({{ ticket.sla_hours_left }}h left)</span>
+                            {% elif ticket.resolved_at %}
+                            <span class="badge bg-success">Resolved in {{ ticket.resolution_hours }}h</span>
+                            {% else %}-{% endif %}
+                        </p>
                     </div>
                 </div>
 
@@ -81,13 +91,14 @@
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary"><i class="fas fa-comments me-1"></i> Conversation</h6>
                     {% for reply in replies %}
-                    <div class="border rounded p-2 mb-2 bg-white">
+                    <div class="border rounded p-2 mb-2 {% if reply.is_internal %}bg-warning bg-opacity-10 border-warning{% else %}bg-white{% endif %}">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div>
                                 <strong>{{ reply.author.full_name|default:"Team" }}</strong>
                                 {% if reply.team == 'networks' %}<span class="badge bg-info ms-1">Networks</span>
                                 {% elif reply.team == 'software' %}<span class="badge bg-primary ms-1">Software</span>
                                 {% elif reply.team == 'hardware' %}<span class="badge bg-secondary ms-1">Hardware</span>{% endif %}
+                                {% if reply.is_internal %}<span class="badge bg-warning text-dark ms-1"><i class="fas fa-lock me-1"></i>Internal note</span>{% endif %}
                             </div>
                             <small class="text-muted">{{ reply.created_at|date:"M d, Y H:i" }}</small>
                         </div>
@@ -103,8 +114,16 @@
                     <form method="post" action="{% url 'networks_ticket_detail' ticket.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="reply">
-                        <textarea name="message" class="form-control mb-2" rows="3" placeholder="Type your response to the employee..." required></textarea>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i> Post Reply</button>
+                        <textarea name="message" class="form-control mb-2" rows="3" placeholder="Type your response..." required></textarea>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="visibility" value="internal" id="internalNote">
+                                <label class="form-check-label small text-muted" for="internalNote">
+                                    <i class="fas fa-lock me-1"></i>Internal note (visible to team only, not emailed to employee)
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i> Post Reply</button>
+                        </div>
                     </form>
                 </div>
                 {% endif %}
