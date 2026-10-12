@@ -583,6 +583,47 @@ def network_teams(request):
     elif team_filter:
         employees = employees.filter(support_team=team_filter)
     if request.method == 'POST':
+        upload = request.FILES.get('csv_file')
+        if upload:
+            import csv, io
+            valid = {
+                'networks': 'networks', 'software': 'software', 'hardware': 'hardware',
+                'networks team': 'networks', 'software team': 'software', 'hardware team': 'hardware',
+                '': '', 'none': '', '-': '',
+            }
+            raw_bytes = upload.read()
+            try:
+                text = raw_bytes.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                text = raw_bytes.decode('latin-1')
+            updated, skipped, errors = 0, 0, []
+            for i, row in enumerate(csv.reader(io.StringIO(text)), start=1):
+                if not row or not row[0].strip():
+                    continue
+                if i == 1 and row[0].strip().lower() in ('employee_id', 'employee id', 'id'):
+                    continue
+                emp_id = row[0].strip()
+                raw = row[1].strip().lower() if len(row) > 1 else ''
+                if raw not in valid:
+                    errors.append(f'row {i}: invalid team "{raw}" for {emp_id}')
+                    skipped += 1
+                    continue
+                emp = Employee.objects.filter(employee_id__iexact=emp_id).first()
+                if not emp:
+                    errors.append(f'row {i}: employee {emp_id} not found')
+                    skipped += 1
+                    continue
+                team = valid[raw]
+                if emp.support_team != team:
+                    emp.support_team = team
+                    emp.save(update_fields=['support_team'])
+                    updated += 1
+            msg = f'CSV imported: {updated} updated, {skipped} skipped.'
+            if errors:
+                messages.warning(request, msg + ' Issues: ' + '; '.join(errors[:5]) + (' ...' if len(errors) > 5 else ''))
+            else:
+                messages.success(request, msg)
+            return redirect('network_teams')
         changed = 0
         for emp in Employee.objects.filter(status='active'):
             key = 'team_%s' % emp.pk
