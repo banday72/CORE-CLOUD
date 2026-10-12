@@ -206,6 +206,7 @@ class NetworkTicket(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='network_tickets')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='networks')
     assigned_team = models.CharField(max_length=20, choices=TEAM_CHOICES, default='networks')
+    assigned_to = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='network_tickets_assigned')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
     subject = models.CharField(max_length=200)
     description = models.TextField()
@@ -225,6 +226,20 @@ class NetworkTicket(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class TicketReply(models.Model):
+    ticket = models.ForeignKey(NetworkTicket, on_delete=models.CASCADE, related_name='replies')
+    author = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='ticket_replies')
+    team = models.CharField(max_length=20, blank=True, help_text='Support team of the responder')
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Reply on #{self.ticket_id} by {self.author_id}"
+
+    class Meta:
+        ordering = ['created_at']
 
 
 class OvertimeRecord(models.Model):

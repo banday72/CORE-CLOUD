@@ -485,24 +485,23 @@ def networks_ticket_create(request):
             priority=request.POST.get('priority', 'medium'),
             subject=request.POST.get('subject'),
             description=request.POST.get('description'),
-            status='pending' if emp and emp.reports_to else 'approved',
+            status='approved',
         )
+        notify_team(ticket.assigned_team, 'IT/Network Ticket',
+            f'New {ticket.get_assigned_team_display()} ticket "{ticket.subject}" from {emp} needs your attention.',
+            'warning', 'networks_ticket_list')
         if emp and emp.reports_to:
-            create_notification(emp.reports_to, 'IT/Network Ticket',
-                f'{emp.first_name} {emp.last_name} raised ticket "{ticket.subject}"',
-                'warning', 'networks_ticket_list')
-        else:
-            notify_team(ticket.assigned_team, 'IT/Network Ticket',
-                f'New {ticket.get_assigned_team_display()} ticket "{ticket.subject}" from {emp} - no manager to approve.',
-                'warning', 'networks_ticket_list')
-        messages.success(request, 'Ticket submitted. Your manager will review it.')
+            create_notification(emp.reports_to, 'IT/Network Ticket (CC)',
+                f'{emp.first_name} {emp.last_name} raised ticket "{ticket.subject}" - routed to {ticket.get_assigned_team_display()}.',
+                'info', 'networks_ticket_list')
+        messages.success(request, 'Ticket submitted and routed to the IT team.')
         return redirect('networks_ticket_list')
     return render(request, 'hr_modules/networks_ticket_form.html')
 
 
 @login_required
 def networks_ticket_detail(request, pk):
-    from .models import NetworkTicket
+    from .models import NetworkTicket, TicketReply
     from django.core.exceptions import PermissionDenied
     ticket = get_object_or_404(NetworkTicket, pk=pk)
     from employees.models import Employee
@@ -513,12 +512,45 @@ def networks_ticket_detail(request, pk):
     is_owner = bool(emp) and ticket.employee_id == emp.pk
     if not (can_resolve or can_approve or is_owner or request.user.is_superuser):
         raise PermissionDenied
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'reply':
+            if not (can_resolve or request.user.is_superuser):
+                raise PermissionDenied
+            message = (request.POST.get('message') or '').strip()
+            if message:
+                TicketReply.objects.create(ticket=ticket, author=emp, team=ticket.assigned_team, message=message)
+                if ticket.employee_id != (emp.pk if emp else None):
+                    create_notification(ticket.employee, 'Ticket Reply',
+                        f'{ticket.get_assigned_team_display()} replied on your ticket "{ticket.subject}".',
+                        'info', 'networks_ticket_list')
+                messages.success(request, 'Reply posted.')
+            else:
+                messages.warning(request, 'Reply cannot be empty.')
+        elif action == 'assign':
+            if not (can_resolve or request.user.is_superuser):
+                raise PermissionDenied
+            member_id = request.POST.get('member_id', '')
+            team_members = Employee.objects.filter(status='active', support_team=ticket.assigned_team)
+            member = team_members.filter(pk=member_id).first() if member_id else None
+            ticket.assigned_to = member
+            ticket.save(update_fields=['assigned_to', 'updated_at'])
+            if member and member.user_id and member.pk != (emp.pk if emp else None):
+                create_notification(member, 'Ticket Assigned',
+                    f'Ticket "{ticket.subject}" ({ticket.get_assigned_team_display()}) has been assigned to you.',
+                    'warning', 'networks_ticket_list')
+            messages.success(request, 'Ticket assigned.' if member else 'Assignment cleared.')
+        return redirect('networks_ticket_detail', pk=ticket.pk)
+    team_members = Employee.objects.filter(status='active', support_team=ticket.assigned_team).order_by('first_name')
     return render(request, 'hr_modules/networks_ticket_detail.html', {
         'ticket': ticket,
         'can_approve': can_approve,
         'can_manage': can_resolve,
+        'can_reply': can_resolve or request.user.is_superuser,
         'is_owner': is_owner,
         'emp': emp,
+        'replies': ticket.replies.select_related('author'),
+        'team_members': team_members,
     })
 
 

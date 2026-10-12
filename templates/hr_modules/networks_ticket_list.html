@@ -66,6 +66,7 @@
                             {% if ticket.assigned_team == 'networks' %}<span class="badge bg-primary">Networks</span>
                             {% elif ticket.assigned_team == 'software' %}<span class="badge bg-success">Software</span>
                             {% else %}<span class="badge bg-warning text-dark">Hardware</span>{% endif %}
+                            {% if ticket.assigned_to %}<div class="small text-muted" style="font-size:0.7rem;"><i class="fas fa-user-check me-1"></i>{{ ticket.assigned_to.first_name }} {{ ticket.assigned_to.last_name|first }}</div>{% endif %}
                         </td>
                         <td>
                             {% if ticket.priority == 'urgent' %}
