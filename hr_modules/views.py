@@ -24,8 +24,14 @@ def create_notification(employee, title, message, notif_type='info', link=''):
 # ============ ORG CHART ============
 @login_required
 def org_chart(request):
-    from employees.models import Employee
-    ceo = Employee.objects.filter(employee_id='CEO001').first()
+    from employees.models import Employee, is_chief_designation
+    active = Employee.objects.filter(status='active')
+    ceo = active.filter(employee_id='CEO001').first()
+    if not ceo:
+        ceo = active.filter(designation__icontains='chief executive').first()
+    if not ceo:
+        roots = [e for e in active if is_chief_designation(e.designation) and e.reports_to_id is None]
+        ceo = roots[0] if roots else active.filter(reports_to__isnull=True).first()
     officers = Employee.objects.filter(reports_to=ceo, status='active') if ceo else []
     org_data = []
     for officer in officers:
@@ -543,3 +549,95 @@ def networks_ticket_action(request, pk):
             messages.success(request, f'Ticket marked {action.replace("_", " ")}.')
         return redirect('networks_ticket_list')
     return redirect('networks_ticket_detail', pk=ticket.pk)
+
+
+# ============ ANNOUNCEMENTS / NOTICE BOARD ============
+def active_announcements():
+    from django.db.models import Q
+    from datetime import date
+    from .models import Announcement
+    today = date.today()
+    return Announcement.objects.filter(
+        Q(publish_from__isnull=True) | Q(publish_from__lte=today),
+        Q(publish_until__isnull=True) | Q(publish_until__gte=today),
+    )
+
+
+def broadcast_announcement(ann):
+    from employees.models import Employee
+    notif_type = 'danger' if ann.priority == 'urgent' else 'warning'
+    for emp in Employee.objects.filter(status='active', user__isnull=False):
+        create_notification(emp, f'Announcement: {ann.title}',
+            ann.body[:160], notif_type, 'announcement_list')
+
+
+@login_required
+def announcement_list(request):
+    from .models import Announcement
+    can_manage = has_any_permission(request.user, 'manage_announcements')
+    announcements = Announcement.objects.all() if can_manage else active_announcements()
+    return render(request, 'hr_modules/announcement_list.html', {
+        'announcements': announcements, 'can_manage': can_manage,
+    })
+
+
+@login_required
+@permission_required('manage_announcements')
+def announcement_create(request):
+    from employees.models import Employee
+    from .models import Announcement
+    if request.method == 'POST':
+        import base64
+        poster = Employee.objects.filter(user=request.user).first()
+        attachment = request.FILES.get('attachment')
+        attachment_b64 = ''
+        attachment_name = ''
+        if attachment:
+            attachment_b64 = 'data:%s;base64,%s' % (
+                attachment.content_type or 'application/octet-stream',
+                base64.b64encode(attachment.read()).decode('utf-8'))
+            attachment_name = attachment.name
+        ann = Announcement.objects.create(
+            title=request.POST.get('title'),
+            body=request.POST.get('body'),
+            priority=request.POST.get('priority', 'normal'),
+            is_pinned=request.POST.get('is_pinned') == 'on',
+            publish_from=request.POST.get('publish_from') or None,
+            publish_until=request.POST.get('publish_until') or None,
+            posted_by=poster,
+            attachment_b64=attachment_b64,
+            attachment_name=attachment_name,
+        )
+        broadcast_announcement(ann)
+        messages.success(request, 'Announcement published.')
+        return redirect('announcement_list')
+    return render(request, 'hr_modules/announcement_form.html', {'announcement': None})
+
+
+@login_required
+@permission_required('manage_announcements')
+def announcement_edit(request, pk):
+    from .models import Announcement
+    ann = get_object_or_404(Announcement, pk=pk)
+    if request.method == 'POST':
+        ann.title = request.POST.get('title')
+        ann.body = request.POST.get('body')
+        ann.priority = request.POST.get('priority', 'normal')
+        ann.is_pinned = request.POST.get('is_pinned') == 'on'
+        ann.publish_from = request.POST.get('publish_from') or None
+        ann.publish_until = request.POST.get('publish_until') or None
+        ann.save()
+        messages.success(request, 'Announcement updated.')
+        return redirect('announcement_list')
+    return render(request, 'hr_modules/announcement_form.html', {'announcement': ann})
+
+
+@login_required
+@permission_required('manage_announcements')
+def announcement_delete(request, pk):
+    from .models import Announcement
+    ann = get_object_or_404(Announcement, pk=pk)
+    if request.method == 'POST':
+        ann.delete()
+        messages.success(request, 'Announcement deleted.')
+    return redirect('announcement_list')

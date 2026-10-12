@@ -267,6 +267,9 @@
             <a class="nav-link {% if 'networks_ticket' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'networks_ticket_list' %}">
                 <i class="fas fa-network-wired nav-icon" style="color:#5dade2;"></i> IT / Networks
             </a>
+            <a class="nav-link {% if 'announcement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'announcement_list' %}">
+                <i class="fas fa-bullhorn nav-icon" style="color:#f6c23e;"></i> Announcements
+            </a>
             <a class="nav-link" href="{% url 'dashboard' %}#my-payrolls">
                 <i class="fas fa-money-bill-wave nav-icon" style="color:#1cc88a;"></i> Salary Slips
             </a>

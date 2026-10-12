@@ -27,4 +27,8 @@ urlpatterns = [
     path('networks/create/', views.networks_ticket_create, name='networks_ticket_create'),
     path('networks/<int:pk>/', views.networks_ticket_detail, name='networks_ticket_detail'),
     path('networks/<int:pk>/action/', views.networks_ticket_action, name='networks_ticket_action'),
+    path('announcements/', views.announcement_list, name='announcement_list'),
+    path('announcements/create/', views.announcement_create, name='announcement_create'),
+    path('announcements/<int:pk>/edit/', views.announcement_edit, name='announcement_edit'),
+    path('announcements/<int:pk>/delete/', views.announcement_delete, name='announcement_delete'),
 ]

@@ -131,6 +131,17 @@ def dashboard(request):
             'today_birthdays': today_birthdays,
             'permissions': perms,
         }
+    from hr_modules.models import Announcement
+    from django.db.models import Q
+    today = date.today()
+    context['announcements'] = Announcement.objects.filter(
+        Q(publish_from__isnull=True) | Q(publish_from__lte=today),
+        Q(publish_until__isnull=True) | Q(publish_until__gte=today),
+    )[:5]
+    context['today_birthdays'] = Employee.objects.filter(
+        date_of_birth__month=today.month, date_of_birth__day=today.day, status='active')
+    context['work_anniversaries'] = Employee.objects.filter(
+        date_of_joining__month=today.month, date_of_joining__day=today.day, status='active')
     return render(request, 'dashboard.html', context)
 
 

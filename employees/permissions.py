@@ -38,6 +38,7 @@ ALL_PERMISSIONS = {
     'approve_overtime',
     'approve_networks',
     'manage_networks',
+    'manage_announcements',
 }
 
 HR_PERMISSIONS = set(ALL_PERMISSIONS)
@@ -78,8 +79,6 @@ def _words(text):
 def permission_group(employee):
     if employee is None:
         return 'employee'
-    if getattr(employee, 'employee_id', None) == 'CEO001':
-        return 'executive'
     from .models import is_chief_designation
     if is_chief_designation(employee.designation):
         return 'executive'

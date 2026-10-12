@@ -236,3 +236,36 @@ class OvertimeRecord(models.Model):
     class Meta:
         unique_together = ['employee', 'date']
         ordering = ['-date']
+
+
+class Announcement(models.Model):
+    PRIORITY_CHOICES = [
+        ('normal', 'Normal'),
+        ('important', 'Important'),
+        ('urgent', 'Urgent'),
+    ]
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='normal')
+    posted_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='announcements')
+    is_pinned = models.BooleanField(default=False)
+    publish_from = models.DateField(null=True, blank=True)
+    publish_until = models.DateField(null=True, blank=True)
+    attachment_b64 = models.TextField(blank=True, help_text='Base64 encoded attachment (optional)')
+    attachment_name = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_active(self):
+        from datetime import date
+        today = date.today()
+        if self.publish_from and self.publish_from > today:
+            return False
+        if self.publish_until and self.publish_until < today:
+            return False
+        return True
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering = ['-is_pinned', '-created_at']

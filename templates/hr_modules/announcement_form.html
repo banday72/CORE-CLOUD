@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{% if announcement %}Edit{% else %}New{% endif %} Announcement{% endblock %}
+{% block page_title %}<i class="fas fa-bullhorn me-2"></i>{% if announcement %}Edit{% else %}New{% endif %} Announcement{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-bullhorn me-1"></i> Announcement Details</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" value="{{ announcement.title|default:'' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Message <span class="text-danger">*</span></label>
+                        <textarea name="body" class="form-control" rows="5" required>{{ announcement.body|default:'' }}</textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="normal" {% if announcement.priority == 'normal' or not announcement %}selected{% endif %}>Normal</option>
+                                <option value="important" {% if announcement.priority == 'important' %}selected{% endif %}>Important</option>
+                                <option value="urgent" {% if announcement.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Publish From</label>
+                            <input type="date" name="publish_from" class="form-control" value="{{ announcement.publish_from|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Publish Until</label>
+                            <input type="date" name="publish_until" class="form-control" value="{{ announcement.publish_until|date:'Y-m-d' }}">
+                        </div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="is_pinned" class="form-check-input" id="is_pinned" {% if announcement.is_pinned %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="is_pinned">Pin to top</label>
+                    </div>
+                    {% if not announcement %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Attachment (Optional)</label>
+                        <input type="file" name="attachment" class="form-control">
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'announcement_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i> Cancel</a>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i> {% if announcement %}Update{% else %}Publish{% endif %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
