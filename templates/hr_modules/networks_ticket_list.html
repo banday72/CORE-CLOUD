@@ -11,6 +11,11 @@
         <a href="{% url 'networks_ticket_list' %}?status=in_progress" class="btn btn-{% if status_filter == 'in_progress' %}info{% else %}outline-info{% endif %} btn-sm">In Progress</a>
         <a href="{% url 'networks_ticket_list' %}?status=resolved" class="btn btn-{% if status_filter == 'resolved' %}success{% else %}outline-success{% endif %} btn-sm">Resolved</a>
         <a href="{% url 'networks_ticket_list' %}?status=rejected" class="btn btn-{% if status_filter == 'rejected' %}danger{% else %}outline-danger{% endif %} btn-sm">Rejected</a>
+        {% if is_resolver %}
+        <a href="{% url 'networks_ticket_list' %}?assigned=me" class="btn btn-{% if assigned_me %}dark{% else %}outline-dark{% endif %} btn-sm">
+            <i class="fas fa-user-check me-1"></i> Assigned to me{% if assigned_to_me_count %} <span class="badge bg-danger">{{ assigned_to_me_count }}</span>{% endif %}
+        </a>
+        {% endif %}
     </div>
     <div>
         {% if is_resolver %}
@@ -49,6 +54,7 @@
                         <td>
                             <div class="fw-bold" style="font-size:0.85rem;">#{{ ticket.pk }}</div>
                             <div style="font-size:0.8rem;">{{ ticket.subject|truncatewords:8 }}</div>
+                            {% if ticket.assigned_to_id == my_emp_id %}<span class="badge bg-dark mt-1" style="font-size:0.6rem;"><i class="fas fa-user-check me-1"></i>Assigned to you</span>{% endif %}
                         </td>
                         <td>
                             <div class="d-flex align-items-center">

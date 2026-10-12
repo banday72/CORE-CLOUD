@@ -461,13 +461,22 @@ def networks_ticket_list(request):
         tickets = mine.distinct()
     status_filter = request.GET.get('status', '')
     team_filter = request.GET.get('team', '')
+    assigned_me = request.GET.get('assigned') == 'me'
+    assigned_to_me_count = 0
+    if emp:
+        assigned_to_me_count = tickets.filter(assigned_to=emp).exclude(status__in=['resolved', 'rejected']).count()
     if status_filter:
         tickets = tickets.filter(status=status_filter)
     if team_filter:
         tickets = tickets.filter(assigned_team=team_filter)
+    if assigned_me and emp:
+        tickets = tickets.filter(assigned_to=emp)
     return render(request, 'hr_modules/networks_ticket_list.html', {
         'tickets': tickets, 'status_filter': status_filter, 'team_filter': team_filter,
         'is_resolver': bool(resolvable_teams(request.user)),
+        'assigned_me': assigned_me,
+        'assigned_to_me_count': assigned_to_me_count,
+        'my_emp_id': emp.pk if emp else None,
     })
 
 
