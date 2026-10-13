@@ -89,6 +89,8 @@ def permission_group(employee):
         return 'hr'
     if employee.role == 'manager':
         return 'manager'
+    if getattr(employee, 'support_team', '') in ('networks', 'software', 'hardware'):
+        return 'employee'
     words = _words(employee.designation)
     if words & set(HR_KEYWORDS):
         return 'hr'
