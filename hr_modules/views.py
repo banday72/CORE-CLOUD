@@ -640,6 +640,8 @@ def network_teams(request):
         employees = employees.filter(support_team='')
     elif team_filter:
         employees = employees.filter(support_team=team_filter)
+    else:
+        employees = employees.filter(support_team__in=['networks', 'software', 'hardware'])
     if request.method == 'POST':
         upload = request.FILES.get('csv_file')
         if upload:
