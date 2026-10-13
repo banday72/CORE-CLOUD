@@ -76,7 +76,7 @@
                             <th>Designation</th>
                             <th style="width:200px;">Support Team</th>
                             <th style="width:160px;">IT Role</th>
-                            <th style="width:90px;" class="text-center">IT Manager</th>
+                            <th style="width:132px;" class="text-center">IT Mgr <span class="text-muted small fw-normal">(Analytics)</span></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -104,7 +104,7 @@
                                 </select>
                             </td>
                             <td class="text-center">
-                                <input type="checkbox" name="itmgr_{{ emp.pk }}" class="form-check-input" {% if emp.is_it_manager %}checked{% endif %}>
+                                <input type="checkbox" name="itmgr_{{ emp.pk }}" class="form-check-input" title="Grants IT Teams page + IT Analytics access" {% if emp.is_it_manager %}checked{% endif %}>
                             </td>
                         </tr>
                         {% empty %}
