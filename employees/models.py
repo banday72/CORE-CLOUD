@@ -46,6 +46,14 @@ def default_password_for(employee_id):
     return 'employee123'
 
 
+TEMP_PASSWORD_CHARS = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+
+def generate_temp_password(length=10):
+    from django.utils.crypto import get_random_string
+    return get_random_string(length, TEMP_PASSWORD_CHARS)
+
+
 class Department(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
@@ -100,6 +108,7 @@ class Employee(models.Model):
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_employees')
     approved_at = models.DateTimeField(null=True, blank=True)
     must_change_password = models.BooleanField(default=False, help_text='Force password change on next login')
+    failed_login_attempts = models.PositiveIntegerField(default=0, help_text='Consecutive failed login attempts (triggers IT ticket at threshold)')
     face_data = models.TextField(blank=True, help_text='JSON encoded face descriptors for face lock')
     face_registered = models.BooleanField(default=False, help_text='Whether face is registered for face lock')
     created_at = models.DateTimeField(auto_now_add=True)

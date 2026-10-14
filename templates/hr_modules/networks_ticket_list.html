@@ -36,6 +36,26 @@
     </div>
 </div>
 
+{% if is_resolver %}
+<div class="card shadow mb-3 border-warning">
+    <div class="card-body py-3">
+        <form method="post" action="{% url 'networks_reset_password' %}" class="row g-2 align-items-end">
+            {% csrf_token %}
+            <div class="col-md-7">
+                <label class="form-label fw-bold small mb-1"><i class="fas fa-key me-1 text-warning"></i> Reset an employee's password</label>
+                <input type="text" name="employee_id" class="form-control" placeholder="Enter Employee ID (e.g. EMP0123)" required>
+            </div>
+            <div class="col-md-5">
+                <button type="submit" class="btn btn-warning w-100"><i class="fas fa-rotate me-1"></i> Reset Password</button>
+            </div>
+            <div class="col-12">
+                <small class="text-muted">A random temporary password will be generated and shown to you. The employee must change it on next login.</small>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <div class="card shadow">
     <div class="card-body">
         <div class="table-responsive">

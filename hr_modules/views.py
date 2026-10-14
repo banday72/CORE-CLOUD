@@ -623,6 +623,67 @@ def networks_ticket_action(request, pk):
     return redirect('networks_ticket_detail', pk=ticket.pk)
 
 
+# ============ IT TEAMS (password reset) ============
+@login_required
+def networks_reset_password(request):
+    from employees.models import Employee, generate_temp_password
+    from employees.audit import log_audit
+    from .models import NetworkTicket, TicketReply
+    from django.core.cache import cache
+    from django.core.exceptions import PermissionDenied
+
+    if request.method != 'POST':
+        return redirect('networks_ticket_list')
+
+    if not has_any_permission(request.user, 'resolve_networks', 'manage_it_teams'):
+        raise PermissionDenied
+
+    employee_id = (request.POST.get('employee_id') or '').strip()
+    emp = Employee.objects.filter(employee_id__iexact=employee_id).first()
+    if emp is None or emp.user is None:
+        messages.error(request, f'No login account found for "{employee_id}".')
+        return redirect('networks_ticket_list')
+
+    team_emp = Employee.objects.filter(user=request.user).first()
+    temp_password = generate_temp_password()
+    emp.user.set_password(temp_password)
+    emp.user.save(update_fields=['password'])
+    emp.must_change_password = True
+    emp.failed_login_attempts = 0
+    emp.save(update_fields=['must_change_password', 'failed_login_attempts'])
+    cache.delete(f'login_attempts_user_{emp.employee_id}')
+    cache.delete(f'login_attempts_{request.META.get("REMOTE_ADDR")}')
+
+    log_audit(user=request.user, action='password_change', model_name='User',
+              object_id=emp.employee_id,
+              description=f'Password reset by IT/Networks team for {emp.full_name}',
+              request=request)
+
+    ticket_id = request.POST.get('ticket')
+    if ticket_id:
+        ticket = NetworkTicket.objects.filter(pk=ticket_id).first()
+        if ticket:
+            TicketReply.objects.create(
+                ticket=ticket, author=team_emp, team=ticket.assigned_team,
+                message=f'Password reset performed by {team_emp.full_name if team_emp else "IT team"}. '
+                        f'A temporary password was issued and shared securely with the employee.',
+                is_internal=True,
+            )
+            if not ticket.first_response_at:
+                ticket.first_response_at = timezone.now()
+                ticket.save(update_fields=['first_response_at', 'updated_at'])
+
+    messages.success(
+        request,
+        f'Password reset for {emp.full_name} ({emp.employee_id}). '
+        f'Temporary password: {temp_password} — share it securely; '
+        f'the employee must change it on next login.'
+    )
+    if ticket_id:
+        return redirect('networks_ticket_detail', pk=ticket_id)
+    return redirect('networks_ticket_list')
+
+
 # ============ IT TEAMS (assignment) ============
 @login_required
 @permission_required('manage_it_teams')

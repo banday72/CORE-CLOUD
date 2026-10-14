@@ -49,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'hr_payroll.middleware.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'hr_payroll.urls'
