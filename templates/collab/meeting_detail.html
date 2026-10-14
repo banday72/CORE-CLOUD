@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ meeting.title }}{% endblock %}
+{% block page_title %}<i class="fas fa-video me-2"></i>Meeting{% endblock %}
+
+{% block content %}
+{% include "collab/_nav.html" %}
+
+<div class="card shadow mb-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-start">
+        <div>
+            <h5 class="mb-1">{{ meeting.title }} <span class="badge bg-{% if meeting.status == 'scheduled' %}success{% elif meeting.status == 'cancelled' %}danger{% else %}secondary{% endif %} ms-1">{{ meeting.get_status_display }}</span></h5>
+            <div class="text-muted small">
+                <i class="fas fa-user-tie me-1"></i>{{ meeting.organizer.full_name|default:"—" }}
+                &nbsp;•&nbsp; <i class="fas fa-clock me-1"></i>{{ meeting.start_at|date:"D M d, Y H:i" }} – {{ meeting.end_at|date:"H:i" }} UTC
+            </div>
+        </div>
+        {% if meeting.join_url %}
+        <a href="{{ meeting.join_url }}" target="_blank" rel="noopener" class="btn btn-primary">
+            <i class="fas fa-video me-1"></i>Join video call
+        </a>
+        {% endif %}
+    </div>
+    {% if meeting.agenda %}
+    <div class="card-body" style="white-space:pre-wrap;">{{ meeting.agenda }}</div>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow h-100">
+            <div class="card-header bg-white fw-bold"><i class="fas fa-users me-2"></i>Attendees ({{ meeting.attendees.count }})</div>
+            <ul class="list-group list-group-flush">
+                {% for a in meeting.attendees.all %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{{ a.employee.full_name }} <small class="text-muted">{{ a.employee.employee_id }}</small></span>
+                    <span class="badge bg-{% if a.status == 'accepted' %}success{% elif a.status == 'declined' %}danger{% else %}secondary{% endif %}">{{ a.get_status_display }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow h-100">
+            <div class="card-header bg-white fw-bold"><i class="fas fa-video me-2"></i>Video meeting</div>
+            <div class="card-body">
+                {% if meeting.join_url %}
+                <p class="text-muted small">Join in the browser — no account needed. Share this link:</p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" value="{{ meeting.join_url }}" readonly onclick="this.select();">
+                    <a href="{{ meeting.join_url }}" target="_blank" rel="noopener" class="btn btn-outline-primary">Open</a>
+                </div>
+                {% else %}
+                <p class="text-muted">No video room for this meeting.</p>
+                {% endif %}
+
+                {% if my_attendee %}
+                <hr>
+                <p class="mb-2 fw-semibold">Your response: <span class="badge bg-secondary">{{ my_attendee.get_status_display }}</span></p>
+                <form method="post" action="{% url 'collab_meeting_respond' meeting.pk %}" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <button name="status" value="accepted" class="btn btn-sm btn-success"><i class="fas fa-check me-1"></i>Accept</button>
+                    <button name="status" value="declined" class="btn btn-sm btn-outline-danger"><i class="fas fa-times me-1"></i>Decline</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

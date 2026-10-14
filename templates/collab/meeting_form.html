@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Schedule Meeting{% endblock %}
+{% block page_title %}<i class="fas fa-video me-2"></i>Schedule Meeting{% endblock %}
+
+{% block content %}
+{% include "collab/_nav.html" %}
+
+<div class="card shadow">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-plus me-2"></i>New Meeting</div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" class="form-control" required maxlength="200">
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Start (UTC)</label>
+                    <input type="datetime-local" name="start_at" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">End (UTC)</label>
+                    <input type="datetime-local" name="end_at" class="form-control" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Agenda <span class="text-muted small">(optional)</span></label>
+                <textarea name="agenda" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Invite <span class="text-muted small">(Ctrl/Cmd-click to select several)</span></label>
+                <select name="attendees" class="form-select" multiple size="8">
+                    {% for emp in employees %}
+                    <option value="{{ emp.pk }}">{{ emp.full_name }} — {{ emp.employee_id }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-check me-1"></i>Schedule</button>
+            <a href="{% url 'collab_meetings' %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

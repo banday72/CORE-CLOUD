@@ -165,6 +165,19 @@
             {% endif %}
         </nav>
 
+        <div class="sidebar-heading bright"><i class="fas fa-comments me-1"></i> COLLABORATION</div>
+        <nav class="nav flex-column">
+            <a class="nav-link {% if request.resolver_match.url_name == 'collab_mail' or request.resolver_match.url_name == 'collab_mail_detail' %}active{% endif %}" href="{% url 'collab_mail' %}">
+                <i class="fas fa-envelope nav-icon" style="color:#36b9cc;"></i> Internal Mail {% if collab_unread_mail %}<span class="nav-badge" style="background:#e74a3b;color:#fff;">{{ collab_unread_mail }}</span>{% endif %}
+            </a>
+            <a class="nav-link {% if 'collab_chat' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'collab_chat' %}">
+                <i class="fas fa-comments nav-icon" style="color:#3498db;"></i> Team Chat {% if collab_unread_chat %}<span class="nav-badge" style="background:#e74a3b;color:#fff;">{{ collab_unread_chat }}</span>{% endif %}
+            </a>
+            <a class="nav-link {% if 'collab_meeting' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'collab_meetings' %}">
+                <i class="fas fa-video nav-icon" style="color:#9b59b6;"></i> Meetings
+            </a>
+        </nav>
+
         <div class="sidebar-heading bright"><i class="fas fa-shield-alt me-1"></i> SECURITY</div>
         <nav class="nav flex-column">
             <a class="nav-link {% if request.resolver_match.url_name == 'face_register' %}active{% endif %}" href="{% url 'face_register' %}">

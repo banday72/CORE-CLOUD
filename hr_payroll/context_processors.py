@@ -38,6 +38,28 @@ def role_context(request):
                 context['unread_notif_count'] = Notification.objects.filter(is_read=False).count()
         except Exception:
             pass
+
+        try:
+            from collab.models import MailRecipient
+            if context.get('current_employee'):
+                context['collab_unread_mail'] = MailRecipient.objects.filter(
+                    employee=context['current_employee'], is_read=False, is_deleted=False).count()
+        except Exception:
+            pass
+
+        try:
+            from collab.models import Conversation, ConversationMember
+            if context.get('current_employee'):
+                me = context['current_employee']
+                total = 0
+                for membership in ConversationMember.objects.filter(employee=me).select_related('conversation'):
+                    unread = membership.conversation.messages.exclude(sender=me)
+                    if membership.last_read_at:
+                        unread = unread.filter(created_at__gt=membership.last_read_at)
+                    total += unread.count()
+                context['collab_unread_chat'] = total
+        except Exception:
+            pass
     return context
 
 

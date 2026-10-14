@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'attendance',
     'leaves',
     'hr_modules',
+    'collab',
 ]
 
 MIDDLEWARE = [

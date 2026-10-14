@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Compose{% endblock %}
+{% block page_title %}<i class="fas fa-envelope me-2"></i>Internal Mail{% endblock %}
+
+{% block content %}
+{% include "collab/_nav.html" %}
+
+<div class="card shadow">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-pen me-2"></i>New Message</div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Recipients <span class="text-muted small">(Ctrl/Cmd-click to select several)</span></label>
+                <select name="recipients" class="form-select" multiple size="8">
+                    {% for emp in employees %}
+                    <option value="{{ emp.pk }}">{{ emp.full_name }} — {{ emp.employee_id }}{% if emp.department %} ({{ emp.department.name }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Add whole department</label>
+                    <select name="department" class="form-select">
+                        <option value="">— none —</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.pk }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="all_active" id="all_active" value="1">
+                        <label class="form-check-label" for="all_active">Send to <strong>all</strong> active employees</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Subject</label>
+                <input type="text" name="subject" class="form-control" required maxlength="300">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Message</label>
+                <textarea name="body" class="form-control" rows="8" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Send</button>
+            <a href="{% url 'collab_mail' %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

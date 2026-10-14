@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Message{% endblock %}
+{% block page_title %}<i class="fas fa-envelope me-2"></i>Internal Mail{% endblock %}
+
+{% block content %}
+{% include "collab/_nav.html" %}
+
+<div class="card shadow">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="mb-1">{{ mail.subject }}</h5>
+                <div class="text-muted small">
+                    <i class="fas fa-user me-1"></i>From: {{ mail.sender.full_name|default:"System" }}
+                    {% if mail.sender %}<span class="text-muted">({{ mail.sender.employee_id }})</span>{% endif %}
+                    &nbsp;•&nbsp; <i class="fas fa-clock me-1"></i>{{ mail.created_at|date:"M d, Y H:i" }}
+                </div>
+                <div class="text-muted small mt-1">
+                    <i class="fas fa-users me-1"></i>To:
+                    {% for r in mail.recipients.all %}{{ r.employee.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </div>
+            </div>
+            <div class="text-nowrap">
+                <a href="{% url 'collab_mail_compose' %}" class="btn btn-sm btn-outline-primary" title="New message"><i class="fas fa-pen"></i></a>
+                <form method="post" action="{% url 'collab_mail_delete' rec.pk %}" class="d-inline" onsubmit="return confirm('Move this message to trash?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card-body" style="white-space:pre-wrap;">{{ mail.body }}</div>
+    <div class="card-footer bg-white">
+        <a href="{% url 'collab_mail' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Inbox</a>
+    </div>
+</div>
+{% endblock %}

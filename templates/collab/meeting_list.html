@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Meetings{% endblock %}
+{% block page_title %}<i class="fas fa-video me-2"></i>Meetings{% endblock %}
+
+{% block content %}
+{% include "collab/_nav.html" %}
+
+<div class="d-flex justify-content-between mb-3">
+    <span class="text-muted small align-self-center">Schedule meetings and join by video (Jitsi).</span>
+    <a href="{% url 'collab_meeting_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Schedule meeting</a>
+</div>
+
+<div class="card shadow mb-3">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-calendar-day me-2"></i>Upcoming</div>
+    <div class="list-group list-group-flush">
+        {% for m in upcoming %}
+        <a href="{% url 'collab_meeting_detail' m.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+                <div class="fw-semibold">{{ m.title }} <span class="badge bg-success ms-1">Scheduled</span></div>
+                <div class="text-muted small">
+                    <i class="fas fa-clock me-1"></i>{{ m.start_at|date:"D M d, Y H:i" }} – {{ m.end_at|date:"H:i" }} UTC
+                    &nbsp;•&nbsp; <i class="fas fa-user-tie me-1"></i>{{ m.organizer.full_name|default:"—" }}
+                </div>
+            </div>
+            {% if m.join_url %}
+            <span class="btn btn-sm btn-outline-primary"><i class="fas fa-video me-1"></i>Join</span>
+            {% endif %}
+        </a>
+        {% empty %}
+        <div class="list-group-item text-center py-4 text-muted small">No upcoming meetings.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card shadow mb-3">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-paper-plane me-2"></i>Meetings I organized</div>
+    <div class="list-group list-group-flush">
+        {% for m in organized %}
+        <a href="{% url 'collab_meeting_detail' m.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+                <div class="fw-semibold">{{ m.title }}</div>
+                <div class="text-muted small">{{ m.start_at|date:"D M d, Y H:i" }} UTC • {{ m.attendees.count }} attendee{{ m.attendees.count|pluralize }}</div>
+            </div>
+            <span class="badge bg-secondary">{{ m.get_status_display }}</span>
+        </a>
+        {% empty %}
+        <div class="list-group-item text-center py-4 text-muted small">You have not organized any meetings.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-history me-2"></i>Past</div>
+    <div class="list-group list-group-flush">
+        {% for m in past %}
+        <a href="{% url 'collab_meeting_detail' m.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <span>{{ m.title }}</span>
+            <small class="text-muted">{{ m.start_at|date:"M d, Y H:i" }}</small>
+        </a>
+        {% empty %}
+        <div class="list-group-item text-center py-4 text-muted small">No past meetings.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -48,6 +48,7 @@ urlpatterns = [
     path('payroll/', include('payroll.urls')),
     path('hr/', include('hr_modules.urls')),
     path('ai/', include('ai_engine.urls')),
+    path('collab/', include('collab.urls')),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,19 @@
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{% url 'collab_mail' %}" class="btn btn-sm {% if collab_tab == 'mail_inbox' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-inbox me-1"></i>Inbox
+        {% if collab_unread_mail %}<span class="badge bg-danger ms-1">{{ collab_unread_mail }}</span>{% endif %}
+    </a>
+    <a href="{% url 'collab_mail_compose' %}" class="btn btn-sm {% if collab_tab == 'mail_compose' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-pen me-1"></i>Compose
+    </a>
+    <a href="{% url 'collab_mail_sent' %}" class="btn btn-sm {% if collab_tab == 'mail_sent' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-paper-plane me-1"></i>Sent
+    </a>
+    <a href="{% url 'collab_chat' %}" class="btn btn-sm {% if collab_tab == 'chat' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-comments me-1"></i>Chat
+        {% if collab_unread_chat %}<span class="badge bg-danger ms-1">{{ collab_unread_chat }}</span>{% endif %}
+    </a>
+    <a href="{% url 'collab_meetings' %}" class="btn btn-sm {% if collab_tab == 'meetings' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-video me-1"></i>Meetings
+    </a>
+</div>
