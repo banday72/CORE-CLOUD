@@ -8,6 +8,8 @@ Meetings embed a free Jitsi Meet room (no extra server needed).
 from django.db import models
 from django.utils import timezone
 
+import hashlib
+
 from employees.models import Employee
 
 
@@ -45,6 +47,11 @@ class Conversation(models.Model):
         if names:
             return ', '.join(names[:3]) + ('…' if len(names) > 3 else '')
         return 'Just you'
+
+    @property
+    def call_room(self):
+        digest = hashlib.sha1(f'corecloud-chat-{self.pk}'.encode()).hexdigest()[:14]
+        return f'CoreCloud-Chat-{digest}'
 
 
 class ConversationMember(models.Model):

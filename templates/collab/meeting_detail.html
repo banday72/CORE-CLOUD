@@ -15,9 +15,14 @@
             </div>
         </div>
         {% if meeting.join_url %}
-        <a href="{{ meeting.join_url }}" target="_blank" rel="noopener" class="btn btn-primary">
-            <i class="fas fa-video me-1"></i>Join video call
-        </a>
+        <div class="text-nowrap">
+            <a href="{% url 'collab_meeting_join' meeting.pk %}" class="btn btn-primary">
+                <i class="fas fa-video me-1"></i>Join in app
+            </a>
+            <a href="{% url 'collab_meeting_join' meeting.pk %}?audio=1" class="btn btn-outline-primary" title="Join with camera off">
+                <i class="fas fa-microphone me-1"></i>Audio only
+            </a>
+        </div>
         {% endif %}
     </div>
     {% if meeting.agenda %}

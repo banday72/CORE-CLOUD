@@ -50,14 +50,20 @@
     <div class="col-lg-8">
         {% if active %}
         <div class="card shadow d-flex flex-column" style="height: 70vh;">
-            <div class="card-header bg-white">
-                <div class="fw-bold">
-                    {% if active.kind == 'group' %}<i class="fas fa-users me-1"></i>{% else %}<i class="fas fa-user me-1"></i>{% endif %}
-                    {{ active_title }}
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-bold">
+                        {% if active.kind == 'group' %}<i class="fas fa-users me-1"></i>{% else %}<i class="fas fa-user me-1"></i>{% endif %}
+                        {{ active_title }}
+                    </div>
+                    <div class="text-muted small">
+                        {% for p in participants %}{{ p.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </div>
                 </div>
-                <div class="text-muted small">
-                    {% for p in participants %}{{ p.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                </div>
+                <form method="post" action="{% url 'collab_chat_call' active.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success text-nowrap"><i class="fas fa-phone-volume me-1"></i>Call</button>
+                </form>
             </div>
             <div class="card-body overflow-auto" id="chatBody" style="background:#f8f9fc;">
                 {% for m in active_messages %}

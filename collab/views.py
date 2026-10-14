@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Max
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_datetime
@@ -269,6 +270,68 @@ def chat_send(request, conv_id):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({'ok': True})
     return redirect('collab_chat_room', conv_id=conv.pk)
+
+
+@require_POST
+@login_required
+def chat_call_start(request, conv_id):
+    """Notify conversation members and open the audio/video call room."""
+    me = _require_me(request)
+    if me is None:
+        return redirect('dashboard')
+    conv = get_object_or_404(Conversation, pk=conv_id, members__employee=me)
+    ChatMessage.objects.create(
+        conversation=conv, sender=me,
+        body=f'{me.full_name} started an audio call. Click "Call" to join.',
+    )
+    conv.save(update_fields=['updated_at'])
+    return redirect('collab_call_room', conv_id=conv.pk)
+
+
+@login_required
+def chat_call_room(request, conv_id):
+    me = _require_me(request)
+    if me is None:
+        return redirect('dashboard')
+    conv = get_object_or_404(Conversation, pk=conv_id, members__employee=me)
+    return _call_page(
+        request,
+        room=conv.call_room,
+        title=conv.display_title(me),
+        back_url=reverse('collab_chat_room', args=[conv.pk]),
+        audio_only=True,
+    )
+
+
+@login_required
+def meeting_join(request, pk):
+    me = _require_me(request)
+    if me is None:
+        return redirect('dashboard')
+    meeting = get_object_or_404(Meeting, pk=pk)
+    is_attendee = meeting.attendees.filter(employee=me).exists()
+    if not is_attendee and meeting.organizer_id != me.pk and not request.user.is_superuser:
+        messages.error(request, 'You do not have access to this meeting.')
+        return redirect('collab_meetings')
+    return _call_page(
+        request,
+        room=meeting.room,
+        title=meeting.title,
+        back_url=reverse('collab_meeting_detail', args=[meeting.pk]),
+        audio_only=request.GET.get('audio') == '1',
+    )
+
+
+def _call_page(request, room, title, back_url, audio_only=False):
+    me = _me(request)
+    return render(request, 'collab/join.html', {
+        'room': room,
+        'call_title': title,
+        'back_url': back_url,
+        'audio_only': audio_only,
+        'display_name': me.full_name if me else request.user.username,
+        'collab_tab': 'chat',
+    })
 
 
 @login_required
