@@ -172,6 +172,28 @@ def managers_queryset():
     return Employee.objects.filter(managers_q(), status='active').select_related('department')
 
 
+_ID_LOOKALIKES = str.maketrans({'O': '0', 'o': '0', 'I': '1', 'i': '1', 'l': '1', 'L': '1'})
+
+
+def _canonical_id(value):
+    return (value or '').translate(_ID_LOOKALIKES).lower()
+
+
+def find_employee_by_id(value):
+    """Look up an employee by Employee ID, tolerant of O/0 and I/l/1 typos."""
+    value = (value or '').strip()
+    if not value:
+        return None
+    emp = Employee.objects.filter(employee_id__iexact=value).first()
+    if emp:
+        return emp
+    canonical = _canonical_id(value)
+    for candidate in Employee.objects.only('id', 'employee_id'):
+        if _canonical_id(candidate.employee_id) == canonical:
+            return candidate
+    return None
+
+
 class LoginSlide(models.Model):
     name = models.CharField(max_length=100, blank=True)
     picture_b64 = models.TextField(help_text='Base64 encoded background image (data URI)')

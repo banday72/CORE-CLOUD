@@ -626,7 +626,7 @@ def networks_ticket_action(request, pk):
 # ============ IT TEAMS (password reset) ============
 @login_required
 def networks_reset_password(request):
-    from employees.models import Employee, generate_temp_password
+    from employees.models import Employee, generate_temp_password, find_employee_by_id
     from employees.audit import log_audit
     from .models import NetworkTicket, TicketReply
     from django.core.cache import cache
@@ -639,9 +639,12 @@ def networks_reset_password(request):
         raise PermissionDenied
 
     employee_id = (request.POST.get('employee_id') or '').strip()
-    emp = Employee.objects.filter(employee_id__iexact=employee_id).first()
-    if emp is None or emp.user is None:
-        messages.error(request, f'No login account found for "{employee_id}".')
+    emp = find_employee_by_id(employee_id)
+    if emp is None:
+        messages.error(request, f'No employee found with ID "{employee_id}".')
+        return redirect('networks_ticket_list')
+    if emp.user is None:
+        messages.error(request, f'{emp.full_name} ({emp.employee_id}) has no login account to reset.')
         return redirect('networks_ticket_list')
 
     team_emp = Employee.objects.filter(user=request.user).first()
