@@ -650,7 +650,7 @@ def networks_reset_password(request):
     temp_password = generate_temp_password()
     emp.user.set_password(temp_password)
     emp.user.save(update_fields=['password'])
-    emp.must_change_password = True
+    emp.must_change_password = False
     emp.failed_login_attempts = 0
     emp.login_locked_until = None
     emp.save(update_fields=['must_change_password', 'failed_login_attempts', 'login_locked_until'])
@@ -677,8 +677,8 @@ def networks_reset_password(request):
     messages.success(
         request,
         f'Password reset for {emp.full_name} ({emp.employee_id}). '
-        f'Temporary password: {temp_password} — share it securely; '
-        f'the employee must change it on next login.'
+        f'New password: {temp_password} — share it securely; '
+        f'the employee can now log in with this password.'
     )
     if ticket_id:
         return redirect('networks_ticket_detail', pk=ticket_id)
