@@ -629,7 +629,6 @@ def networks_reset_password(request):
     from employees.models import Employee, generate_temp_password, find_employee_by_id
     from employees.audit import log_audit
     from .models import NetworkTicket, TicketReply
-    from django.core.cache import cache
     from django.core.exceptions import PermissionDenied
 
     if request.method != 'POST':
@@ -653,9 +652,8 @@ def networks_reset_password(request):
     emp.user.save(update_fields=['password'])
     emp.must_change_password = True
     emp.failed_login_attempts = 0
-    emp.save(update_fields=['must_change_password', 'failed_login_attempts'])
-    cache.delete(f'login_attempts_user_{emp.employee_id}')
-    cache.delete(f'login_attempts_{request.META.get("REMOTE_ADDR")}')
+    emp.login_locked_until = None
+    emp.save(update_fields=['must_change_password', 'failed_login_attempts', 'login_locked_until'])
 
     log_audit(user=request.user, action='password_change', model_name='User',
               object_id=emp.employee_id,

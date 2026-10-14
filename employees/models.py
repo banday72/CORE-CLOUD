@@ -2,6 +2,7 @@ import re
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 CHIEF_ABBREVS = ('ceo', 'coo', 'cio', 'cso', 'cfo', 'cto', 'cmo', 'chro')
 CHIEF_PHRASES = ('chief', 'director', 'general manager')
@@ -109,6 +110,7 @@ class Employee(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     must_change_password = models.BooleanField(default=False, help_text='Force password change on next login')
     failed_login_attempts = models.PositiveIntegerField(default=0, help_text='Consecutive failed login attempts (triggers IT ticket at threshold)')
+    login_locked_until = models.DateTimeField(null=True, blank=True, help_text='Account is blocked from login until this time')
     face_data = models.TextField(blank=True, help_text='JSON encoded face descriptors for face lock')
     face_registered = models.BooleanField(default=False, help_text='Whether face is registered for face lock')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -124,6 +126,10 @@ class Employee(models.Model):
     @property
     def is_chief(self):
         return is_chief_designation(self.designation)
+
+    @property
+    def is_login_locked(self):
+        return bool(self.login_locked_until and self.login_locked_until > timezone.now())
 
     @property
     def in_hr_department(self):

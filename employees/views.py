@@ -8,6 +8,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.views import LoginView
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q
@@ -789,3 +790,28 @@ def dashboard_stats(request):
         'attendance_labels': att_labels, 'attendance_counts': att_counts,
         'salary_labels': sal_labels, 'salary_totals': sal_totals,
     })
+
+
+class LockoutLoginView(LoginView):
+    template_name = 'registration/login.html'
+
+    def form_valid(self, form):
+        from .models import find_employee_by_id
+        from .lockout import clear_login_lock
+        employee = find_employee_by_id(self.request.POST.get('username', ''))
+        if employee and not employee.is_login_locked:
+            clear_login_lock(employee)
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        from .models import find_employee_by_id
+        from .lockout import register_failed_login, locked_message
+        username = (self.request.POST.get('username') or '').strip()
+        employee = find_employee_by_id(username)
+        if employee is not None:
+            if employee.is_login_locked:
+                messages.error(self.request, locked_message(employee))
+            elif register_failed_login(employee):
+                messages.error(self.request, locked_message(employee))
+        return super().form_invalid(form)
+

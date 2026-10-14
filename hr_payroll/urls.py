@@ -6,6 +6,8 @@ from django.conf.urls.static import static
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 
+from employees.views import LockoutLoginView
+
 
 def custom_logout(request):
     log_audit_logout(request)
@@ -22,7 +24,7 @@ def log_audit_logout(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+    path('login/', LockoutLoginView.as_view(), name='login'),
     path('logout/', custom_logout, name='logout'),
     path('password-reset/', auth_views.PasswordResetView.as_view(
         template_name='registration/password_reset.html',

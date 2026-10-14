@@ -1,5 +1,6 @@
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 
 
 class AuthorizedUserBackend(ModelBackend):
@@ -17,8 +18,10 @@ class AuthorizedUserBackend(ModelBackend):
         from employees.models import Employee
         try:
             employee = user.employee
-            if employee.status == 'active':
-                return user
         except Employee.DoesNotExist:
-            pass
+            return None
+        if employee.is_login_locked:
+            raise PermissionDenied('Account locked after too many failed login attempts')
+        if employee.status == 'active':
+            return user
         return None
