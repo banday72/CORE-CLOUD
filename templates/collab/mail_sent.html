@@ -19,8 +19,14 @@
             </div>
             <div class="text-muted small">
                 <i class="fas fa-users me-1"></i>
-                {% for r in mail.recipients.all %}{{ r.employee.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                {% for emp in mail.to_employees %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}
             </div>
+            {% if mail.cc_employees %}
+            <div class="text-muted small">
+                <i class="fas fa-users me-1"></i>CC:
+                {% for emp in mail.cc_employees %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+            {% endif %}
             <div class="small mt-1" style="white-space:pre-wrap;">{{ mail.body|truncatechars:220 }}</div>
         </div>
         {% empty %}

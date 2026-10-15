@@ -36,8 +36,8 @@ class MailMessageAdmin(admin.ModelAdmin):
 
 @admin.register(MailRecipient)
 class MailRecipientAdmin(admin.ModelAdmin):
-    list_display = ('mail', 'employee', 'is_read', 'is_deleted')
-    list_filter = ('is_read', 'is_deleted')
+    list_display = ('mail', 'employee', 'kind', 'is_read', 'is_deleted')
+    list_filter = ('kind', 'is_read', 'is_deleted')
 
 
 class MeetingAttendeeInline(admin.TabularInline):

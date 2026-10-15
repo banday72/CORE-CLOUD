@@ -17,8 +17,19 @@
                 </div>
                 <div class="text-muted small mt-1">
                     <i class="fas fa-users me-1"></i>To:
-                    {% for r in mail.recipients.all %}{{ r.employee.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    {% for emp in to_recipients %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-muted">—</span>{% endfor %}
                 </div>
+                {% if cc_recipients %}
+                <div class="text-muted small mt-1">
+                    <i class="fas fa-users me-1"></i>CC:
+                    {% for emp in cc_recipients %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </div>
+                {% endif %}
+                {% if mail.parent %}
+                <div class="text-muted small mt-1">
+                    <i class="fas fa-reply me-1"></i>In reply to: {{ mail.parent.subject }}
+                </div>
+                {% endif %}
             </div>
             <div class="text-nowrap">
                 <a href="{% url 'collab_mail_compose' %}" class="btn btn-sm btn-outline-primary" title="New message"><i class="fas fa-pen"></i></a>
@@ -31,7 +42,20 @@
     </div>
     <div class="card-body" style="white-space:pre-wrap;">{{ mail.body }}</div>
     <div class="card-footer bg-white">
-        <a href="{% url 'collab_mail' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Inbox</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'collab_mail_reply' mail.pk %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-reply me-1"></i>Reply
+            </a>
+            <a href="{% url 'collab_mail_reply_all' mail.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-reply-all me-1"></i>Reply all
+            </a>
+            <a href="{% url 'collab_mail_cc' mail.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-envelope-open-text me-1"></i>Reply with CC
+            </a>
+            <a href="{% url 'collab_mail' %}" class="btn btn-sm btn-outline-secondary ms-auto">
+                <i class="fas fa-arrow-left me-1"></i>Back to Inbox
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

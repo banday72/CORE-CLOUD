@@ -92,6 +92,10 @@ class MailMessage(models.Model):
     )
     subject = models.CharField(max_length=300)
     body = models.TextField()
+    parent = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='replies',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -100,10 +104,26 @@ class MailMessage(models.Model):
     def __str__(self):
         return self.subject
 
+    @property
+    def to_employees(self):
+        return [r.employee for r in self.recipients.all() if r.kind == 'to']
+
+    @property
+    def cc_employees(self):
+        return [r.employee for r in self.recipients.all() if r.kind == 'cc']
+
 
 class MailRecipient(models.Model):
+    KIND_TO = 'to'
+    KIND_CC = 'cc'
+    KIND_CHOICES = [
+        (KIND_TO, 'To'),
+        (KIND_CC, 'CC'),
+    ]
+
     mail = models.ForeignKey(MailMessage, on_delete=models.CASCADE, related_name='recipients')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='mails_received')
+    kind = models.CharField(max_length=2, choices=KIND_CHOICES, default=KIND_TO)
     is_read = models.BooleanField(default=False)
     read_at = models.DateTimeField(null=True, blank=True)
     is_deleted = models.BooleanField(default=False)
