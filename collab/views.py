@@ -38,6 +38,19 @@ def _active_employees(exclude=None):
     return qs
 
 
+def _employee_data(me):
+    return [
+        {
+            'id': e.pk,
+            'name': e.full_name,
+            'designation': e.designation or '',
+            'dept': e.department.name if e.department else '',
+            'emp_id': e.employee_id,
+        }
+        for e in _active_employees(me)
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Mail (Outlook-like)
 # ---------------------------------------------------------------------------
@@ -204,21 +217,8 @@ def mail_compose(request):
     initial_to = _dedupe(initial_to)
     initial_cc = [i for i in _dedupe(initial_cc) if i not in initial_to]
 
-    employees = list(_active_employees(me))
-    employee_data = [
-        {
-            'id': e.pk,
-            'name': e.full_name,
-            'designation': e.designation or '',
-            'dept': e.department.name if e.department else '',
-            'emp_id': e.employee_id,
-        }
-        for e in employees
-    ]
-
     return render(request, 'collab/mail_compose.html', {
-        'employees': employees,
-        'employee_data': employee_data,
+        'employee_data': _employee_data(me),
         'departments': Department.objects.all(),
         'initial_to': initial_to,
         'initial_cc': initial_cc,
@@ -241,6 +241,45 @@ def mail_reply(request, pk, mode='reply'):
     return redirect(f"{reverse('collab_mail_compose')}?reply_to={pk}&mode={mode}")
 
 
+def _reply_variants(me, mail, to_recipients, cc_recipients):
+    """Pre-built Reply / Reply all / Forward fields (Outlook-like inline reply)."""
+    sender = mail.sender
+    subject = mail.subject or ''
+    re_subject = subject if subject.lower().startswith('re:') else f'Re: {subject}'
+    fwd_subject = subject if subject.lower().startswith('fwd:') else f'Fwd: {subject}'
+    quoted = '\n'.join('> ' + line for line in (mail.body or '').splitlines())
+    sender_name = sender.full_name if sender else 'System'
+    stamp = mail.created_at.strftime('%b %d, %Y %H:%M')
+    reply_body = f'\n\nOn {stamp}, {sender_name} wrote:\n{quoted}'
+
+    sender_only = [sender] if (sender and sender.pk != me.pk) else []
+    reply_all_to = _dedupe([e.pk for e in sender_only] + [e.pk for e in to_recipients if e.pk != me.pk])
+    reply_all_cc = [e.pk for e in cc_recipients if e.pk != me.pk and e.pk not in reply_all_to]
+
+    to_names = ', '.join(e.full_name for e in to_recipients) or '—'
+    from_email = (sender.email if sender else '') or ''
+    forward_body = (
+        f'\n\n---------- Forwarded message ----------\n'
+        f'From: {sender_name} <{from_email}>\n'
+        f'Date: {stamp}\nSubject: {subject}\nTo: {to_names}\n\n{mail.body or ""}'
+    )
+
+    return {
+        'reply': {
+            'to': [e.pk for e in sender_only], 'cc': [],
+            'subject': re_subject, 'body': reply_body,
+        },
+        'reply_all': {
+            'to': reply_all_to, 'cc': reply_all_cc,
+            'subject': re_subject, 'body': reply_body,
+        },
+        'forward': {
+            'to': [], 'cc': [],
+            'subject': fwd_subject, 'body': forward_body,
+        },
+    }
+
+
 @login_required
 def mail_detail(request, pk):
     me = _require_me(request)
@@ -260,6 +299,8 @@ def mail_detail(request, pk):
     return render(request, 'collab/mail_detail.html', {
         'rec': rec, 'mail': rec.mail, 'collab_tab': 'mail_inbox',
         'to_recipients': to_recipients, 'cc_recipients': cc_recipients,
+        'employee_data': _employee_data(me),
+        'reply_variants': _reply_variants(me, rec.mail, to_recipients, cc_recipients),
     })
 
 

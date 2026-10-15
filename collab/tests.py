@@ -112,13 +112,29 @@ class InternalMailTests(TestCase):
         reply = MailMessage.objects.exclude(pk=mail.pk).get()
         self.assertEqual(reply.parent, mail)
 
-    def test_detail_shows_reply_options(self):
+    def test_detail_has_inline_reply(self):
         mail = self._mail_from_b_to_a()
         rec = mail.recipients.get(employee=self.a)
         resp = self.client.get(reverse('collab_mail_detail', args=[rec.pk]))
         self.assertContains(resp, 'Reply all')
-        self.assertContains(resp, reverse('collab_mail_reply', args=[mail.pk]))
-        self.assertContains(resp, reverse('collab_mail_reply_all', args=[mail.pk]))
+        self.assertContains(resp, 'Forward')
+        self.assertContains(resp, 'data-mode="reply"')
+        self.assertContains(resp, 'id="replyCard"')
+        variants = resp.context['reply_variants']
+        self.assertEqual(variants['reply']['to'], [self.b.pk])
+        self.assertEqual(variants['reply']['subject'], 'Re: Project')
+
+    def test_detail_reply_all_and_forward_variants(self):
+        mail = MailMessage.objects.create(sender=self.b, subject='Project', body='body')
+        MailRecipient.objects.create(mail=mail, employee=self.a, kind=MailRecipient.KIND_TO)
+        MailRecipient.objects.create(mail=mail, employee=self.c, kind=MailRecipient.KIND_CC)
+        rec = mail.recipients.get(employee=self.a)
+        resp = self.client.get(reverse('collab_mail_detail', args=[rec.pk]))
+        variants = resp.context['reply_variants']
+        self.assertEqual(variants['reply_all']['to'], [self.b.pk])
+        self.assertEqual(variants['reply_all']['cc'], [self.c.pk])
+        self.assertEqual(variants['forward']['to'], [])
+        self.assertEqual(variants['forward']['subject'], 'Fwd: Project')
 
     def test_sent_list_shows_cc(self):
         self.client.post(reverse('collab_mail_compose'), {
@@ -126,5 +142,5 @@ class InternalMailTests(TestCase):
             'recipients': [self.b.pk], 'cc_recipients': [self.c.pk],
         })
         resp = self.client.get(reverse('collab_mail_sent'))
-        self.assertContains(resp, 'CC:')
+        self.assertContains(resp, 'Cc:')
         self.assertContains(resp, 'Carol Clark')

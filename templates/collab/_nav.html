@@ -4,10 +4,10 @@
         {% if collab_unread_mail %}<span class="badge bg-danger ms-1">{{ collab_unread_mail }}</span>{% endif %}
     </a>
     <a href="{% url 'collab_mail_compose' %}" class="btn btn-sm {% if collab_tab == 'mail_compose' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-        <i class="fas fa-pen me-1"></i>Compose
+        <i class="fas fa-pen me-1"></i>New mail
     </a>
     <a href="{% url 'collab_mail_sent' %}" class="btn btn-sm {% if collab_tab == 'mail_sent' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-        <i class="fas fa-paper-plane me-1"></i>Sent
+        <i class="fas fa-paper-plane me-1"></i>Sent items
     </a>
     <a href="{% url 'collab_chat' %}" class="btn btn-sm {% if collab_tab == 'chat' %}btn-primary{% else %}btn-outline-primary{% endif %}">
         <i class="fas fa-comments me-1"></i>Chat

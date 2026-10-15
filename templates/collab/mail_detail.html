@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Message{% endblock %}
-{% block page_title %}<i class="fas fa-envelope me-2"></i>Internal Mail{% endblock %}
+{% block page_title %}<i class="fas fa-envelope me-2"></i>Mail{% endblock %}
 
 {% block content %}
 {% include "collab/_nav.html" %}
@@ -21,7 +21,7 @@
                 </div>
                 {% if cc_recipients %}
                 <div class="text-muted small mt-1">
-                    <i class="fas fa-users me-1"></i>CC:
+                    <i class="fas fa-users me-1"></i>Cc:
                     {% for emp in cc_recipients %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                 </div>
                 {% endif %}
@@ -32,7 +32,7 @@
                 {% endif %}
             </div>
             <div class="text-nowrap">
-                <a href="{% url 'collab_mail_compose' %}" class="btn btn-sm btn-outline-primary" title="New message"><i class="fas fa-pen"></i></a>
+                <a href="{% url 'collab_mail_compose' %}" class="btn btn-sm btn-outline-primary" title="New mail"><i class="fas fa-pen"></i></a>
                 <form method="post" action="{% url 'collab_mail_delete' rec.pk %}" class="d-inline" onsubmit="return confirm('Move this message to trash?');">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
@@ -43,19 +43,95 @@
     <div class="card-body" style="white-space:pre-wrap;">{{ mail.body }}</div>
     <div class="card-footer bg-white">
         <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'collab_mail_reply' mail.pk %}" class="btn btn-sm btn-primary">
+            <button type="button" class="btn btn-sm btn-primary reply-mode-btn" data-mode="reply">
                 <i class="fas fa-reply me-1"></i>Reply
-            </a>
-            <a href="{% url 'collab_mail_reply_all' mail.pk %}" class="btn btn-sm btn-outline-primary">
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary reply-mode-btn" data-mode="reply_all">
                 <i class="fas fa-reply-all me-1"></i>Reply all
-            </a>
-            <a href="{% url 'collab_mail_cc' mail.pk %}" class="btn btn-sm btn-outline-primary">
-                <i class="fas fa-envelope-open-text me-1"></i>Reply with CC
-            </a>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary reply-mode-btn" data-mode="forward">
+                <i class="fas fa-share me-1"></i>Forward
+            </button>
             <a href="{% url 'collab_mail' %}" class="btn btn-sm btn-outline-secondary ms-auto">
                 <i class="fas fa-arrow-left me-1"></i>Back to Inbox
             </a>
         </div>
     </div>
 </div>
+
+<div class="card shadow mt-3" id="replyCard" style="display:none;">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-reply me-2"></i><span id="replyHeading">Reply</span></div>
+    <div class="card-body">
+        <form method="post" action="{% url 'collab_mail_compose' %}">
+            {% csrf_token %}
+            <input type="hidden" name="parent" value="{{ mail.pk }}">
+            <div class="mb-2">
+                <label class="form-label small mb-1">To</label>
+                {% include "collab/_recipient_picker.html" with target="recipients" initial="" %}
+            </div>
+            <div class="mb-2">
+                <label class="form-label small mb-1">Cc</label>
+                {% include "collab/_recipient_picker.html" with target="cc_recipients" initial="" %}
+            </div>
+            <div class="mb-2">
+                <label class="form-label small mb-1">Subject</label>
+                <input type="text" name="subject" id="replySubject" class="form-control" required maxlength="300">
+            </div>
+            <div class="mb-2">
+                <textarea name="body" id="replyBody" class="form-control" rows="8" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Send</button>
+            <button type="button" class="btn btn-outline-secondary" id="replyDiscard">Discard</button>
+        </form>
+    </div>
+</div>
+
+{{ employee_data|json_script:"mail-employees" }}
+{{ reply_variants|json_script:"mail-reply-variants" }}
+{% include "collab/_recipient_picker_assets.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var variantsEl = document.getElementById('mail-reply-variants');
+    var card = document.getElementById('replyCard');
+    if (!variantsEl || !card) return;
+    var variants = JSON.parse(variantsEl.textContent);
+    var subject = document.getElementById('replySubject');
+    var body = document.getElementById('replyBody');
+    var heading = document.getElementById('replyHeading');
+
+    function applyMode(mode, label) {
+        var v = variants[mode];
+        if (!v) return;
+        subject.value = v.subject;
+        body.value = v.body;
+        heading.textContent = label;
+        if (window.MailPickers) {
+            if (window.MailPickers.recipients) window.MailPickers.recipients.set(v.to);
+            if (window.MailPickers.cc_recipients) window.MailPickers.cc_recipients.set(v.cc);
+        }
+        card.style.display = 'block';
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.reply-mode-btn'), function (btn) {
+        btn.addEventListener('click', function () {
+            applyMode(btn.dataset.mode, btn.textContent.trim());
+        });
+    });
+
+    var discard = document.getElementById('replyDiscard');
+    if (discard) {
+        discard.addEventListener('click', function () {
+            card.style.display = 'none';
+            if (window.MailPickers) {
+                if (window.MailPickers.recipients) window.MailPickers.recipients.clear();
+                if (window.MailPickers.cc_recipients) window.MailPickers.cc_recipients.clear();
+            }
+        });
+    }
+})();
+</script>
 {% endblock %}

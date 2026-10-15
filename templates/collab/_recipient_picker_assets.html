@@ -1,0 +1,148 @@
+<style>
+    .recipient-picker .picker-box { cursor: text; }
+    .recipient-picker .picker-search { box-shadow: none; background: transparent; }
+    .recipient-picker .picker-results {
+        position: absolute; top: 100%; left: 0; right: 0; z-index: 1050;
+        max-height: 260px; overflow-y: auto; margin-top: 2px; display: none;
+    }
+    .recipient-picker .picker-chip { font-weight: 500; padding: 0.35em 0.5em; }
+    .recipient-picker .picker-chip .btn-close { font-size: 0.6rem; padding: 0.35rem; }
+</style>
+<script>
+(function () {
+    var dataEl = document.getElementById('mail-employees');
+    if (!dataEl) return;
+    var EMPLOYEES = JSON.parse(dataEl.textContent);
+    var byId = {};
+    EMPLOYEES.forEach(function (e) { byId[e.id] = e; });
+
+    window.MailPickers = window.MailPickers || {};
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    function haystack(e) {
+        return (e.name + ' ' + e.designation + ' ' + e.emp_id + ' ' + e.dept).toLowerCase();
+    }
+
+    function initPicker(picker) {
+        var target = picker.dataset.target;
+        var box = picker.querySelector('.picker-box');
+        var chipsWrap = picker.querySelector('.picker-chips');
+        var search = picker.querySelector('.picker-search');
+        var results = picker.querySelector('.picker-results');
+        var selected = [];
+
+        function isSelected(id) { return selected.some(function (e) { return e.id === id; }); }
+
+        function renderChips() {
+            chipsWrap.innerHTML = '';
+            Array.prototype.forEach.call(
+                picker.querySelectorAll('input[type=hidden][data-chip]'),
+                function (n) { n.remove(); }
+            );
+            selected.forEach(function (emp) {
+                var chip = document.createElement('span');
+                chip.className = 'picker-chip badge bg-primary d-inline-flex align-items-center gap-1';
+                var label = document.createElement('span');
+                label.textContent = emp.name;
+                chip.appendChild(label);
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-close btn-close-white';
+                btn.addEventListener('click', function () { remove(emp.id); });
+                chip.appendChild(btn);
+                chipsWrap.appendChild(chip);
+
+                var hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = target;
+                hidden.value = emp.id;
+                hidden.setAttribute('data-chip', '1');
+                picker.appendChild(hidden);
+            });
+        }
+
+        function add(emp) {
+            if (!emp || isSelected(emp.id)) return;
+            selected.push(emp);
+            renderChips();
+            search.value = '';
+            hideResults();
+            search.focus();
+        }
+
+        function remove(id) {
+            selected = selected.filter(function (e) { return e.id !== id; });
+            renderChips();
+        }
+
+        function hideResults() { results.style.display = 'none'; results.innerHTML = ''; }
+
+        function showResults(list) {
+            if (!list.length) { hideResults(); return; }
+            results.innerHTML = '';
+            list.slice(0, 50).forEach(function (emp) {
+                var a = document.createElement('button');
+                a.type = 'button';
+                a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                a.innerHTML =
+                    '<span>' + escapeHtml(emp.name) +
+                    (emp.designation ? ' <span class="text-muted small">— ' + escapeHtml(emp.designation) + '</span>' : '') +
+                    '</span>' +
+                    '<span class="text-muted small">' + escapeHtml(emp.emp_id) +
+                    (emp.dept ? ' · ' + escapeHtml(emp.dept) : '') + '</span>';
+                a.addEventListener('click', function () { add(emp); });
+                results.appendChild(a);
+            });
+            results.style.display = 'block';
+        }
+
+        function onSearch() {
+            var q = search.value.trim().toLowerCase();
+            if (!q) { hideResults(); return; }
+            showResults(EMPLOYEES.filter(function (e) {
+                return !isSelected(e.id) && haystack(e).indexOf(q) !== -1;
+            }));
+        }
+
+        box.addEventListener('click', function () { search.focus(); });
+        search.addEventListener('input', onSearch);
+        search.addEventListener('focus', onSearch);
+        search.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                var first = results.querySelector('button');
+                if (results.style.display !== 'none' && first) first.click();
+            } else if (ev.key === 'Backspace' && !search.value && selected.length) {
+                selected.pop();
+                renderChips();
+            } else if (ev.key === 'Escape') {
+                hideResults();
+            }
+        });
+        document.addEventListener('click', function (ev) {
+            if (!picker.contains(ev.target)) hideResults();
+        });
+
+        (picker.dataset.initial || '').split(',').filter(Boolean).forEach(function (idStr) {
+            var emp = byId[parseInt(idStr, 10)];
+            if (emp && !isSelected(emp.id)) selected.push(emp);
+        });
+        renderChips();
+
+        window.MailPickers[target] = {
+            set: function (ids) {
+                selected = (ids || []).map(function (id) { return byId[id]; }).filter(Boolean);
+                renderChips();
+            },
+            clear: function () { selected = []; renderChips(); }
+        };
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('.recipient-picker'), initPicker);
+})();
+</script>

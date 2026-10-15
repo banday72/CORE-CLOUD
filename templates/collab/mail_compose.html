@@ -1,52 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Compose{% endblock %}
-{% block page_title %}<i class="fas fa-envelope me-2"></i>Internal Mail{% endblock %}
-
-{% block extra_css %}
-<style>
-    .recipient-picker .picker-box { cursor: text; }
-    .recipient-picker .picker-search { box-shadow: none; background: transparent; }
-    .recipient-picker .picker-results {
-        position: absolute; top: 100%; left: 0; right: 0; z-index: 1050;
-        max-height: 260px; overflow-y: auto; margin-top: 2px;
-    }
-    .recipient-picker .picker-chip { font-weight: 500; padding: 0.35em 0.5em; }
-    .recipient-picker .picker-chip .btn-close { font-size: 0.6rem; padding: 0.35rem; }
-</style>
-{% endblock %}
+{% block title %}New mail{% endblock %}
+{% block page_title %}<i class="fas fa-envelope me-2"></i>Mail{% endblock %}
 
 {% block content %}
 {% include "collab/_nav.html" %}
 
 <div class="card shadow">
     <div class="card-header bg-white fw-bold">
-        <i class="fas fa-pen me-2"></i>{% if parent %}Reply{% else %}New Message{% endif %}
+        <i class="fas fa-pen me-2"></i>{% if parent %}Reply{% else %}New mail{% endif %}
     </div>
     <div class="card-body">
-        <form method="post" id="composeForm">
+        <form method="post">
             {% csrf_token %}
             <input type="hidden" name="parent" value="{{ parent.pk|default:'' }}">
 
             <div class="mb-3">
-                <label class="form-label">To <span class="text-muted small">(type a name or designation to search)</span></label>
-                <div class="recipient-picker position-relative" data-target="recipients" data-initial="{{ initial_to|join:',' }}">
-                    <div class="picker-box form-control d-flex flex-wrap align-items-center gap-1">
-                        <span class="picker-chips d-inline-flex flex-wrap gap-1"></span>
-                        <input type="text" class="picker-search border-0 flex-grow-1" style="outline:none;min-width:140px;" placeholder="Search by name or designation…" autocomplete="off">
-                    </div>
-                    <div class="picker-results list-group shadow"></div>
-                </div>
+                <label class="form-label">To</label>
+                {% include "collab/_recipient_picker.html" with target="recipients" initial=initial_to|join:',' %}
             </div>
 
             <div class="mb-3">
-                <label class="form-label">CC <span class="text-muted small">(optional)</span></label>
-                <div class="recipient-picker position-relative" data-target="cc_recipients" data-initial="{{ initial_cc|join:',' }}">
-                    <div class="picker-box form-control d-flex flex-wrap align-items-center gap-1">
-                        <span class="picker-chips d-inline-flex flex-wrap gap-1"></span>
-                        <input type="text" class="picker-search border-0 flex-grow-1" style="outline:none;min-width:140px;" placeholder="Search by name or designation…" autocomplete="off">
-                    </div>
-                    <div class="picker-results list-group shadow"></div>
-                </div>
+                <label class="form-label">Cc</label>
+                {% include "collab/_recipient_picker.html" with target="cc_recipients" initial=initial_cc|join:',' %}
             </div>
 
             <div class="row g-2 mb-3">
@@ -73,144 +48,14 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Message</label>
-                <textarea name="body" class="form-control" rows="10" required>{{ initial_body }}</textarea>
+                <textarea name="body" class="form-control" rows="12" required>{{ initial_body }}</textarea>
             </div>
             <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Send</button>
-            <a href="{% url 'collab_mail' %}" class="btn btn-outline-secondary">Cancel</a>
+            <a href="{% url 'collab_mail' %}" class="btn btn-outline-secondary">Discard</a>
         </form>
     </div>
 </div>
 
 {{ employee_data|json_script:"mail-employees" }}
-{% endblock %}
-
-{% block extra_js %}
-<script>
-(function () {
-    var dataEl = document.getElementById('mail-employees');
-    if (!dataEl) return;
-    var EMPLOYEES = JSON.parse(dataEl.textContent);
-    var byId = {};
-    EMPLOYEES.forEach(function (e) { byId[e.id] = e; });
-
-    function escapeHtml(s) {
-        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-        });
-    }
-
-    function haystack(e) {
-        return (e.name + ' ' + e.designation + ' ' + e.emp_id + ' ' + e.dept).toLowerCase();
-    }
-
-    function initPicker(picker) {
-        var target = picker.dataset.target;
-        var box = picker.querySelector('.picker-box');
-        var chipsWrap = picker.querySelector('.picker-chips');
-        var search = picker.querySelector('.picker-search');
-        var results = picker.querySelector('.picker-results');
-        var selected = [];
-
-        function isSelected(id) { return selected.some(function (e) { return e.id === id; }); }
-
-        function renderChips() {
-            chipsWrap.innerHTML = '';
-            Array.prototype.forEach.call(
-                picker.querySelectorAll('input[type=hidden][data-chip]'),
-                function (n) { n.remove(); }
-            );
-            selected.forEach(function (emp) {
-                var chip = document.createElement('span');
-                chip.className = 'picker-chip badge bg-primary d-inline-flex align-items-center gap-1';
-                var label = document.createElement('span');
-                label.textContent = emp.name;
-                chip.appendChild(label);
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn-close btn-close-white';
-                btn.addEventListener('click', function () { remove(emp.id); });
-                chip.appendChild(btn);
-                chipsWrap.appendChild(chip);
-
-                var hidden = document.createElement('input');
-                hidden.type = 'hidden';
-                hidden.name = target;
-                hidden.value = emp.id;
-                hidden.setAttribute('data-chip', '1');
-                picker.appendChild(hidden);
-            });
-        }
-
-        function add(emp) {
-            if (!emp || isSelected(emp.id)) return;
-            selected.push(emp);
-            renderChips();
-            search.value = '';
-            hideResults();
-            search.focus();
-        }
-
-        function remove(id) {
-            selected = selected.filter(function (e) { return e.id !== id; });
-            renderChips();
-        }
-
-        function hideResults() { results.style.display = 'none'; results.innerHTML = ''; }
-
-        function showResults(list) {
-            if (!list.length) { hideResults(); return; }
-            results.innerHTML = '';
-            list.slice(0, 50).forEach(function (emp) {
-                var a = document.createElement('button');
-                a.type = 'button';
-                a.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
-                a.innerHTML =
-                    '<span>' + escapeHtml(emp.name) +
-                    (emp.designation ? ' <span class="text-muted small">— ' + escapeHtml(emp.designation) + '</span>' : '') +
-                    '</span>' +
-                    '<span class="text-muted small">' + escapeHtml(emp.emp_id) +
-                    (emp.dept ? ' · ' + escapeHtml(emp.dept) : '') + '</span>';
-                a.addEventListener('click', function () { add(emp); });
-                results.appendChild(a);
-            });
-            results.style.display = 'block';
-        }
-
-        function onSearch() {
-            var q = search.value.trim().toLowerCase();
-            if (!q) { hideResults(); return; }
-            showResults(EMPLOYEES.filter(function (e) {
-                return !isSelected(e.id) && haystack(e).indexOf(q) !== -1;
-            }));
-        }
-
-        box.addEventListener('click', function () { search.focus(); });
-        search.addEventListener('input', onSearch);
-        search.addEventListener('focus', onSearch);
-        search.addEventListener('keydown', function (ev) {
-            if (ev.key === 'Enter') {
-                ev.preventDefault();
-                var first = results.querySelector('button');
-                if (results.style.display !== 'none' && first) first.click();
-            } else if (ev.key === 'Backspace' && !search.value && selected.length) {
-                selected.pop();
-                renderChips();
-            } else if (ev.key === 'Escape') {
-                hideResults();
-            }
-        });
-        document.addEventListener('click', function (ev) {
-            if (!picker.contains(ev.target)) hideResults();
-        });
-
-        (picker.dataset.initial || '').split(',').filter(Boolean).forEach(function (idStr) {
-            var emp = byId[parseInt(idStr, 10)];
-            if (emp && !isSelected(emp.id)) selected.push(emp);
-        });
-        renderChips();
-    }
-
-    document.querySelectorAll('.recipient-picker').forEach(initPicker);
-})();
-</script>
+{% include "collab/_recipient_picker_assets.html" %}
 {% endblock %}

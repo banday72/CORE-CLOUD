@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Sent Mail{% endblock %}
-{% block page_title %}<i class="fas fa-envelope me-2"></i>Internal Mail{% endblock %}
+{% block title %}Sent items{% endblock %}
+{% block page_title %}<i class="fas fa-envelope me-2"></i>Mail{% endblock %}
 
 {% block content %}
 {% include "collab/_nav.html" %}
 
 <div class="card shadow">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="fw-bold"><i class="fas fa-paper-plane me-2"></i>Sent</span>
+        <span class="fw-bold"><i class="fas fa-paper-plane me-2"></i>Sent items</span>
         <span class="text-muted small">{{ mails|length }} message{{ mails|length|pluralize }}</span>
     </div>
     <div class="list-group list-group-flush">
@@ -23,7 +23,7 @@
             </div>
             {% if mail.cc_employees %}
             <div class="text-muted small">
-                <i class="fas fa-users me-1"></i>CC:
+                <i class="fas fa-users me-1"></i>Cc:
                 {% for emp in mail.cc_employees %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
             </div>
             {% endif %}
