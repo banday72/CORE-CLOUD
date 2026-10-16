@@ -1,0 +1,175 @@
+/* CoreCloud interactive UI layer
+   Loaded after Bootstrap. Adds motion, feedback, and drawer behaviour
+   without touching the existing inline theme. */
+
+:root {
+    --cc-primary: #2980b9;
+    --cc-success: #1cc88a;
+    --cc-info: #36b9cc;
+    --cc-warning: #f6c23e;
+    --cc-danger: #e74a3b;
+    --cc-transition: 180ms cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ---------- Page + card motion ---------- */
+@keyframes cc-fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.cc-animate-in {
+    animation: cc-fade-up 280ms ease both;
+}
+
+.content-wrapper .card {
+    transition: box-shadow var(--cc-transition), transform var(--cc-transition);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cc-animate-in { animation: none !important; }
+    * { transition-duration: 0.001ms !important; }
+}
+
+/* ---------- Feature tiles get a lift instead of inline JS ---------- */
+.cc-tile {
+    transition: transform var(--cc-transition), box-shadow var(--cc-transition);
+}
+
+.cc-tile:hover,
+.cc-tile:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .1);
+}
+
+.cc-stat-value {
+    transition: color var(--cc-transition);
+}
+
+/* ---------- Accessibility ---------- */
+:focus-visible {
+    outline: 2px solid var(--cc-primary);
+    outline-offset: 2px;
+}
+
+.icon-btn {
+    position: relative;
+}
+
+/* ---------- Sidebar drawer / backdrop ---------- */
+.sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(13, 33, 55, .45);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--cc-transition), visibility var(--cc-transition);
+    z-index: 99;
+}
+
+.sidebar-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ---------- Busy buttons ---------- */
+.btn.is-busy {
+    pointer-events: none;
+    opacity: .75;
+}
+
+.btn .cc-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: .35em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: cc-spin .6s linear infinite;
+    vertical-align: -0.15em;
+}
+
+@keyframes cc-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ---------- Row transitions ---------- */
+.row-removing {
+    opacity: 0;
+    transform: translateX(12px);
+    transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.row-new {
+    animation: cc-fade-up 260ms ease both;
+}
+
+/* ---------- Toasts ---------- */
+.app-toast-container {
+    z-index: 1090;
+}
+
+.app-toast {
+    border: none;
+    border-left: 4px solid var(--cc-primary);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, .15);
+    min-width: 280px;
+}
+
+.app-toast.toast-success { border-left-color: var(--cc-success); }
+.app-toast.toast-danger  { border-left-color: var(--cc-danger); }
+.app-toast.toast-warning { border-left-color: var(--cc-warning); }
+.app-toast.toast-info,
+.app-toast.toast-primary { border-left-color: var(--cc-info); }
+
+.app-toast .toast-body {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-size: .875rem;
+}
+
+.app-toast .toast-body i {
+    font-size: 1.05rem;
+}
+
+.app-toast.toast-success .toast-body i { color: var(--cc-success); }
+.app-toast.toast-danger  .toast-body i { color: var(--cc-danger); }
+.app-toast.toast-warning .toast-body i { color: var(--cc-warning); }
+.app-toast.toast-info    .toast-body i,
+.app-toast.toast-primary .toast-body i { color: var(--cc-info); }
+
+/* ---------- Skeleton loaders ---------- */
+.cc-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #eef1f6;
+    border-radius: 8px;
+}
+
+.cc-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .7), transparent);
+    animation: cc-shimmer 1.2s infinite;
+}
+
+@keyframes cc-shimmer {
+    100% { transform: translateX(100%); }
+}
+
+.cc-chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: #98a2b3;
+    gap: .5rem;
+}
+
+/* ---------- Table row hover affordance ---------- */
+.table-hover tbody tr {
+    transition: background-color var(--cc-transition);
+}
