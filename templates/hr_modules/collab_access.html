@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Collaboration Access{% endblock %}
+{% block page_title %}<i class="fas fa-shield-halved me-2"></i>Collaboration Access Control{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-3 border-primary">
+    <div class="card-body py-3">
+        <div class="d-flex justify-content-between flex-wrap gap-2 align-items-center">
+            <div class="small text-muted" style="max-width:640px;">
+                <i class="fas fa-circle-info me-1 text-primary"></i>
+                Allow or block <strong>Mail</strong>, <strong>Chat</strong> and <strong>Meetings</strong> for each employee.
+                All features are allowed by default; a blocked employee loses that feature everywhere
+                (links, badges, message pickers and meeting invites). Only the Networks / IT team can change these settings.
+            </div>
+            <form method="get" class="d-flex gap-2">
+                <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm"
+                       placeholder="Search name / ID / designation" style="width:260px;">
+                <button type="submit" class="btn btn-outline-primary btn-sm"><i class="fas fa-magnifying-glass"></i></button>
+                {% if search %}
+                <a href="{% url 'collab_access_admin' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Employee</th>
+                        <th class="text-center" style="width:170px;">Mail</th>
+                        <th class="text-center" style="width:170px;">Chat</th>
+                        <th class="text-center" style="width:170px;">Meetings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center me-2"
+                                     style="width:32px;height:32px;background:#eaf2f8;color:#2980b9;font-weight:600;font-size:0.65rem;flex-shrink:0;">
+                                    {{ row.employee.first_name|first|upper }}{{ row.employee.last_name|first|upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="font-size:0.85rem;">{{ row.employee.full_name }}</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">
+                                        {{ row.employee.employee_id }}
+                                        {% if row.employee.designation %}&middot; {{ row.employee.designation }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        {% for state in row.states %}
+                        <td class="text-center">
+                            {% if state.blocked %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="employee" value="{{ row.employee.pk }}">
+                                <input type="hidden" name="feature" value="{{ state.feature }}">
+                                <input type="hidden" name="blocked" value="0">
+                                <button type="submit" class="btn btn-danger btn-sm rounded-pill px-3"
+                                        title="{% if state.by %}Blocked by {{ state.by.full_name|default:'system' }} on {{ state.at|date:'d M Y H:i' }}{% endif %} — click to allow">
+                                    <i class="fas fa-ban me-1"></i>Blocked
+                                </button>
+                            </form>
+                            {% if state.by %}
+                            <div class="text-muted mt-1" style="font-size:0.62rem;">
+                                {{ state.by.full_name }}<br>{{ state.at|date:'d M Y, H:i' }}
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="employee" value="{{ row.employee.pk }}">
+                                <input type="hidden" name="feature" value="{{ state.feature }}">
+                                <input type="hidden" name="blocked" value="1">
+                                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3"
+                                        title="Allowed (default) — click to block">
+                                    <i class="fas fa-check me-1"></i>Allowed
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">No employees found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

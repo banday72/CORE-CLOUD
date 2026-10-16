@@ -7,7 +7,10 @@ from django.urls import reverse
 
 from employees.models import Department, Employee
 
-from .models import MailMessage, MailRecipient, MailSettings
+from .models import (
+    MailMessage, MailRecipient, MailSettings,
+    CollabAccess, Conversation, ConversationMember,
+)
 
 
 class InternalMailTests(TestCase):
@@ -272,3 +275,208 @@ class InternalMailTests(TestCase):
         resp = self.client.get(reverse('collab_mail_sent'))
         self.assertContains(resp, 'Cc:')
         self.assertContains(resp, 'Carol Clark')
+
+
+class CollabAccessTests(TestCase):
+    """Per-employee allow/block for Mail, Chat and Meetings."""
+
+    def setUp(self):
+        self.dept = Department.objects.create(name='IT')
+        self.admin = self._make('EMP300', 'Nina', 'Networks', 'Network Engineer', support_team='networks')
+        self.plain = self._make('EMP301', 'Paul', 'Plain', 'Engineer')
+        self.target = self._make('EMP302', 'Tina', 'Target', 'Designer')
+        self.client.force_login(self.admin.user)
+
+    def _make(self, emp_id, first, last, designation, support_team=''):
+        user = User.objects.create_user(username=emp_id, password='employee123')
+        return Employee.objects.create(
+            user=user, employee_id=emp_id, first_name=first, last_name=last,
+            email=f'{emp_id.lower()}@example.com', department=self.dept,
+            designation=designation, date_of_joining=date(2020, 1, 1),
+            salary=Decimal('1000.00'), status='active', support_team=support_team,
+        )
+
+    def _block(self, emp, feature):
+        return self.client.post(reverse('collab_access_admin'), {
+            'employee': emp.pk, 'feature': feature, 'blocked': '1',
+        })
+
+    def _allow(self, emp, feature):
+        return self.client.post(reverse('collab_access_admin'), {
+            'employee': emp.pk, 'feature': feature, 'blocked': '0',
+        })
+
+    # -- management page -----------------------------------------------------
+    def test_page_renders_for_networks_team(self):
+        resp = self.client.get(reverse('collab_access_admin'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Tina Target')
+        self.assertContains(resp, 'Allowed')
+
+    def test_page_denied_for_plain_employee(self):
+        self.client.force_login(self.plain.user)
+        resp = self.client.get(reverse('collab_access_admin'))
+        self.assertRedirects(resp, reverse('dashboard'))
+
+    def test_block_and_unblock_roundtrip(self):
+        resp = self._block(self.target, 'mail')
+        self.assertRedirects(resp, reverse('collab_access_admin'))
+        access = CollabAccess.objects.get(employee=self.target)
+        self.assertTrue(access.block_mail)
+        self.assertFalse(access.block_chat)
+        self.assertEqual(access.blocked_by, self.admin)
+        resp = self.client.get(reverse('collab_access_admin'))
+        self.assertContains(resp, 'Blocked')
+
+        self._allow(self.target, 'mail')
+        self.assertFalse(CollabAccess.objects.filter(employee=self.target).exists())
+        resp = self.client.get(reverse('collab_access_admin'))
+        self.assertContains(resp, 'Allowed')
+
+    def test_sidebar_link_hidden_without_permission(self):
+        resp = self.client.get(reverse('dashboard'))
+        self.assertContains(resp, reverse('collab_access_admin'))
+        self.client.force_login(self.plain.user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertNotContains(resp, reverse('collab_access_admin'))
+
+    # -- feature lockout -----------------------------------------------------
+    def test_blocked_mail_redirects(self):
+        self._block(self.target, 'mail')
+        self.client.force_login(self.target.user)
+        resp = self.client.get(reverse('collab_mail'))
+        self.assertRedirects(resp, reverse('dashboard'))
+        resp = self.client.get(reverse('collab_mail_compose'))
+        self.assertRedirects(resp, reverse('dashboard'))
+
+    def test_blocked_chat_redirects_and_json_returns_403(self):
+        conv = Conversation.objects.create(kind=Conversation.KIND_DIRECT, created_by=self.plain)
+        ConversationMember.objects.create(conversation=conv, employee=self.target)
+        ConversationMember.objects.create(conversation=conv, employee=self.plain)
+        self._block(self.target, 'chat')
+        self.client.force_login(self.target.user)
+        resp = self.client.get(reverse('collab_chat'))
+        self.assertRedirects(resp, reverse('dashboard'))
+        resp = self.client.get(reverse('collab_chat_messages', args=[conv.pk]))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_blocked_meetings_redirect(self):
+        self._block(self.target, 'meetings')
+        self.client.force_login(self.target.user)
+        resp = self.client.get(reverse('collab_meetings'))
+        self.assertRedirects(resp, reverse('dashboard'))
+
+    def test_default_access_is_unaffected(self):
+        self.assertFalse(CollabAccess.objects.exists())
+        self.client.force_login(self.plain.user)
+        for name in ('collab_mail', 'collab_chat', 'collab_meetings'):
+            resp = self.client.get(reverse(name))
+            self.assertEqual(resp.status_code, 200, name)
+
+    # -- pickers / invites ---------------------------------------------------
+    def test_mail_picker_excludes_blocked_employee(self):
+        self._block(self.target, 'mail')
+        self.client.force_login(self.plain.user)
+        resp = self.client.get(reverse('collab_mail_compose'))
+        ids = {e['id'] for e in resp.context['employee_data']}
+        self.assertNotIn(self.target.pk, ids)
+        self.assertIn(self.admin.pk, ids)
+
+    def test_chat_picker_excludes_blocked_employee(self):
+        self._block(self.target, 'chat')
+        self.client.force_login(self.plain.user)
+        resp = self.client.get(reverse('collab_chat'))
+        ids = {e.pk for e in resp.context['employees']}
+        self.assertNotIn(self.target.pk, ids)
+
+    def test_meeting_picker_excludes_blocked_employee(self):
+        self._block(self.target, 'meetings')
+        self.client.force_login(self.plain.user)
+        resp = self.client.get(reverse('collab_meeting_create'))
+        ids = {e.pk for e in resp.context['employees']}
+        self.assertNotIn(self.target.pk, ids)
+
+    # -- badges / sidebar ----------------------------------------------------
+    def test_unread_badges_zeroed_when_blocked(self):
+        mail = MailMessage.objects.create(sender=self.plain, subject='Hi', body='body')
+        MailRecipient.objects.create(mail=mail, employee=self.target, kind=MailRecipient.KIND_TO)
+
+        self.client.force_login(self.target.user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.context['collab_unread_mail'], 1)
+
+        self.client.force_login(self.admin.user)
+        self._block(self.target, 'mail')
+        self.client.force_login(self.target.user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertEqual(resp.context['collab_unread_mail'], 0)
+
+    def test_sidebar_hides_blocked_links(self):
+        self.client.force_login(self.target.user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertContains(resp, reverse('collab_mail'))
+
+        self.client.force_login(self.admin.user)
+        self._block(self.target, 'mail')
+        self.client.force_login(self.target.user)
+        resp = self.client.get(reverse('dashboard'))
+        self.assertNotContains(resp, reverse('collab_mail'))
+
+
+class ChatCallTests(TestCase):
+    """Audio/video call buttons in chat."""
+
+    def setUp(self):
+        self.dept = Department.objects.create(name='IT')
+        self.a = self._make('EMP400', 'Alice', 'Caller', 'Engineer')
+        self.b = self._make('EMP401', 'Bob', 'Callee', 'Designer')
+        self.conv = Conversation.objects.create(kind=Conversation.KIND_DIRECT, created_by=self.a)
+        ConversationMember.objects.create(conversation=self.conv, employee=self.a)
+        ConversationMember.objects.create(conversation=self.conv, employee=self.b)
+        self.client.force_login(self.a.user)
+
+    def _make(self, emp_id, first, last, designation):
+        user = User.objects.create_user(username=emp_id, password='employee123')
+        return Employee.objects.create(
+            user=user, employee_id=emp_id, first_name=first, last_name=last,
+            email=f'{emp_id.lower()}@example.com', department=self.dept,
+            designation=designation, date_of_joining=date(2020, 1, 1),
+            salary=Decimal('1000.00'), status='active',
+        )
+
+    def test_chat_page_shows_audio_and_video_buttons(self):
+        resp = self.client.get(reverse('collab_chat_room', args=[self.conv.pk]))
+        self.assertContains(resp, 'mode" value="video')
+        self.assertContains(resp, 'mode" value="audio')
+        self.assertContains(resp, 'Start a video call')
+        self.assertContains(resp, 'audio-only call')
+
+    def test_conversation_list_has_call_button(self):
+        resp = self.client.get(reverse('collab_chat'))
+        self.assertContains(resp, reverse('collab_chat_call', args=[self.conv.pk]))
+
+    def test_video_call_posts_message_and_redirects_to_room(self):
+        resp = self.client.post(reverse('collab_chat_call', args=[self.conv.pk]), {'mode': 'video'})
+        self.assertRedirects(resp, reverse('collab_call_room', args=[self.conv.pk]))
+        msg = self.conv.messages.order_by('-created_at').first()
+        self.assertIn('video call', msg.body)
+
+    def test_audio_call_redirects_with_audio_param(self):
+        resp = self.client.post(reverse('collab_chat_call', args=[self.conv.pk]), {'mode': 'audio'})
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('audio=1', resp.url)
+        msg = self.conv.messages.order_by('-created_at').first()
+        self.assertIn('audio call', msg.body)
+
+    def test_call_user_reuses_direct_conversation(self):
+        resp = self.client.post(reverse('collab_chat_call_user'), {'employee': self.b.pk, 'mode': 'video'})
+        self.assertRedirects(resp, reverse('collab_call_room', args=[self.conv.pk]))
+        self.assertEqual(Conversation.objects.count(), 1)
+
+    def test_call_user_creates_direct_conversation(self):
+        other = self._make('EMP402', 'Cara', 'Caller2', 'Manager')
+        resp = self.client.post(reverse('collab_chat_call_user'), {'employee': other.pk})
+        conv = Conversation.objects.exclude(pk=self.conv.pk).get()
+        self.assertRedirects(resp, reverse('collab_call_room', args=[conv.pk]))
+        self.assertEqual(
+            set(conv.members.values_list('employee_id', flat=True)), {self.a.pk, other.pk})

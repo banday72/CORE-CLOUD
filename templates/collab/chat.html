@@ -21,23 +21,33 @@
         <div class="card shadow">
             <div class="list-group list-group-flush">
                 {% for row in conv_list %}
-                <a href="{% url 'collab_chat_room' row.conv.pk %}"
-                   class="list-group-item list-group-item-action {% if active and active.pk == row.conv.pk %}active{% endif %}">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-truncate fw-semibold">
-                            {% if row.conv.kind == 'group' %}<i class="fas fa-users me-1"></i>{% else %}<i class="fas fa-user me-1"></i>{% endif %}
-                            {{ row.title }}
-                        </span>
-                        {% if row.unread %}<span class="badge bg-danger">{{ row.unread }}</span>{% endif %}
-                    </div>
-                    {% if row.last %}
-                    <div class="small text-truncate {% if active and active.pk == row.conv.pk %}text-white-50{% else %}text-muted{% endif %}">
-                        {{ row.last.sender.full_name|default:"?" }}: {{ row.last.body|truncatechars:40 }}
-                    </div>
-                    {% else %}
-                    <div class="small text-muted">No messages yet</div>
-                    {% endif %}
-                </a>
+                <div class="list-group-item d-flex align-items-center gap-2 {% if active and active.pk == row.conv.pk %}active{% endif %}">
+                    <a href="{% url 'collab_chat_room' row.conv.pk %}"
+                       class="flex-grow-1 overflow-hidden text-decoration-none {% if active and active.pk == row.conv.pk %}text-white{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-truncate fw-semibold">
+                                {% if row.conv.kind == 'group' %}<i class="fas fa-users me-1"></i>{% else %}<i class="fas fa-user me-1"></i>{% endif %}
+                                {{ row.title }}
+                            </span>
+                            {% if row.unread %}<span class="badge bg-danger">{{ row.unread }}</span>{% endif %}
+                        </div>
+                        {% if row.last %}
+                        <div class="small text-truncate {% if active and active.pk == row.conv.pk %}text-white-50{% else %}text-muted{% endif %}">
+                            {{ row.last.sender.full_name|default:"?" }}: {{ row.last.body|truncatechars:40 }}
+                        </div>
+                        {% else %}
+                        <div class="small {% if active and active.pk == row.conv.pk %}text-white-50{% else %}text-muted{% endif %}">No messages yet</div>
+                        {% endif %}
+                    </a>
+                    <form method="post" action="{% url 'collab_chat_call' row.conv.pk %}" class="m-0 flex-shrink-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="mode" value="video">
+                        <button type="submit" class="btn btn-sm btn-success rounded-circle d-inline-flex align-items-center justify-content-center"
+                                style="width:30px;height:30px;" title="Video call — {{ row.title }}">
+                            <i class="fas fa-video" style="font-size:0.7rem;"></i>
+                        </button>
+                    </form>
+                </div>
                 {% empty %}
                 <div class="list-group-item text-center py-4 text-muted small">
                     No conversations yet. Start a new chat.
@@ -51,19 +61,48 @@
         {% if active %}
         <div class="card shadow d-flex flex-column" style="height: 70vh;">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <div>
+                <div class="overflow-hidden">
                     <div class="fw-bold">
                         {% if active.kind == 'group' %}<i class="fas fa-users me-1"></i>{% else %}<i class="fas fa-user me-1"></i>{% endif %}
                         {{ active_title }}
                     </div>
-                    <div class="text-muted small">
+                    <div class="text-muted small text-truncate">
                         {% for p in participants %}{{ p.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
                     </div>
+                    {% if active.kind == 'group' %}
+                    <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                        {% for p in participants %}
+                        {% if p.pk != current_employee.pk %}
+                        <form method="post" action="{% url 'collab_chat_call_user' %}" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="employee" value="{{ p.pk }}">
+                            <input type="hidden" name="mode" value="video">
+                            <button type="submit" class="btn btn-xs btn-outline-success rounded-pill px-2 py-0"
+                                    style="font-size:0.62rem;" title="Video call {{ p.full_name }}">
+                                <i class="fas fa-video me-1"></i>{{ p.first_name }}
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
-                <form method="post" action="{% url 'collab_chat_call' active.pk %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success text-nowrap"><i class="fas fa-phone-volume me-1"></i>Call</button>
-                </form>
+                <div class="d-flex gap-1 flex-shrink-0 ms-2">
+                    <form method="post" action="{% url 'collab_chat_call' active.pk %}" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="mode" value="video">
+                        <button type="submit" class="btn btn-sm btn-success text-nowrap" title="Start a video call">
+                            <i class="fas fa-video me-1"></i>Call
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'collab_chat_call' active.pk %}" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="mode" value="audio">
+                        <button type="submit" class="btn btn-sm btn-outline-success text-nowrap" title="Start an audio-only call">
+                            <i class="fas fa-phone me-1"></i>Audio
+                        </button>
+                    </form>
+                </div>
             </div>
             <div class="card-body overflow-auto" id="chatBody" style="background:#f8f9fc;">
                 {% for m in active_messages %}

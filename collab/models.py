@@ -123,6 +123,76 @@ class MailSettings(models.Model):
         return obj
 
 
+FEATURE_MAIL = 'mail'
+FEATURE_CHAT = 'chat'
+FEATURE_MEETINGS = 'meetings'
+FEATURE_CHOICES = [
+    (FEATURE_MAIL, 'Mail'),
+    (FEATURE_CHAT, 'Chat'),
+    (FEATURE_MEETINGS, 'Meetings'),
+]
+
+_BLOCK_FIELDS = {
+    FEATURE_MAIL: 'block_mail',
+    FEATURE_CHAT: 'block_chat',
+    FEATURE_MEETINGS: 'block_meetings',
+}
+
+
+class CollabAccess(models.Model):
+    """Per-employee allow/block overrides for collaboration features.
+
+    Managed by the Networks/IT team. Absence of a row means the employee
+    has full access (default-on), so this table only stores exceptions.
+    """
+
+    employee = models.OneToOneField(
+        Employee, on_delete=models.CASCADE, related_name='collab_access',
+    )
+    block_mail = models.BooleanField(default=False)
+    block_chat = models.BooleanField(default=False)
+    block_meetings = models.BooleanField(default=False)
+    blocked_by = models.ForeignKey(
+        Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='+',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'Collaboration access'
+
+    def __str__(self):
+        blocked = [f for f in FEATURE_CHOICES if getattr(self, _BLOCK_FIELDS[f[0]])]
+        return f'{self.employee} — blocked: {", ".join(b[0] for b in blocked) or "none"}'
+
+    @property
+    def blocked_features(self):
+        return [f for f, field in _BLOCK_FIELDS.items() if getattr(self, field)]
+
+    @property
+    def is_fully_allowed(self):
+        return not any(getattr(self, field) for field in _BLOCK_FIELDS.values())
+
+    def set_block(self, feature, blocked, blocked_by=None):
+        """Set/clear one feature block; delete the row when nothing is blocked."""
+        field = _BLOCK_FIELDS.get(feature)
+        if field is None:
+            raise ValueError(f'Unknown feature: {feature}')
+        setattr(self, field, blocked)
+        if blocked and blocked_by is not None:
+            self.blocked_by = blocked_by
+        if self.is_fully_allowed and self.pk:
+            self.delete()
+            return None
+        self.save()
+        return self
+
+
+def block_field(feature):
+    """Return the ``block_<feature>`` field name for a feature key."""
+    return _BLOCK_FIELDS[feature]
+
+
 class MailMessage(models.Model):
     """An internal mail (Outlook-like). One row per sent message."""
 

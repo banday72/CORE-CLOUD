@@ -2,10 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.urls import reverse
 from django.utils import timezone
 from datetime import date, timedelta
 
-from employees.decorators import permission_required
+from employees.decorators import permission_required, collab_access_required
 from employees.permissions import permissions_for_user
 from .emails import send_ticket_email, email_team_members
 
@@ -683,6 +684,71 @@ def networks_reset_password(request):
     if ticket_id:
         return redirect('networks_ticket_detail', pk=ticket_id)
     return redirect('networks_ticket_list')
+
+
+# ============ COLLABORATION ACCESS (Mail/Chat/Meetings allow-block) ============
+@login_required
+@collab_access_required
+def collab_access_admin(request):
+    """Networks/IT team: allow or block Mail, Chat and Meetings per employee."""
+    from django.db.models import Q
+    from employees.models import Employee
+    from collab.access import FEATURES, can_manage_collab_access
+    from collab.models import FEATURE_CHOICES, CollabAccess
+
+    if not can_manage_collab_access(request.user):
+        messages.error(request, 'Access denied. Only the Networks/IT team can manage collaboration access.')
+        return redirect('dashboard')
+
+    search = (request.GET.get('search') or '').strip()
+    employees = (Employee.objects
+                 .filter(status='active')
+                 .select_related('department', 'collab_access')
+                 .order_by('first_name', 'last_name'))
+    if search:
+        employees = employees.filter(
+            Q(employee_id__icontains=search) | Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) | Q(designation__icontains=search))
+
+    rows = []
+    for emp in employees:
+        access = getattr(emp, 'collab_access', None)
+        rows.append({
+            'employee': emp,
+            'access': access,
+            'states': [
+                {'feature': f, 'label': label,
+                 'blocked': bool(access and getattr(access, f'block_{f}')),
+                 'by': access.blocked_by if access else None,
+                 'at': access.updated_at if access else None}
+                for f, label in FEATURE_CHOICES
+            ],
+        })
+
+    if request.method == 'POST':
+        emp_id = request.POST.get('employee')
+        feature = request.POST.get('feature')
+        blocked = request.POST.get('blocked') == '1'
+        emp = Employee.objects.filter(pk=emp_id).first()
+        if emp is None or feature not in FEATURES:
+            messages.error(request, 'Invalid employee or feature.')
+        else:
+            access = CollabAccess.objects.filter(employee=emp).first()
+            if access is None:
+                if not blocked:
+                    messages.info(request, f'{emp.full_name} already has full {feature} access.')
+                    return redirect(f"{reverse('collab_access_admin')}{f'?search={search}' if search else ''}")
+                access = CollabAccess(employee=emp)
+            action = 'blocked' if blocked else 'unblocked'
+            access.set_block(feature, blocked, blocked_by=request.user.employee if hasattr(request.user, 'employee') else None)
+            messages.success(request, f'{emp.full_name} ({emp.employee_id}): {feature} {action}.')
+        return redirect(f"{reverse('collab_access_admin')}{f'?search={search}' if search else ''}")
+
+    return render(request, 'hr_modules/collab_access.html', {
+        'rows': rows,
+        'search': search,
+        'feature_choices': FEATURE_CHOICES,
+    })
 
 
 # ============ IT TEAMS (assignment) ============

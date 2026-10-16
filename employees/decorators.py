@@ -29,3 +29,8 @@ def hr_required(view_func):
 
 def privilege_required(view_func):
     return permission_required('manage_access', 'view_audit', 'manage_slides', 'bulk_import')(view_func)
+
+
+def collab_access_required(view_func):
+    """Networks team (resolve_networks), IT managers (manage_it_teams), superusers."""
+    return permission_required('resolve_networks', 'manage_it_teams')(view_func)

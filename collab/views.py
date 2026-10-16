@@ -16,9 +16,11 @@ from django.views.decorators.http import require_POST
 from employees.decorators import permission_required
 from employees.models import Department, Employee
 
+from .access import accessible_employees, blocked_features, is_blocked
 from .models import (
     FORWARD_STYLE_CHOICES, FORWARD_STYLE_QUOTE,
     MAIL_TYPE_CHOICES, MAIL_TYPE_HTML, MAIL_TYPE_PLAIN,
+    FEATURE_CHAT, FEATURE_MAIL, FEATURE_MEETINGS,
     ChatMessage, Conversation, ConversationMember,
     MailMessage, MailRecipient, MailSettings, Meeting, MeetingAttendee,
 )
@@ -34,6 +36,25 @@ def _require_me(request):
     me = _me(request)
     if me is None:
         messages.error(request, 'No employee profile is linked to this account.')
+    return me
+
+
+def _guard_feature(request, feature):
+    """Return the current Employee, or a redirect response when blocked.
+
+    Usage: ``guarded = _guard_feature(request, FEATURE_MAIL);
+    if isinstance(guarded, HttpResponse): return guarded``.
+    """
+    me = _require_me(request)
+    if me is None:
+        return redirect('dashboard')
+    if is_blocked(me, feature):
+        messages.error(
+            request,
+            f'Your {feature} access has been restricted by the IT/Networks team. '
+            f'Contact them to restore access.',
+        )
+        return redirect('dashboard')
     return me
 
 
@@ -53,7 +74,7 @@ def _employee_data(me):
             'dept': e.department.name if e.department else '',
             'emp_id': e.employee_id,
         }
-        for e in _active_employees(me)
+        for e in accessible_employees(FEATURE_MAIL, exclude=me)
     ]
 
 
@@ -63,9 +84,9 @@ def _employee_data(me):
 
 @login_required
 def mail_inbox(request):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MAIL)
+    if not isinstance(me, Employee):
+        return me
     items = (MailRecipient.objects
              .filter(employee=me, is_deleted=False)
              .select_related('mail', 'mail__sender'))
@@ -78,9 +99,9 @@ def mail_inbox(request):
 
 @login_required
 def mail_sent(request):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MAIL)
+    if not isinstance(me, Employee):
+        return me
     mails = (MailMessage.objects
              .filter(sender=me)
              .prefetch_related('recipients__employee'))
@@ -187,9 +208,9 @@ def _apply_signature(body, mail_type):
 
 @login_required
 def mail_compose(request):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MAIL)
+    if not isinstance(me, Employee):
+        return me
 
     prefs = MailSettings.get()
     mode = request.GET.get('mode', 'reply')
@@ -329,9 +350,9 @@ def mail_compose(request):
 
 @login_required
 def mail_reply(request, pk, mode='reply'):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MAIL)
+    if not isinstance(me, Employee):
+        return me
     mail = get_object_or_404(MailMessage, pk=pk)
     if not _can_access_mail(me, mail):
         messages.error(request, 'You do not have access to that message.')
@@ -376,9 +397,9 @@ def _reply_variants(me, mail, to_recipients, cc_recipients):
 
 @login_required
 def mail_detail(request, pk):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MAIL)
+    if not isinstance(me, Employee):
+        return me
     rec = get_object_or_404(
         MailRecipient.objects.select_related('mail', 'mail__sender'),
         pk=pk, employee=me, is_deleted=False,
@@ -427,9 +448,9 @@ def mail_settings(request):
 @require_POST
 @login_required
 def mail_delete(request, pk):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MAIL)
+    if not isinstance(me, Employee):
+        return me
     rec = get_object_or_404(MailRecipient, pk=pk, employee=me)
     rec.is_deleted = True
     rec.save(update_fields=['is_deleted'])
@@ -443,9 +464,9 @@ def mail_delete(request, pk):
 
 @login_required
 def chat_home(request, conv_id=None):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_CHAT)
+    if not isinstance(me, Employee):
+        return me
 
     conv_list = []
     for conv in Conversation.objects.filter(members__employee=me).prefetch_related('members__employee'):
@@ -491,7 +512,7 @@ def chat_home(request, conv_id=None):
         'active_title': active_title,
         'active_messages': active_messages,
         'participants': participants,
-        'employees': _active_employees(me),
+        'employees': accessible_employees(FEATURE_CHAT, exclude=me),
         'collab_tab': 'chat',
     })
 
@@ -499,10 +520,19 @@ def chat_home(request, conv_id=None):
 @require_POST
 @login_required
 def chat_start_direct(request):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
-    other = get_object_or_404(Employee, pk=request.POST.get('employee') or 0)
+    me = _guard_feature(request, FEATURE_CHAT)
+    if not isinstance(me, Employee):
+        return me
+    other = get_object_or_404(
+        Employee.objects.filter(status='active'),
+        pk=request.POST.get('employee') or 0,
+    )
+    if is_blocked(other, FEATURE_CHAT):
+        messages.error(
+            request,
+            f'{other.full_name}\'s Chat access is restricted by the IT/Networks team.',
+        )
+        return redirect('collab_chat')
     if other.pk == me.pk:
         messages.error(request, 'You cannot start a chat with yourself.')
         return redirect('collab_chat')
@@ -520,15 +550,22 @@ def chat_start_direct(request):
 @require_POST
 @login_required
 def chat_start_group(request):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_CHAT)
+    if not isinstance(me, Employee):
+        return me
     title = (request.POST.get('title') or '').strip() or 'Group chat'
     ids = set(int(x) for x in request.POST.getlist('members') if x.isdigit())
     ids.add(me.pk)
-    emps = list(Employee.objects.filter(pk__in=ids))
+    emps = [
+        e for e in Employee.objects.filter(pk__in=ids, status='active')
+        if e.pk == me.pk or not is_blocked(e, FEATURE_CHAT)
+    ]
     if len(emps) < 2:
-        messages.error(request, 'Pick at least one other person to start a group.')
+        messages.error(
+            request,
+            'Pick at least one other person to start a group '
+            '(restricted employees cannot be invited).',
+        )
         return redirect('collab_chat')
     conv = Conversation.objects.create(kind=Conversation.KIND_GROUP, title=title, created_by=me)
     ConversationMember.objects.bulk_create([
@@ -542,6 +579,15 @@ def chat_start_group(request):
 def chat_send(request, conv_id):
     me = _require_me(request)
     if me is None:
+        return redirect('dashboard')
+    if is_blocked(me, FEATURE_CHAT):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': False, 'error': 'Chat access restricted.'}, status=403)
+        messages.error(
+            request,
+            'Your Chat access has been restricted by the IT/Networks team. '
+            'Contact them to restore access.',
+        )
         return redirect('dashboard')
     conv = get_object_or_404(Conversation, pk=conv_id, members__employee=me)
     body = (request.POST.get('body') or '').strip()
@@ -557,38 +603,80 @@ def chat_send(request, conv_id):
 @login_required
 def chat_call_start(request, conv_id):
     """Notify conversation members and open the audio/video call room."""
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_CHAT)
+    if not isinstance(me, Employee):
+        return me
     conv = get_object_or_404(Conversation, pk=conv_id, members__employee=me)
+    audio_only = (request.POST.get('mode') or 'audio') == 'audio'
+    kind = 'audio' if audio_only else 'video'
     ChatMessage.objects.create(
         conversation=conv, sender=me,
-        body=f'{me.full_name} started an audio call. Click "Call" to join.',
+        body=f'{me.full_name} started a {kind} call. Click "Call" to join.',
     )
     conv.save(update_fields=['updated_at'])
-    return redirect('collab_call_room', conv_id=conv.pk)
+    url = reverse('collab_call_room', args=[conv.pk])
+    return redirect(url + ('?audio=1' if audio_only else ''))
+
+
+@require_POST
+@login_required
+def chat_call_user(request):
+    """Start (or reuse) a 1:1 conversation with someone and open a call."""
+    me = _guard_feature(request, FEATURE_CHAT)
+    if not isinstance(me, Employee):
+        return me
+    other = get_object_or_404(
+        Employee.objects.filter(status='active'),
+        pk=request.POST.get('employee') or 0,
+    )
+    if other.pk == me.pk:
+        messages.error(request, 'You cannot call yourself.')
+        return redirect('collab_chat')
+    if is_blocked(other, FEATURE_CHAT):
+        messages.error(
+            request,
+            f'{other.full_name}\'s Chat access is restricted by the IT/Networks team.',
+        )
+        return redirect('collab_chat')
+    conv = (Conversation.objects
+            .filter(kind=Conversation.KIND_DIRECT, members__employee=me)
+            .filter(members__employee=other)
+            .first())
+    if conv is None:
+        conv = Conversation.objects.create(kind=Conversation.KIND_DIRECT, created_by=me)
+        ConversationMember.objects.create(conversation=conv, employee=me)
+        ConversationMember.objects.create(conversation=conv, employee=other)
+    audio_only = (request.POST.get('mode') or 'video') == 'audio'
+    kind = 'audio' if audio_only else 'video'
+    ChatMessage.objects.create(
+        conversation=conv, sender=me,
+        body=f'{me.full_name} started a {kind} call. Click "Call" to join.',
+    )
+    conv.save(update_fields=['updated_at'])
+    url = reverse('collab_call_room', args=[conv.pk])
+    return redirect(url + ('?audio=1' if audio_only else ''))
 
 
 @login_required
 def chat_call_room(request, conv_id):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_CHAT)
+    if not isinstance(me, Employee):
+        return me
     conv = get_object_or_404(Conversation, pk=conv_id, members__employee=me)
     return _call_page(
         request,
         room=conv.call_room,
         title=conv.display_title(me),
         back_url=reverse('collab_chat_room', args=[conv.pk]),
-        audio_only=True,
+        audio_only=request.GET.get('audio') == '1',
     )
 
 
 @login_required
 def meeting_join(request, pk):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MEETINGS)
+    if not isinstance(me, Employee):
+        return me
     meeting = get_object_or_404(Meeting, pk=pk)
     is_attendee = meeting.attendees.filter(employee=me).exists()
     if not is_attendee and meeting.organizer_id != me.pk and not request.user.is_superuser:
@@ -620,6 +708,8 @@ def chat_messages_json(request, conv_id):
     me = _require_me(request)
     if me is None:
         return JsonResponse({'messages': []})
+    if is_blocked(me, FEATURE_CHAT):
+        return JsonResponse({'ok': False, 'error': 'Chat access restricted.'}, status=403)
     conv = get_object_or_404(Conversation, pk=conv_id, members__employee=me)
     qs = conv.messages.select_related('sender').order_by('created_at')
     after = request.GET.get('after')
@@ -642,9 +732,9 @@ def chat_messages_json(request, conv_id):
 
 @login_required
 def meeting_list(request):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MEETINGS)
+    if not isinstance(me, Employee):
+        return me
     now = timezone.now()
     invited = Meeting.objects.filter(attendees__employee=me).distinct()
     upcoming = invited.filter(start_at__gte=now).order_by('start_at')
@@ -665,9 +755,9 @@ def _parse_dt(value):
 
 @login_required
 def meeting_create(request):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MEETINGS)
+    if not isinstance(me, Employee):
+        return me
     if request.method == 'POST':
         title = (request.POST.get('title') or '').strip()
         agenda = (request.POST.get('agenda') or '').strip()
@@ -681,13 +771,17 @@ def meeting_create(request):
         elif end_dt <= start_dt:
             messages.error(request, 'End time must be after the start time.')
         else:
+            attendees = [
+                e for e in Employee.objects.filter(pk__in=ids, status='active')
+                if e.pk == me.pk or not is_blocked(e, FEATURE_MEETINGS)
+            ]
             room = 'CoreCloud-' + get_random_string(10)
             meeting = Meeting.objects.create(
                 title=title, agenda=agenda, organizer=me,
                 start_at=start_dt, end_at=end_dt, room=room,
             )
             from hr_modules.notify import notify
-            for emp in Employee.objects.filter(pk__in=ids):
+            for emp in attendees:
                 MeetingAttendee.objects.create(meeting=meeting, employee=emp)
                 if emp.pk != me.pk:
                     notify(
@@ -702,15 +796,16 @@ def meeting_create(request):
             return redirect('collab_meeting_detail', pk=meeting.pk)
 
     return render(request, 'collab/meeting_form.html', {
-        'employees': _active_employees(me), 'collab_tab': 'meetings',
+        'employees': accessible_employees(FEATURE_MEETINGS, exclude=me),
+        'collab_tab': 'meetings',
     })
 
 
 @login_required
 def meeting_detail(request, pk):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MEETINGS)
+    if not isinstance(me, Employee):
+        return me
     meeting = get_object_or_404(Meeting, pk=pk)
     is_attendee = meeting.attendees.filter(employee=me).exists()
     if not is_attendee and meeting.organizer_id != me.pk and not request.user.is_superuser:
@@ -727,9 +822,9 @@ def meeting_detail(request, pk):
 @require_POST
 @login_required
 def meeting_respond(request, pk):
-    me = _require_me(request)
-    if me is None:
-        return redirect('dashboard')
+    me = _guard_feature(request, FEATURE_MEETINGS)
+    if not isinstance(me, Employee):
+        return me
     meeting = get_object_or_404(Meeting, pk=pk)
     attendee = get_object_or_404(MeetingAttendee, meeting=meeting, employee=me)
     new_status = request.POST.get('status')

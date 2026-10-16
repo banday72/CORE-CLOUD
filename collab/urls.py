@@ -17,6 +17,7 @@ urlpatterns = [
     path('chat/', views.chat_home, name='collab_chat'),
     path('chat/start-direct/', views.chat_start_direct, name='collab_chat_start_direct'),
     path('chat/start-group/', views.chat_start_group, name='collab_chat_start_group'),
+    path('chat/call-user/', views.chat_call_user, name='collab_chat_call_user'),
     path('chat/<int:conv_id>/', views.chat_home, name='collab_chat_room'),
     path('chat/<int:conv_id>/send/', views.chat_send, name='collab_chat_send'),
     path('chat/<int:conv_id>/messages/', views.chat_messages_json, name='collab_chat_messages'),

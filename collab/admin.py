@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     Conversation, ConversationMember, ChatMessage,
     MailMessage, MailRecipient, MailSettings, Meeting, MeetingAttendee,
+    CollabAccess,
 )
 
 
@@ -65,3 +66,12 @@ class MeetingAdmin(admin.ModelAdmin):
 class MeetingAttendeeAdmin(admin.ModelAdmin):
     list_display = ('meeting', 'employee', 'status')
     list_filter = ('status',)
+
+
+@admin.register(CollabAccess)
+class CollabAccessAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'block_mail', 'block_chat', 'block_meetings',
+                    'blocked_by', 'updated_at')
+    list_filter = ('block_mail', 'block_chat', 'block_meetings')
+    search_fields = ('employee__first_name', 'employee__last_name', 'employee__employee_id')
+    raw_id_fields = ('employee', 'blocked_by')

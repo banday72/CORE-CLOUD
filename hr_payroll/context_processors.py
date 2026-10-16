@@ -40,10 +40,22 @@ def role_context(request):
             pass
 
         try:
+            from collab.access import blocked_features
+            if context.get('current_employee'):
+                context['collab_blocked'] = blocked_features(context['current_employee'])
+            else:
+                context['collab_blocked'] = set()
+        except Exception:
+            context['collab_blocked'] = set()
+
+        try:
             from collab.models import MailRecipient
             if context.get('current_employee'):
-                context['collab_unread_mail'] = MailRecipient.objects.filter(
-                    employee=context['current_employee'], is_read=False, is_deleted=False).count()
+                if 'mail' in context.get('collab_blocked', set()):
+                    context['collab_unread_mail'] = 0
+                else:
+                    context['collab_unread_mail'] = MailRecipient.objects.filter(
+                        employee=context['current_employee'], is_read=False, is_deleted=False).count()
         except Exception:
             pass
 
@@ -51,13 +63,16 @@ def role_context(request):
             from collab.models import Conversation, ConversationMember
             if context.get('current_employee'):
                 me = context['current_employee']
-                total = 0
-                for membership in ConversationMember.objects.filter(employee=me).select_related('conversation'):
-                    unread = membership.conversation.messages.exclude(sender=me)
-                    if membership.last_read_at:
-                        unread = unread.filter(created_at__gt=membership.last_read_at)
-                    total += unread.count()
-                context['collab_unread_chat'] = total
+                if 'chat' in context.get('collab_blocked', set()):
+                    context['collab_unread_chat'] = 0
+                else:
+                    total = 0
+                    for membership in ConversationMember.objects.filter(employee=me).select_related('conversation'):
+                        unread = membership.conversation.messages.exclude(sender=me)
+                        if membership.last_read_at:
+                            unread = unread.filter(created_at__gt=membership.last_read_at)
+                        total += unread.count()
+                    context['collab_unread_chat'] = total
         except Exception:
             pass
     return context
