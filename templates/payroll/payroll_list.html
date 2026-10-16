@@ -80,10 +80,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'payroll_detail' payroll.pk %}" class="btn btn-sm btn-outline-info"><i class="fas fa-eye"></i></a>
+                            <a href="{% url 'payroll_detail' payroll.pk %}" class="btn btn-sm btn-outline-info" title="View" aria-label="View payroll"><i class="fas fa-eye" aria-hidden="true"></i></a>
                             {% if not is_employee %}
-                            <a href="{% url 'payroll_update' payroll.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'payroll_delete' payroll.pk %}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></a>
+                            <a href="{% url 'payroll_update' payroll.pk %}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit payroll"><i class="fas fa-edit" aria-hidden="true"></i></a>
+                            <a href="{% url 'payroll_delete' payroll.pk %}" class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete payroll"
+                               data-ajax="{% url 'payroll_delete' payroll.pk %}" data-ajax-method="POST" data-ajax-remove="closest"
+                               data-ajax-confirm="Delete payroll for {{ payroll.employee.full_name }} ({{ payroll.get_month_display }} {{ payroll.year }})?"
+                               data-ajax-confirm-title="Delete payroll" data-ajax-confirm-ok="Delete" data-ajax-confirm-danger="true"><i class="fas fa-trash" aria-hidden="true"></i></a>
                             {% endif %}
                         </td>
                     </tr>

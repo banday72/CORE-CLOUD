@@ -57,17 +57,17 @@
             <table class="table table-bordered table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Employee ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Department</th>
-                        <th>Designation</th>
-                        <th>Manager</th>
-                        <th>Salary</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th scope="col">Employee ID</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Department</th>
+                        <th scope="col">Designation</th>
+                        <th scope="col">Manager</th>
+                        <th scope="col">Salary</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -109,9 +109,12 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'employee_detail' emp.pk %}" class="btn btn-sm btn-outline-info" title="View"><i class="fas fa-eye"></i></a>
-                            <a href="{% url 'employee_update' emp.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'employee_delete' emp.pk %}" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></a>
+                            <a href="{% url 'employee_detail' emp.pk %}" class="btn btn-sm btn-outline-info" title="View" aria-label="View {{ emp.full_name }}"><i class="fas fa-eye" aria-hidden="true"></i></a>
+                            <a href="{% url 'employee_update' emp.pk %}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit {{ emp.full_name }}"><i class="fas fa-edit" aria-hidden="true"></i></a>
+                            <a href="{% url 'employee_delete' emp.pk %}" class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete {{ emp.full_name }}"
+                               data-ajax="{% url 'employee_delete' emp.pk %}" data-ajax-method="POST" data-ajax-remove="closest"
+                               data-ajax-confirm="Delete {{ emp.full_name }} ({{ emp.employee_id }})? This cannot be undone."
+                               data-ajax-confirm-title="Delete employee" data-ajax-confirm-ok="Delete" data-ajax-confirm-danger="true"><i class="fas fa-trash" aria-hidden="true"></i></a>
                         </td>
                     </tr>
                     {% empty %}

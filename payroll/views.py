@@ -9,6 +9,7 @@ from datetime import datetime, date
 from calendar import monthrange
 import csv
 from employees.decorators import permission_required
+from employees.ajax import is_ajax, json_ok, json_err
 from .models import Payroll, PayrollPolicy, PayrollBreakdown, BoutiqueProduct, BoutiqueIssue, BudgetLoan
 from .forms import PayrollForm, PayrollFilterForm, PayrollPolicyForm, BoutiqueProductForm, BoutiqueIssueForm, BudgetLoanForm
 from employees.models import Employee, Department, managers_q
@@ -243,6 +244,8 @@ def payroll_delete(request, pk):
     payroll = get_object_or_404(Payroll, pk=pk)
     if request.method == 'POST':
         payroll.delete()
+        if is_ajax(request):
+            return json_ok('Payroll deleted successfully.')
         messages.success(request, 'Payroll deleted successfully.')
         return redirect('payroll_list')
     return render(request, 'payroll/payroll_confirm_delete.html', {'payroll': payroll})

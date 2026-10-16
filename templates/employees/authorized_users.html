@@ -99,7 +99,7 @@
                 </thead>
                 <tbody>
                     {% for emp in employees %}
-                    <tr>
+                    <tr data-emp-id="{{ emp.pk }}">
                         <td><strong>{{ emp.employee_id }}</strong></td>
                         <td>{{ emp.full_name }}</td>
                         <td>{{ emp.department|default:"-" }}</td>
@@ -112,7 +112,7 @@
                             <span class="badge bg-secondary">Employee</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="js-auth-status">
                             {% if emp.is_authorized and emp.approved_by_manager %}
                             <span class="badge bg-success"><i class="fas fa-check me-1"></i>Approved - Can Login</span>
                             {% elif emp.is_authorized and not emp.approved_by_manager and emp.role in 'hr,manager' %}
@@ -132,23 +132,26 @@
                             <small class="text-muted">-</small>
                             {% endif %}
                         </td>
-                        <td>
-                            {% if emp.is_authorized %}
-                            <form method="post" action="{% url 'toggle_authorize' emp.pk %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoke Access">
-                                    <i class="fas fa-ban me-1"></i> Revoke
+                        <td class="js-auth-action">
+                            <span class="js-auth-on" {% if not emp.is_authorized %}style="display:none"{% endif %}>
+                                <form method="post" action="{% url 'toggle_authorize' emp.pk %}" style="display:inline;"
+                                      data-ajax="{% url 'toggle_authorize' emp.pk %}" data-emp-id="{{ emp.pk }}"
+                                      data-ajax-confirm="Revoke access for {{ emp.full_name }}? They will no longer be able to log in."
+                                      data-ajax-confirm-title="Revoke access" data-ajax-confirm-ok="Revoke" data-ajax-confirm-danger="true">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Revoke Access" aria-label="Revoke access for {{ emp.full_name }}">
+                                        <i class="fas fa-ban me-1" aria-hidden="true"></i> Revoke
+                                    </button>
+                                </form>
+                            </span>
+                            <span class="js-auth-off" {% if emp.is_authorized %}style="display:none"{% endif %}>
+                                <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#authModal{{ emp.pk }}" title="Grant Access" aria-label="Authorize {{ emp.full_name }}">
+                                    <i class="fas fa-check me-1" aria-hidden="true"></i> Authorize
                                 </button>
-                            </form>
-                            {% else %}
-                            <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#authModal{{ emp.pk }}" title="Grant Access">
-                                <i class="fas fa-check me-1"></i> Authorize
-                            </button>
-                            {% endif %}
+                            </span>
                         </td>
                     </tr>
 
-                    {% if not emp.is_authorized %}
                     <div class="modal fade" id="authModal{{ emp.pk }}" tabindex="-1">
                         <div class="modal-dialog">
                             <div class="modal-content">
@@ -156,7 +159,8 @@
                                     <h5 class="modal-title"><i class="fas fa-user-check me-2"></i>Authorize {{ emp.full_name }}</h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                 </div>
-                                <form method="post" action="{% url 'toggle_authorize' emp.pk %}">
+                                <form method="post" action="{% url 'toggle_authorize' emp.pk %}"
+                                      data-ajax="{% url 'toggle_authorize' emp.pk %}" data-emp-id="{{ emp.pk }}">
                                     {% csrf_token %}
                                     <div class="modal-body">
                                         {% if emp.role in 'hr,manager' %}
@@ -194,7 +198,6 @@
                             </div>
                         </div>
                     </div>
-                    {% endif %}
                     {% empty %}
                     <tr><td colspan="7" class="text-center py-4">No employees found.</td></tr>
                     {% endfor %}
@@ -204,4 +207,34 @@
         {% include "includes/pagination.html" %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var BADGES = {
+        approved: '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Approved - Can Login</span>',
+        active_role: '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Active (HR/Manager)</span>',
+        pending: '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pending Manager Approval</span>',
+        unauthorized: '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Not Authorized</span>'
+    };
+    document.addEventListener('cc:success', function (e) {
+        var d = e.detail.data || {};
+        if (typeof d.is_authorized === 'undefined' || !e.detail.el) return;
+        var empId = e.detail.el.dataset.empId;
+        var row = empId ? document.querySelector('tr[data-emp-id="' + empId + '"]') : e.detail.el.closest('tr');
+        if (!row) return;
+        var status = row.querySelector('.js-auth-status');
+        if (status) status.innerHTML = BADGES[d.state] || '';
+        var on = row.querySelector('.js-auth-on');
+        var off = row.querySelector('.js-auth-off');
+        if (on) on.style.display = d.is_authorized ? '' : 'none';
+        if (off) off.style.display = d.is_authorized ? 'none' : '';
+        var modalEl = e.detail.el.closest('.modal');
+        if (modalEl && window.bootstrap && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        }
+    });
+})();
+</script>
 {% endblock %}

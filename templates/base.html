@@ -5,8 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CoreCloud{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'css/app.css' %}" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a5276'/%3E%3Ctext x='32' y='44' font-family='Arial' font-size='36' font-weight='900' fill='white' text-anchor='middle'%3EC%3C/text%3E%3C/svg%3E">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -62,8 +64,8 @@
 <body>
     <header class="app-header">
         <div class="d-flex align-items-center gap-2">
-            <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('show')">
-                <i class="fas fa-bars"></i>
+            <button class="menu-toggle" type="button" aria-label="Toggle navigation menu">
+                <i class="fas fa-bars" aria-hidden="true"></i>
             </button>
             <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 100 100">
                 <rect x="2" y="2" width="46" height="46" rx="6" fill="#1a5276"/>
@@ -119,14 +121,14 @@
                 </div>
                 {% endif %}
             </div>
-            <a href="{% url 'notification_list' %}" class="btn btn-sm position-relative" style="background:rgba(255,255,255,.15);color:white;border:none;">
-                <i class="fas fa-bell"></i>
+            <a href="{% url 'notification_list' %}" class="btn btn-sm position-relative" aria-label="Notifications" style="background:rgba(255,255,255,.15);color:white;border:none;">
+                <i class="fas fa-bell" aria-hidden="true"></i>
                 {% if unread_notif_count > 0 %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.55rem;">{{ unread_notif_count }}</span>{% endif %}
             </a>
-            <a href="{% url 'change_password' %}" class="btn btn-sm d-none-mobile" style="background:rgba(255,255,255,.15);color:white;border:none;">
-                <i class="fas fa-key"></i>
+            <a href="{% url 'change_password' %}" class="btn btn-sm d-none-mobile" aria-label="Change password" style="background:rgba(255,255,255,.15);color:white;border:none;">
+                <i class="fas fa-key" aria-hidden="true"></i>
             </a>
-            <a href="{% url 'logout' %}" class="btn-logout"><i class="fas fa-sign-out-alt"></i></a>
+            <a href="{% url 'logout' %}" class="btn-logout" aria-label="Log out"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></a>
             {% endif %}
         </div>
     </header>
@@ -365,28 +367,24 @@
             <h5>{% block page_title %}Dashboard{% endblock %}</h5>
         </div>
         <div class="container-fluid px-3 px-md-4">
+            <div id="cc-message-source">
             {% if messages %}
                 {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 {% endfor %}
             {% endif %}
+            </div>
             {% block content %}{% endblock %}
         </div>
     </div>
 
+    <div class="app-toast-container toast-container position-fixed top-0 end-0 p-3" aria-live="polite" aria-atomic="true"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    document.addEventListener('click', function(e) {
-        var sidebar = document.getElementById('sidebar');
-        var toggle = document.querySelector('.menu-toggle');
-        if (sidebar && sidebar.classList.contains('show') && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
-            sidebar.classList.remove('show');
-        }
-    });
-    </script>
+    <script src="{% static 'js/app.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

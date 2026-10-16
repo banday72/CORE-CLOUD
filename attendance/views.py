@@ -7,6 +7,7 @@ from .models import Attendance
 from .forms import AttendanceForm, AttendanceFilterForm
 from employees.views import get_employee
 from employees.decorators import permission_required
+from employees.ajax import is_ajax, json_ok, json_err
 
 
 @login_required
@@ -45,19 +46,26 @@ def attendance_list(request):
 def attendance_clock_in(request):
     employee = get_employee(request.user)
     if not employee:
+        if is_ajax(request):
+            return json_err('No employee profile found.')
         messages.error(request, 'No employee profile found.')
         return redirect('dashboard')
 
     today = date.today()
     existing = Attendance.objects.filter(employee=employee, date=today).first()
+    clock_in_time = None
     if existing:
         if existing.clock_in is None:
             existing.clock_in = datetime.now().time()
             existing.status = 'present'
             existing.save()
-            messages.success(request, f'Clocked in at {existing.clock_in.strftime("%H:%M")}')
+            clock_in_time = existing.clock_in
+            msg = f'Clocked in at {existing.clock_in.strftime("%H:%M")}'
+            level = 'success'
         else:
-            messages.info(request, 'Already clocked in today.')
+            clock_in_time = existing.clock_in
+            msg = 'Already clocked in today.'
+            level = 'info'
     else:
         now = datetime.now().time()
         status = 'late' if now.hour > 9 or (now.hour == 9 and now.minute > 0) else 'present'
@@ -67,11 +75,21 @@ def attendance_clock_in(request):
             clock_in=now,
             status=status,
         )
+        clock_in_time = now
         msg = f'Clocked in at {now.strftime("%H:%M")}'
+        level = 'success'
         if status == 'late':
             msg += ' (Late arrival)'
-        messages.success(request, msg)
+            level = 'warning'
 
+    if is_ajax(request):
+        return json_ok(msg, type=level, clock_in=(clock_in_time.strftime("%H:%M") if clock_in_time else None))
+    if level == 'info':
+        messages.info(request, msg)
+    elif level == 'warning':
+        messages.warning(request, msg)
+    else:
+        messages.success(request, msg)
     return redirect('attendance_list')
 
 
@@ -79,6 +97,8 @@ def attendance_clock_in(request):
 def attendance_clock_out(request):
     employee = get_employee(request.user)
     if not employee:
+        if is_ajax(request):
+            return json_err('No employee profile found.')
         messages.error(request, 'No employee profile found.')
         return redirect('dashboard')
 
@@ -87,12 +107,23 @@ def attendance_clock_out(request):
     if existing and existing.clock_in and not existing.clock_out:
         existing.clock_out = datetime.now().time()
         existing.save()
-        messages.success(request, f'Clocked out at {existing.clock_out.strftime("%H:%M")}')
+        msg = f'Clocked out at {existing.clock_out.strftime("%H:%M")}'
+        level = 'success'
     elif existing and existing.clock_out:
-        messages.info(request, 'Already clocked out today.')
+        msg = 'Already clocked out today.'
+        level = 'info'
     else:
-        messages.warning(request, 'No clock-in record found for today.')
+        msg = 'No clock-in record found for today.'
+        level = 'warning'
 
+    if is_ajax(request):
+        return json_ok(msg, type=level, clock_out=(existing.clock_out.strftime("%H:%M") if existing and existing.clock_out else None))
+    if level == 'info':
+        messages.info(request, msg)
+    elif level == 'warning':
+        messages.warning(request, msg)
+    else:
+        messages.success(request, msg)
     return redirect('attendance_list')
 
 
@@ -131,6 +162,8 @@ def attendance_delete(request, pk):
     attendance = get_object_or_404(Attendance, pk=pk)
     if request.method == 'POST':
         attendance.delete()
+        if is_ajax(request):
+            return json_ok('Attendance deleted successfully.')
         messages.success(request, 'Attendance deleted successfully.')
         return redirect('attendance_list')
     return render(request, 'attendance/attendance_confirm_delete.html', {'attendance': attendance})

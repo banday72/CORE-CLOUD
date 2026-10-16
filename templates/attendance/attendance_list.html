@@ -113,8 +113,11 @@
                         <td><span class="badge bg-{% if record.status == 'present' %}success{% elif record.status == 'absent' %}danger{% elif record.status == 'half_day' %}warning{% elif record.status == 'late' %}info{% else %}secondary{% endif %}">{{ record.get_status_display }}</span></td>
                         <td>{{ record.notes|default:"-" }}</td>
                         <td>
-                            <a href="{% url 'attendance_update' record.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'attendance_delete' record.pk %}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></a>
+                            <a href="{% url 'attendance_update' record.pk %}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit record"><i class="fas fa-edit" aria-hidden="true"></i></a>
+                            <a href="{% url 'attendance_delete' record.pk %}" class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete record"
+                               data-ajax="{% url 'attendance_delete' record.pk %}" data-ajax-method="POST" data-ajax-remove="closest"
+                               data-ajax-confirm="Delete attendance for {{ record.employee.full_name }} on {{ record.date|date:'M d, Y' }}?"
+                               data-ajax-confirm-title="Delete attendance" data-ajax-confirm-ok="Delete" data-ajax-confirm-danger="true"><i class="fas fa-trash" aria-hidden="true"></i></a>
                         </td>
                     </tr>
                     {% empty %}

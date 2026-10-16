@@ -6,6 +6,7 @@ from .models import Leave, LeaveType, LeaveBalance
 from .forms import LeaveForm, LeaveTypeForm, LeaveApprovalForm
 from employees.views import get_employee
 from employees.decorators import permission_required
+from employees.ajax import is_ajax, json_ok, json_err
 from hr_modules.notify import notify, notify_reports_to
 
 
@@ -103,6 +104,28 @@ def leave_create(request):
 def leave_approve(request, pk):
     leave = get_object_or_404(Leave, pk=pk)
     if request.method == 'POST':
+        if is_ajax(request):
+            status = request.POST.get('status', '')
+            if status not in ('approved', 'rejected'):
+                return json_err('Invalid status.')
+            leave.status = status
+            leave.approved_by = (request.POST.get('approved_by', '').strip()
+                                 or request.user.get_full_name()
+                                 or request.user.username)
+            leave.save()
+            notify(
+                leave.employee,
+                'Leave ' + leave.status,
+                f'Your {leave.leave_type.name} leave '
+                f'({leave.start_date} to {leave.end_date}) was {leave.status}.',
+                'success' if leave.status == 'approved' else 'danger' if leave.status == 'rejected' else 'info')
+            badge = {'approved': 'success', 'rejected': 'danger'}.get(leave.status, 'secondary')
+            return json_ok(
+                f'Leave request {leave.status}.',
+                type='success' if leave.status == 'approved' else 'danger',
+                status=leave.status,
+                status_display=leave.get_status_display(),
+                badge=badge)
         form = LeaveApprovalForm(request.POST)
         if form.is_valid():
             leave.status = form.cleaned_data['status']
@@ -127,6 +150,8 @@ def leave_delete(request, pk):
     leave = get_object_or_404(Leave, pk=pk)
     if request.method == 'POST':
         leave.delete()
+        if is_ajax(request):
+            return json_ok('Leave deleted successfully.')
         messages.success(request, 'Leave deleted successfully.')
         return redirect('leave_list')
     return render(request, 'leaves/leave_confirm_delete.html', {'leave': leave})

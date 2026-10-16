@@ -54,26 +54,31 @@
                 {% if slides %}
                 <div class="list-group">
                     {% for slide in slides %}
-                    <div class="list-group-item d-flex align-items-center gap-3">
+                    <div class="list-group-item d-flex align-items-center gap-3 js-slide" data-slide-id="{{ slide.pk }}">
                         <div style="width:110px; height:60px; border-radius:8px; background-image:url('{{ slide.picture_b64 }}'); background-size:cover; background-position:center; flex:0 0 auto; border:1px solid #dee2e6;"></div>
                         <div class="flex-grow-1">
                             <div class="fw-bold">{{ slide.name|default:slide.picture_name }}</div>
                             <div class="small text-muted">
                                 Order {{ slide.sort_order }}
+                                <span class="js-slide-state">
                                 {% if slide.is_active %}<span class="badge bg-success ms-1">Active</span>
                                 {% else %}<span class="badge bg-secondary ms-1">Inactive</span>{% endif %}
+                                </span>
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            <form method="post" action="{% url 'login_slide_toggle' slide.pk %}">
+                            <form method="post" action="{% url 'login_slide_toggle' slide.pk %}"
+                                  data-ajax="{% url 'login_slide_toggle' slide.pk %}" data-slide-id="{{ slide.pk }}">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm {% if slide.is_active %}btn-warning{% else %}btn-success{% endif %}">
-                                    {% if slide.is_active %}<i class="fas fa-eye-slash"></i>{% else %}<i class="fas fa-eye"></i>{% endif %}
+                                <button type="submit" class="btn btn-sm js-slide-toggle {% if slide.is_active %}btn-warning{% else %}btn-success{% endif %}" title="{% if slide.is_active %}Disable{% else %}Enable{% endif %}" aria-label="Toggle slide visibility">
+                                    {% if slide.is_active %}<i class="fas fa-eye-slash" aria-hidden="true"></i>{% else %}<i class="fas fa-eye" aria-hidden="true"></i>{% endif %}
                                 </button>
                             </form>
-                            <form method="post" action="{% url 'login_slide_delete' slide.pk %}" onsubmit="return confirm('Delete this login background?');">
+                            <form method="post" action="{% url 'login_slide_delete' slide.pk %}"
+                                  data-ajax="{% url 'login_slide_delete' slide.pk %}" data-ajax-remove="closest"
+                                  data-ajax-confirm="Delete this login background? This cannot be undone." data-ajax-confirm-title="Delete background" data-ajax-confirm-ok="Delete" data-ajax-confirm-danger="true">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                                <button type="submit" class="btn btn-sm btn-danger" aria-label="Delete slide"><i class="fas fa-trash" aria-hidden="true"></i></button>
                             </form>
                         </div>
                     </div>
@@ -89,4 +94,30 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('cc:success', function (e) {
+    var d = e.detail.data || {};
+    if (typeof d.is_active === 'undefined') return;
+    var id = e.detail.el.dataset.slideId;
+    var item = id ? document.querySelector('.js-slide[data-slide-id="' + id + '"]') : e.detail.el.closest('.js-slide');
+    if (!item) return;
+    var state = item.querySelector('.js-slide-state');
+    if (state) {
+        state.innerHTML = d.is_active
+            ? '<span class="badge bg-success ms-1">Active</span>'
+            : '<span class="badge bg-secondary ms-1">Inactive</span>';
+    }
+    var btn = item.querySelector('.js-slide-toggle');
+    if (btn) {
+        btn.className = 'btn btn-sm js-slide-toggle ' + (d.is_active ? 'btn-warning' : 'btn-success');
+        btn.innerHTML = d.is_active
+            ? '<i class="fas fa-eye-slash" aria-hidden="true"></i>'
+            : '<i class="fas fa-eye" aria-hidden="true"></i>';
+        btn.title = d.is_active ? 'Disable' : 'Enable';
+    }
+});
+</script>
 {% endblock %}

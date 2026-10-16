@@ -18,6 +18,7 @@ from .forms import DepartmentForm, EmployeeForm, ProfileForm, LoginSlideForm
 from .decorators import permission_required, hr_required, privilege_required
 from .permissions import permissions_for_user
 from .audit import log_audit
+from .ajax import is_ajax, json_ok, json_err
 
 
 def generate_employee_id(designation=None, department=None):
@@ -337,6 +338,8 @@ def employee_delete(request, pk):
         employee.delete()
         log_audit(user=request.user, action='delete', model_name='Employee',
                   object_id=emp_id, description=f'Deleted employee {name}', request=request)
+        if is_ajax(request):
+            return json_ok('Employee deleted successfully.')
         messages.success(request, 'Employee deleted successfully.')
         return redirect('employee_list')
     return render(request, 'employees/employee_confirm_delete.html', {'employee': employee})
@@ -465,6 +468,8 @@ def toggle_authorize(request, pk):
             employee.approved_by = None
             employee.approved_at = None
         employee.save()
+        ajax_message = None
+        ajax_type = 'info'
         if employee.is_authorized:
             action = 'authorize'
             if employee.role in ('hr', 'manager'):
@@ -476,16 +481,27 @@ def toggle_authorize(request, pk):
                 if new_password and employee.user:
                     employee.user.set_password(new_password)
                     employee.user.save()
-                    messages.success(request, f'{employee.full_name} (HR/Manager) authorized directly. Username: {employee.employee_id} | Password: {new_password}')
+                    ajax_message = f'{employee.full_name} (HR/Manager) authorized directly. Username: {employee.employee_id} | Password: {new_password}'
                 else:
-                    messages.success(request, f'{employee.full_name} (HR/Manager) authorized directly. Username: {employee.employee_id} | Default password: {default_password_for(employee.employee_id)}')
+                    ajax_message = f'{employee.full_name} (HR/Manager) authorized directly. Username: {employee.employee_id} | Default password: {default_password_for(employee.employee_id)}'
+                messages.success(request, ajax_message)
             else:
-                messages.info(request, f'{employee.full_name} authorized by you. Waiting for Manager approval before they can login.')
+                ajax_message = f'{employee.full_name} authorized by you. Waiting for Manager approval before they can login.'
+                ajax_type = 'info'
+                messages.info(request, ajax_message)
         else:
             action = 'deauthorize'
-            messages.warning(request, f'{employee.full_name} has been deauthorized. They can no longer login.')
+            ajax_message = f'{employee.full_name} has been deauthorized. They can no longer login.'
+            ajax_type = 'warning'
+            messages.warning(request, ajax_message)
         log_audit(user=request.user, action=action, model_name='Employee',
                   object_id=employee.employee_id, description=f'{action.title()}d {employee.full_name}', request=request)
+        if is_ajax(request):
+            state = 'approved' if (employee.is_authorized and employee.approved_by_manager) else (
+                'active_role' if (employee.is_authorized and employee.role in ('hr', 'manager')) else (
+                    'pending' if employee.is_authorized else 'unauthorized'))
+            return json_ok(ajax_message, type=ajax_type, is_authorized=employee.is_authorized,
+                           approved_by_manager=employee.approved_by_manager, state=state)
     return redirect('authorized_users')
 
 
@@ -530,6 +546,8 @@ def manager_approve(request, pk):
     emp = get_object_or_404(Employee, pk=pk)
     if request.method == 'POST':
         action = request.POST.get('action', '')
+        ajax_message = None
+        ajax_type = 'success'
         if action == 'approve':
             emp.approved_by_manager = True
             emp.approved_by = request.user
@@ -540,18 +558,25 @@ def manager_approve(request, pk):
             if new_password and emp.user:
                 emp.user.set_password(new_password)
                 emp.user.save()
-                messages.success(request, f'{emp.full_name} approved. They can now login. Username: {emp.employee_id} | Password: {new_password}')
+                ajax_message = f'{emp.full_name} approved. They can now login. Username: {emp.employee_id} | Password: {new_password}'
             else:
-                messages.success(request, f'{emp.full_name} approved. They can now login. Username: {emp.employee_id} | Default password: {default_password_for(emp.employee_id)}')
+                ajax_message = f'{emp.full_name} approved. They can now login. Username: {emp.employee_id} | Default password: {default_password_for(emp.employee_id)}'
+            messages.success(request, ajax_message)
             log_audit(user=request.user, action='authorize', model_name='Employee',
                       object_id=emp.employee_id, description=f'Manager approved {emp.full_name}', request=request)
         elif action == 'reject':
             emp.is_authorized = False
             emp.approved_by_manager = False
             emp.save()
-            messages.warning(request, f'{emp.full_name} authorization rejected.')
+            ajax_message = f'{emp.full_name} authorization rejected.'
+            ajax_type = 'warning'
+            messages.warning(request, ajax_message)
             log_audit(user=request.user, action='deauthorize', model_name='Employee',
                       object_id=emp.employee_id, description=f'Manager rejected {emp.full_name}', request=request)
+        if is_ajax(request):
+            if not ajax_message:
+                return json_err('Unknown action.')
+            return json_ok(ajax_message, type=ajax_type, action=action)
     return redirect('pending_approvals')
 
 
@@ -592,6 +617,8 @@ def login_slide_delete(request, pk):
         slide.delete()
         log_audit(user=request.user, action='delete', model_name='LoginSlide',
                   object_id=pk, description=f'Deleted login background {name}', request=request)
+        if is_ajax(request):
+            return json_ok('Login background deleted.')
         messages.success(request, 'Login background deleted.')
     return redirect('login_slide_list')
 
@@ -606,6 +633,8 @@ def login_slide_toggle(request, pk):
         state = 'enabled' if slide.is_active else 'disabled'
         log_audit(user=request.user, action='update', model_name='LoginSlide',
                   object_id=pk, description=f'{state.title()} login background {slide}', request=request)
+        if is_ajax(request):
+            return json_ok(f'Login background {state}.', type='info', is_active=slide.is_active)
         messages.info(request, f'Login background {state}.')
     return redirect('login_slide_list')
 

@@ -59,7 +59,7 @@
                 </thead>
                 <tbody>
                     {% for leave in leaves %}
-                    <tr>
+                    <tr data-leave-id="{{ leave.pk }}">
                         {% if not is_employee %}
                         <td>{{ leave.employee.employee_id }} - {{ leave.employee.full_name }}</td>
                         {% endif %}
@@ -68,13 +68,18 @@
                         <td>{{ leave.end_date|date:"M d, Y" }}</td>
                         <td>{{ leave.total_days }}</td>
                         <td>{{ leave.reason|truncatewords:5 }}</td>
-                        <td><span class="badge bg-{% if leave.status == 'approved' %}success{% elif leave.status == 'pending' %}warning{% elif leave.status == 'rejected' %}danger{% else %}secondary{% endif %}">{{ leave.get_status_display }}</span></td>
-                        <td>
+                        <td><span class="badge js-leave-status bg-{% if leave.status == 'approved' %}success{% elif leave.status == 'pending' %}warning{% elif leave.status == 'rejected' %}danger{% else %}secondary{% endif %}">{{ leave.get_status_display }}</span></td>
+                        <td class="js-leave-actions">
                             {% if not is_employee and leave.status == 'pending' %}
-                            <a href="{% url 'leave_approve' leave.pk %}" class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i></a>
-                            {% endif %}
-                            {% if not is_employee and leave.status == 'pending' %}
-                            <a href="{% url 'leave_delete' leave.pk %}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></a>
+                            <a href="{% url 'leave_approve' leave.pk %}" class="btn btn-sm btn-outline-success" title="Approve" aria-label="Approve leave"
+                               data-ajax="{% url 'leave_approve' leave.pk %}" data-ajax-method="POST" data-ajax-extra='{"status":"approved"}'
+                               data-ajax-confirm="Approve this {{ leave.leave_type }} leave for {{ leave.employee.full_name }}?" data-ajax-confirm-title="Approve leave" data-ajax-confirm-ok="Approve"><i class="fas fa-check" aria-hidden="true"></i></a>
+                            <a href="{% url 'leave_approve' leave.pk %}" class="btn btn-sm btn-outline-warning" title="Reject" aria-label="Reject leave"
+                               data-ajax="{% url 'leave_approve' leave.pk %}" data-ajax-method="POST" data-ajax-extra='{"status":"rejected"}'
+                               data-ajax-confirm="Reject this {{ leave.leave_type }} leave for {{ leave.employee.full_name }}?" data-ajax-confirm-title="Reject leave" data-ajax-confirm-ok="Reject" data-ajax-confirm-danger="true"><i class="fas fa-times" aria-hidden="true"></i></a>
+                            <a href="{% url 'leave_delete' leave.pk %}" class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete leave"
+                               data-ajax="{% url 'leave_delete' leave.pk %}" data-ajax-method="POST" data-ajax-remove="closest"
+                               data-ajax-confirm="Delete this leave record? This cannot be undone." data-ajax-confirm-title="Delete leave" data-ajax-confirm-ok="Delete" data-ajax-confirm-danger="true"><i class="fas fa-trash" aria-hidden="true"></i></a>
                             {% endif %}
                             {% if is_employee %}
                             <span class="text-muted small">View Only</span>
@@ -82,7 +87,10 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="{% if is_employee %}7{% else %}8{% endif %}" class="text-center">No leave records found.</td></tr>
+                    <tr><td colspan="{% if is_employee %}7{% else %}8{% endif %}" class="text-center py-4">
+                        <i class="fas fa-calendar-check fa-2x text-muted mb-2 d-block" style="opacity:.4;"></i>
+                        No leave records found.
+                    </td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -90,4 +98,22 @@
         {% include "includes/pagination.html" %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('cc:success', function (e) {
+    var d = e.detail.data || {};
+    if (!d.status_display || !e.detail.el) return;
+    var row = e.detail.el.closest('tr');
+    if (!row) return;
+    var badge = row.querySelector('.js-leave-status');
+    if (badge) {
+        badge.textContent = d.status_display;
+        badge.className = 'badge js-leave-status bg-' + (d.badge || 'secondary');
+    }
+    var actions = row.querySelector('.js-leave-actions');
+    if (actions) actions.innerHTML = '<span class="text-muted small">View Only</span>';
+});
+</script>
 {% endblock %}

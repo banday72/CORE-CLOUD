@@ -64,7 +64,7 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-primary fw-bold text-uppercase" style="font-size:0.7rem;">Today's Status</div>
-                        <div class="h5 mb-0 mt-1">
+                        <div class="h5 mb-0 mt-1" id="js-today-status">
                             {% if my_attendance %}
                                 {% if my_attendance.clock_out %}<span class="text-success">Clocked Out</span>
                                 {% else %}<span class="text-info">Clocked In</span>{% endif %}
@@ -82,7 +82,7 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-warning fw-bold text-uppercase" style="font-size:0.7rem;">Pending Leaves</div>
-                        <div class="h5 mb-0 mt-1">{{ my_pending_leaves }}</div>
+                        <div class="h5 mb-0 mt-1" data-count-to="{{ my_pending_leaves }}">0</div>
                     </div>
                     <div style="width:45px;height:45px;border-radius:12px;background:rgba(246,194,62,.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-calendar-times fa-lg" style="color:#f6c23e;"></i></div>
                 </div>
@@ -95,7 +95,7 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-success fw-bold text-uppercase" style="font-size:0.7rem;">My Salary</div>
-                        <div class="h5 mb-0 mt-1">Rs. {{ employee.salary|floatformat:0 }}</div>
+                        <div class="h5 mb-0 mt-1" data-count-to="{{ employee.salary|floatformat:0 }}" data-count-prefix="Rs. ">Rs. 0</div>
                     </div>
                     <div style="width:45px;height:45px;border-radius:12px;background:rgba(28,200,138,.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-rupee-sign fa-lg" style="color:#1cc88a;"></i></div>
                 </div>
@@ -125,12 +125,14 @@
             <div class="card-body py-3">
                 <div class="row g-2">
                     <div class="col-6 col-md-3 col-lg-2">
-                        <a href="{% url 'attendance_clock_in' %}" class="btn btn-success w-100 py-3 text-center" style="border-radius:12px;">
+                        <a href="{% url 'attendance_clock_in' %}" class="btn btn-success w-100 py-3 text-center" style="border-radius:12px;"
+                           data-ajax="{% url 'attendance_clock_in' %}" data-ajax-method="POST">
                             <i class="fas fa-sign-in-alt fa-lg d-block mb-1"></i><small>Clock In</small>
                         </a>
                     </div>
                     <div class="col-6 col-md-3 col-lg-2">
-                        <a href="{% url 'attendance_clock_out' %}" class="btn btn-danger w-100 py-3 text-center" style="border-radius:12px;">
+                        <a href="{% url 'attendance_clock_out' %}" class="btn btn-danger w-100 py-3 text-center" style="border-radius:12px;"
+                           data-ajax="{% url 'attendance_clock_out' %}" data-ajax-method="POST">
                             <i class="fas fa-sign-out-alt fa-lg d-block mb-1"></i><small>Clock Out</small>
                         </a>
                     </div>
@@ -256,7 +258,7 @@
         <div class="card stat-card border-primary shadow h-100">
             <div class="card-body py-3">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><div class="text-primary fw-bold" style="font-size:0.7rem;">TOTAL EMPLOYEES</div><div class="h4 mb-0 mt-1">{{ total_employees }}</div></div>
+                    <div><div class="text-primary fw-bold" style="font-size:0.7rem;">TOTAL EMPLOYEES</div><div class="h4 mb-0 mt-1" data-count-to="{{ total_employees }}">0</div></div>
                     <div style="width:45px;height:45px;border-radius:12px;background:rgba(41,128,185,.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-users fa-lg" style="color:#2980b9;"></i></div>
                 </div>
             </div>
@@ -266,7 +268,7 @@
         <div class="card stat-card border-success shadow h-100">
             <div class="card-body py-3">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><div class="text-success fw-bold" style="font-size:0.7rem;">DEPARTMENTS</div><div class="h4 mb-0 mt-1">{{ total_departments }}</div></div>
+                    <div><div class="text-success fw-bold" style="font-size:0.7rem;">DEPARTMENTS</div><div class="h4 mb-0 mt-1" data-count-to="{{ total_departments }}">0</div></div>
                     <div style="width:45px;height:45px;border-radius:12px;background:rgba(28,200,138,.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-building fa-lg" style="color:#1cc88a;"></i></div>
                 </div>
             </div>
@@ -276,7 +278,7 @@
         <div class="card stat-card border-info shadow h-100">
             <div class="card-body py-3">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><div class="text-info fw-bold" style="font-size:0.7rem;">PENDING LEAVES</div><div class="h4 mb-0 mt-1">{{ pending_leaves }}</div></div>
+                    <div><div class="text-info fw-bold" style="font-size:0.7rem;">PENDING LEAVES</div><div class="h4 mb-0 mt-1" data-count-to="{{ pending_leaves }}">0</div></div>
                     <div style="width:45px;height:45px;border-radius:12px;background:rgba(54,185,204,.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-calendar-times fa-lg" style="color:#36b9cc;"></i></div>
                 </div>
             </div>
@@ -286,7 +288,7 @@
         <div class="card stat-card border-warning shadow h-100">
             <div class="card-body py-3">
                 <div class="d-flex align-items-center justify-content-between">
-                    <div><div class="text-warning fw-bold" style="font-size:0.7rem;">DRAFT PAYROLLS</div><div class="h4 mb-0 mt-1">{{ draft_payrolls }}</div></div>
+                    <div><div class="text-warning fw-bold" style="font-size:0.7rem;">DRAFT PAYROLLS</div><div class="h4 mb-0 mt-1" data-count-to="{{ draft_payrolls }}">0</div></div>
                     <div style="width:45px;height:45px;border-radius:12px;background:rgba(246,194,62,.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-file-invoice fa-lg" style="color:#f6c23e;"></i></div>
                 </div>
             </div>
@@ -501,19 +503,47 @@
 (function() {
     var KEY = 'security_popup_first_shown';
     var EXPIRY = 2 * 24 * 60 * 60 * 1000;
-    var modal = new bootstrap.Modal(document.getElementById('securityTipsModal'));
-    var shown = localStorage.getItem(KEY);
-    if (!shown || (Date.now() - parseInt(shown,10)) >= EXPIRY) modal.show();
-    document.getElementById('closeSecurityPopup').addEventListener('click', function() { localStorage.setItem(KEY, Date.now().toString()); });
+    var modalEl = document.getElementById('securityTipsModal');
+    if (modalEl) {
+        var modal = new bootstrap.Modal(modalEl);
+        var shown = localStorage.getItem(KEY);
+        if (!shown || (Date.now() - parseInt(shown, 10)) >= EXPIRY) modal.show();
+        document.getElementById('closeSecurityPopup').addEventListener('click', function () {
+            localStorage.setItem(KEY, Date.now().toString());
+        });
+    }
 })();
 
+/* Live clock status after an AJAX clock in/out */
+document.addEventListener('cc:success', function (e) {
+    var d = (e.detail && e.detail.data) || {};
+    if (typeof d.clock_in === 'undefined' && typeof d.clock_out === 'undefined') return;
+    var el = document.getElementById('js-today-status');
+    if (!el) return;
+    if (d.clock_out) el.innerHTML = '<span class="text-success">Clocked Out</span>';
+    else if (d.clock_in) el.innerHTML = '<span class="text-info">Clocked In</span>';
+});
+
 {% if not is_employee %}
-document.addEventListener('DOMContentLoaded', function() {
-    fetch('/api/dashboard-stats/').then(r => r.json()).then(data => {
-        if (data.dept_labels) new Chart(document.getElementById('deptChart'), { type:'doughnut', data:{ labels:data.dept_labels, datasets:[{ data:data.dept_counts, backgroundColor:['#1a5276','#2980b9','#5dade2','#3498db','#1cc88a','#f6c23e','#e74a3b','#9b59b6'] }] }, options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ font:{size:10} } } } } });
-        if (data.attendance_labels) new Chart(document.getElementById('attendanceChart'), { type:'bar', data:{ labels:data.attendance_labels, datasets:[{ label:'Employees', data:data.attendance_counts, backgroundColor:['#1cc88a','#e74a3b','#f6c23e','#36b9cc','#9b59b6'] }] }, options:{ responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true} } } });
-        if (data.salary_labels) new Chart(document.getElementById('salaryChart'), { type:'line', data:{ labels:data.salary_labels, datasets:[{ label:'Avg Salary', data:data.salary_totals, borderColor:'#f6c23e', backgroundColor:'rgba(246,194,62,.1)', fill:true, tension:.3 }] }, options:{ responsive:true, plugins:{ legend:{display:false} } } });
-    }).catch(function(){});
+document.addEventListener('DOMContentLoaded', function () {
+    var ids = ['deptChart', 'attendanceChart', 'salaryChart'];
+    var hosts = ids.map(function (id) {
+        var c = document.getElementById(id);
+        return c ? c.parentElement : null;
+    }).filter(Boolean);
+    hosts.forEach(function (h) { App.setLoading(h, true, 'Loading chart…'); });
+
+    App.request('/api/dashboard-stats/', { method: 'GET' })
+        .then(function (data) {
+            hosts.forEach(function (h) { App.setLoading(h, false); });
+            if (data.dept_labels) new Chart(document.getElementById('deptChart'), { type: 'doughnut', data: { labels: data.dept_labels, datasets: [{ data: data.dept_counts, backgroundColor: ['#1a5276', '#2980b9', '#5dade2', '#3498db', '#1cc88a', '#f6c23e', '#e74a3b', '#9b59b6'] }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } });
+            if (data.attendance_labels) new Chart(document.getElementById('attendanceChart'), { type: 'bar', data: { labels: data.attendance_labels, datasets: [{ label: 'Employees', data: data.attendance_counts, backgroundColor: ['#1cc88a', '#e74a3b', '#f6c23e', '#36b9cc', '#9b59b6'] }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } });
+            if (data.salary_labels) new Chart(document.getElementById('salaryChart'), { type: 'line', data: { labels: data.salary_labels, datasets: [{ label: 'Avg Salary', data: data.salary_totals, borderColor: '#f6c23e', backgroundColor: 'rgba(246,194,62,.1)', fill: true, tension: .3 }] }, options: { responsive: true, plugins: { legend: { display: false } } } });
+        })
+        .catch(function (err) {
+            hosts.forEach(function (h) { App.setLoading(h, false); });
+            App.toast('Could not load dashboard charts. ' + (err.message || ''), 'danger');
+        });
 });
 {% endif %}
 </script>

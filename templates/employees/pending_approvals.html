@@ -43,7 +43,7 @@
 <div class="card shadow">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-clock me-1"></i> Pending Approvals</h6>
-        <span class="badge bg-warning text-dark fs-6">{{ page_obj.paginator.count }} Pending</span>
+        <span class="badge bg-warning text-dark fs-6 js-pending-count" data-count-value="{{ page_obj.paginator.count }}">{{ page_obj.paginator.count }} Pending</span>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -60,7 +60,7 @@
                 </thead>
                 <tbody>
                     {% for emp in pending_employees %}
-                    <tr>
+                    <tr data-pending-id="{{ emp.pk }}">
                         <td><strong>{{ emp.employee_id }}</strong></td>
                         <td>{{ emp.full_name }}</td>
                         <td>{{ emp.department|default:"-" }}</td>
@@ -76,11 +76,13 @@
                             <button type="button" class="btn btn-sm btn-outline-success me-1" data-bs-toggle="modal" data-bs-target="#approveModal{{ emp.pk }}">
                                 <i class="fas fa-check me-1"></i> Approve
                             </button>
-                            <form method="post" action="{% url 'manager_approve' emp.pk %}" style="display:inline;">
+                            <form method="post" action="{% url 'manager_approve' emp.pk %}" style="display:inline;"
+                                  data-ajax="{% url 'manager_approve' emp.pk %}" data-emp-id="{{ emp.pk }}"
+                                  data-ajax-confirm="Reject authorization for {{ emp.full_name }}?" data-ajax-confirm-title="Reject authorization" data-ajax-confirm-ok="Reject" data-ajax-confirm-danger="true">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="reject">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject" onclick="return confirm('Reject authorization for {{ emp.full_name }}?')">
-                                    <i class="fas fa-times me-1"></i> Reject
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Reject" aria-label="Reject {{ emp.full_name }}">
+                                    <i class="fas fa-times me-1" aria-hidden="true"></i> Reject
                                 </button>
                             </form>
                         </td>
@@ -93,7 +95,8 @@
                                     <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Approve {{ emp.full_name }}</h5>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                 </div>
-                                <form method="post" action="{% url 'manager_approve' emp.pk %}">
+                                <form method="post" action="{% url 'manager_approve' emp.pk %}"
+                                      data-ajax="{% url 'manager_approve' emp.pk %}" data-emp-id="{{ emp.pk }}">
                                     {% csrf_token %}
                                     <div class="modal-body">
                                         <div class="alert alert-info">
@@ -138,4 +141,29 @@
         {% include "includes/pagination.html" %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('cc:success', function (e) {
+    var d = e.detail.data || {};
+    if (!e.detail.el || typeof d.action === 'undefined') return;
+    var empId = e.detail.el.dataset.empId;
+    var row = empId ? document.querySelector('tr[data-pending-id="' + empId + '"]') : e.detail.el.closest('tr');
+    if (row) {
+        row.classList.add('row-removing');
+        setTimeout(function () { row.remove(); }, 220);
+    }
+    var modalEl = e.detail.el.closest('.modal');
+    if (modalEl && window.bootstrap && bootstrap.Modal) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    }
+    var counter = document.querySelector('.js-pending-count');
+    if (counter) {
+        var value = Math.max(0, parseInt(counter.dataset.countValue || '1', 10) - 1);
+        counter.dataset.countValue = value;
+        counter.textContent = value + ' Pending';
+    }
+});
+</script>
 {% endblock %}
