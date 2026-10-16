@@ -2,6 +2,11 @@
 {% block title %}New mail{% endblock %}
 {% block page_title %}<i class="fas fa-envelope me-2"></i>Mail{% endblock %}
 
+{% block extra_css %}
+{% include "collab/_mail_editor_css.html" %}
+{% include "collab/_mail_styles.html" %}
+{% endblock %}
+
 {% block content %}
 {% include "collab/_nav.html" %}
 
@@ -10,9 +15,13 @@
         <i class="fas fa-pen me-2"></i>{% if parent %}Reply{% else %}New mail{% endif %}
     </div>
     <div class="card-body">
-        <form method="post">
+        <form method="post" id="mailForm">
             {% csrf_token %}
             <input type="hidden" name="parent" value="{{ parent.pk|default:'' }}">
+            {% if parent %}
+            <input type="hidden" name="quote_mode" id="quoteMode" value="{{ quote_mode|default:'reply' }}">
+            <input type="hidden" name="include_quote" id="includeQuote" value="{% if quote_html %}1{% else %}0{% endif %}">
+            {% endif %}
 
             <div class="mb-3">
                 <label class="form-label">To</label>
@@ -46,10 +55,32 @@
                 <label class="form-label">Subject</label>
                 <input type="text" name="subject" class="form-control" required maxlength="300" value="{{ initial_subject }}">
             </div>
-            <div class="mb-3">
-                <label class="form-label">Message</label>
-                <textarea name="body" class="form-control" rows="12" required>{{ initial_body }}</textarea>
+
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label mb-0" for="mailBody">Message</label>
+                <span class="text-muted small">
+                    <label for="mailType" class="me-1 mb-0">Email type</label>
+                    <select name="mail_type" id="mailType" class="form-select form-select-sm d-inline-block w-auto">
+                        <option value="plain" {% if mail_type == 'plain' %}selected{% endif %}>Plain text</option>
+                        <option value="html" {% if mail_type == 'html' %}selected{% endif %}>HTML</option>
+                    </select>
+                </span>
             </div>
+            <div class="mb-3">
+                <textarea name="body" id="mailBody" class="form-control" rows="12">{{ initial_body }}</textarea>
+                <div id="mailEditor" style="display:none;"></div>
+            </div>
+
+            {% if parent %}
+            <div id="quoteWrap" class="mail-quote-wrap" {% if not quote_html %}style="display:none;"{% endif %}>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="fw-semibold text-muted"><i class="fas fa-quote-left me-1"></i>Quoted message</small>
+                    <button type="button" class="btn-close" id="deleteQuote" title="Delete quoted message" aria-label="Delete quoted message"></button>
+                </div>
+                <div class="mail-quote-body" id="quoteBody">{{ quote_html|safe }}</div>
+            </div>
+            {% endif %}
+
             <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Send</button>
             <a href="{% url 'collab_mail' %}" class="btn btn-outline-secondary">Discard</a>
         </form>
@@ -58,4 +89,23 @@
 
 {{ employee_data|json_script:"mail-employees" }}
 {% include "collab/_recipient_picker_assets.html" %}
+{% endblock %}
+
+{% block extra_js %}
+{% include "collab/_mail_editor_js.html" %}
+<script>
+setupMailTypeSwitch({ typeId: 'mailType', textareaId: 'mailBody', editorId: 'mailEditor' });
+
+(function () {
+    var del = document.getElementById('deleteQuote');
+    var wrap = document.getElementById('quoteWrap');
+    var inc = document.getElementById('includeQuote');
+    if (del && wrap) {
+        del.addEventListener('click', function () {
+            wrap.style.display = 'none';
+            if (inc) inc.value = '0';
+        });
+    }
+})();
+</script>
 {% endblock %}

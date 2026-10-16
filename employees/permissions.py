@@ -41,6 +41,7 @@ ALL_PERMISSIONS = {
     'resolve_hardware',
     'manage_it_teams',
     'manage_announcements',
+    'manage_mail_settings',
 }
 
 IT_RESOLVE_PERMISSIONS = {'resolve_networks', 'resolve_software', 'resolve_hardware'}

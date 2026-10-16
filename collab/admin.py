@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from .models import (
     Conversation, ConversationMember, ChatMessage,
-    MailMessage, MailRecipient, Meeting, MeetingAttendee,
+    MailMessage, MailRecipient, MailSettings, Meeting, MeetingAttendee,
 )
 
 
@@ -30,8 +30,17 @@ class MailRecipientInline(admin.TabularInline):
 
 @admin.register(MailMessage)
 class MailMessageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'subject', 'sender', 'created_at')
+    list_display = ('id', 'subject', 'sender', 'mail_type', 'created_at')
+    list_filter = ('mail_type',)
     inlines = [MailRecipientInline]
+
+
+@admin.register(MailSettings)
+class MailSettingsAdmin(admin.ModelAdmin):
+    list_display = ('include_quote_in_reply', 'use_signature', 'default_mail_type', 'forward_style')
+
+    def has_add_permission(self, request):
+        return not MailSettings.objects.exists()
 
 
 @admin.register(MailRecipient)

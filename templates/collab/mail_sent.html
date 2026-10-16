@@ -27,7 +27,7 @@
                 {% for emp in mail.cc_employees %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
             </div>
             {% endif %}
-            <div class="small mt-1" style="white-space:pre-wrap;">{{ mail.body|truncatechars:220 }}</div>
+            <div class="small mt-1" style="white-space:pre-wrap;">{% if mail.mail_type == 'html' %}{{ mail.body|striptags|truncatechars:220 }}{% else %}{{ mail.body|truncatechars:220 }}{% endif %}</div>
         </div>
         {% empty %}
         <div class="list-group-item text-center py-5 text-muted">

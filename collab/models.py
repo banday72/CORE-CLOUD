@@ -83,6 +83,46 @@ class ChatMessage(models.Model):
         return f'{self.sender}: {self.body[:40]}'
 
 
+MAIL_TYPE_PLAIN = 'plain'
+MAIL_TYPE_HTML = 'html'
+MAIL_TYPE_CHOICES = [
+    (MAIL_TYPE_PLAIN, 'Plain text'),
+    (MAIL_TYPE_HTML, 'HTML'),
+]
+
+FORWARD_STYLE_HEADERS = 'headers'
+FORWARD_STYLE_QUOTE = 'quote'
+FORWARD_STYLE_CHOICES = [
+    (FORWARD_STYLE_HEADERS, 'Forwarded message header block'),
+    (FORWARD_STYLE_QUOTE, 'Simple quoted message'),
+]
+
+
+class MailSettings(models.Model):
+    """Site-wide preferences for the internal mail module (managed by HR)."""
+
+    include_quote_in_reply = models.BooleanField(
+        default=True,
+        help_text='Show the sender\'s message under the reply box (Outlook-style).',
+    )
+    use_signature = models.BooleanField(default=False)
+    signature = models.TextField(blank=True)
+    default_mail_type = models.CharField(
+        max_length=10, choices=MAIL_TYPE_CHOICES, default=MAIL_TYPE_PLAIN,
+    )
+    forward_style = models.CharField(
+        max_length=10, choices=FORWARD_STYLE_CHOICES, default=FORWARD_STYLE_HEADERS,
+    )
+
+    def __str__(self):
+        return 'Mail settings'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+
 class MailMessage(models.Model):
     """An internal mail (Outlook-like). One row per sent message."""
 
@@ -92,6 +132,11 @@ class MailMessage(models.Model):
     )
     subject = models.CharField(max_length=300)
     body = models.TextField()
+    mail_type = models.CharField(max_length=10, choices=MAIL_TYPE_CHOICES, default=MAIL_TYPE_PLAIN)
+    quoted = models.TextField(
+        blank=True,
+        help_text='Sanitized HTML of the quoted message shown under the reply (Outlook-style).',
+    )
     parent = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='replies',

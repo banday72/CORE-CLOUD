@@ -2,6 +2,11 @@
 {% block title %}Message{% endblock %}
 {% block page_title %}<i class="fas fa-envelope me-2"></i>Mail{% endblock %}
 
+{% block extra_css %}
+{% include "collab/_mail_editor_css.html" %}
+{% include "collab/_mail_styles.html" %}
+{% endblock %}
+
 {% block content %}
 {% include "collab/_nav.html" %}
 
@@ -14,6 +19,7 @@
                     <i class="fas fa-user me-1"></i>From: {{ mail.sender.full_name|default:"System" }}
                     {% if mail.sender %}<span class="text-muted">({{ mail.sender.employee_id }})</span>{% endif %}
                     &nbsp;•&nbsp; <i class="fas fa-clock me-1"></i>{{ mail.created_at|date:"M d, Y H:i" }}
+                    {% if mail.mail_type == 'html' %}&nbsp;•&nbsp;<span class="badge bg-secondary">HTML</span>{% endif %}
                 </div>
                 <div class="text-muted small mt-1">
                     <i class="fas fa-users me-1"></i>To:
@@ -40,7 +46,16 @@
             </div>
         </div>
     </div>
-    <div class="card-body" style="white-space:pre-wrap;">{{ mail.body }}</div>
+    <div class="card-body {% if mail.mail_type == 'html' %}mail-html-body{% else %}mail-plain-body{% endif %}"
+         {% if mail.mail_type != 'html' %}style="white-space:pre-wrap;"{% endif %}>{% if mail.mail_type == 'html' %}{{ mail.body|safe }}{% else %}{{ mail.body }}{% endif %}</div>
+    {% if mail.quoted %}
+    <div class="card-body border-top pt-2">
+        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" id="toggleQuote">
+            <i class="fas fa-quote-left me-1"></i><span id="toggleQuoteLabel">Show quoted text</span>
+        </button>
+        <div class="mail-quote-body mt-2" id="quoteHistory" style="display:none;">{{ mail.quoted|safe }}</div>
+    </div>
+    {% endif %}
     <div class="card-footer bg-white">
         <div class="d-flex flex-wrap gap-2">
             <button type="button" class="btn btn-sm btn-primary reply-mode-btn" data-mode="reply">
@@ -62,9 +77,11 @@
 <div class="card shadow mt-3" id="replyCard" style="display:none;">
     <div class="card-header bg-white fw-bold"><i class="fas fa-reply me-2"></i><span id="replyHeading">Reply</span></div>
     <div class="card-body">
-        <form method="post" action="{% url 'collab_mail_compose' %}">
+        <form method="post" action="{% url 'collab_mail_compose' %}" id="replyForm">
             {% csrf_token %}
             <input type="hidden" name="parent" value="{{ mail.pk }}">
+            <input type="hidden" name="quote_mode" id="replyQuoteMode" value="reply">
+            <input type="hidden" name="include_quote" id="replyIncludeQuote" value="0">
             <div class="mb-2">
                 <label class="form-label small mb-1">To</label>
                 {% include "collab/_recipient_picker.html" with target="recipients" initial="" %}
@@ -74,12 +91,33 @@
                 {% include "collab/_recipient_picker.html" with target="cc_recipients" initial="" %}
             </div>
             <div class="mb-2">
-                <label class="form-label small mb-1">Subject</label>
+                <label class="form-label small mb-1" for="replySubject">Subject</label>
                 <input type="text" name="subject" id="replySubject" class="form-control" required maxlength="300">
             </div>
-            <div class="mb-2">
-                <textarea name="body" id="replyBody" class="form-control" rows="8" required></textarea>
+
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label small mb-0" for="replyBody">Message</label>
+                <span class="text-muted small">
+                    <label for="replyMailType" class="me-1 mb-0">Email type</label>
+                    <select name="mail_type" id="replyMailType" class="form-select form-select-sm d-inline-block w-auto">
+                        <option value="plain" {% if mail_type == 'plain' %}selected{% endif %}>Plain text</option>
+                        <option value="html" {% if mail_type == 'html' %}selected{% endif %}>HTML</option>
+                    </select>
+                </span>
             </div>
+            <div class="mb-2">
+                <textarea name="body" id="replyBody" class="form-control" rows="8"></textarea>
+                <div id="replyEditor" style="display:none;"></div>
+            </div>
+
+            <div id="replyQuoteWrap" class="mail-quote-wrap" style="display:none;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="fw-semibold text-muted"><i class="fas fa-quote-left me-1"></i>Quoted message</small>
+                    <button type="button" class="btn-close" id="replyDeleteQuote" title="Delete quoted message" aria-label="Delete quoted message"></button>
+                </div>
+                <div class="mail-quote-body" id="replyQuoteBody"></div>
+            </div>
+
             <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Send</button>
             <button type="button" class="btn btn-outline-secondary" id="replyDiscard">Discard</button>
         </form>
@@ -92,6 +130,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{% include "collab/_mail_editor_js.html" %}
 <script>
 (function () {
     var variantsEl = document.getElementById('mail-reply-variants');
@@ -99,18 +138,34 @@
     if (!variantsEl || !card) return;
     var variants = JSON.parse(variantsEl.textContent);
     var subject = document.getElementById('replySubject');
-    var body = document.getElementById('replyBody');
     var heading = document.getElementById('replyHeading');
+    var quoteWrap = document.getElementById('replyQuoteWrap');
+    var quoteBody = document.getElementById('replyQuoteBody');
+    var includeQuote = document.getElementById('replyIncludeQuote');
+    var quoteMode = document.getElementById('replyQuoteMode');
+    var editor = setupMailTypeSwitch({
+        typeId: 'replyMailType', textareaId: 'replyBody', editorId: 'replyEditor'
+    });
 
     function applyMode(mode, label) {
         var v = variants[mode];
         if (!v) return;
         subject.value = v.subject;
-        body.value = v.body;
         heading.textContent = label;
+        if (editor) editor.clear();
         if (window.MailPickers) {
             if (window.MailPickers.recipients) window.MailPickers.recipients.set(v.to);
             if (window.MailPickers.cc_recipients) window.MailPickers.cc_recipients.set(v.cc);
+        }
+        quoteMode.value = v.mode || 'reply';
+        if (v.quote) {
+            quoteBody.innerHTML = v.quote;
+            quoteWrap.style.display = 'block';
+            includeQuote.value = '1';
+        } else {
+            quoteBody.innerHTML = '';
+            quoteWrap.style.display = 'none';
+            includeQuote.value = '0';
         }
         card.style.display = 'block';
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -122,16 +177,42 @@
         });
     });
 
+    var delQuote = document.getElementById('replyDeleteQuote');
+    if (delQuote) {
+        delQuote.addEventListener('click', function () {
+            quoteWrap.style.display = 'none';
+            includeQuote.value = '0';
+        });
+    }
+
     var discard = document.getElementById('replyDiscard');
     if (discard) {
         discard.addEventListener('click', function () {
             card.style.display = 'none';
+            subject.value = '';
+            if (editor) editor.clear();
+            quoteBody.innerHTML = '';
+            quoteWrap.style.display = 'none';
+            includeQuote.value = '0';
             if (window.MailPickers) {
                 if (window.MailPickers.recipients) window.MailPickers.recipients.clear();
                 if (window.MailPickers.cc_recipients) window.MailPickers.cc_recipients.clear();
             }
         });
     }
+})();
+</script>
+<script>
+(function () {
+    var btn = document.getElementById('toggleQuote');
+    var box = document.getElementById('quoteHistory');
+    var lbl = document.getElementById('toggleQuoteLabel');
+    if (!btn || !box) return;
+    btn.addEventListener('click', function () {
+        var open = box.style.display !== 'none';
+        box.style.display = open ? 'none' : 'block';
+        if (lbl) lbl.textContent = open ? 'Show quoted text' : 'Hide quoted text';
+    });
 })();
 </script>
 {% endblock %}

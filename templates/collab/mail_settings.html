@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Mail settings{% endblock %}
+{% block page_title %}<i class="fas fa-envelope me-2"></i>Mail{% endblock %}
+
+{% block extra_css %}{% include "collab/_mail_styles.html" %}{% endblock %}
+
+{% block content %}
+{% include "collab/_nav.html" %}
+
+<div class="card shadow" style="max-width: 760px;">
+    <div class="card-header bg-white fw-bold"><i class="fas fa-cog me-2"></i>Mail settings</div>
+    <div class="card-body">
+        <p class="text-muted small">
+            These preferences apply to everyone's internal mail: reply quoting, signature
+            and the default format of new messages.
+        </p>
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" name="include_quote_in_reply" id="include_quote_in_reply" value="1" {% if prefs.include_quote_in_reply %}checked{% endif %}>
+                <label class="form-check-label" for="include_quote_in_reply">
+                    Include the sender's message when replying
+                    <span class="text-muted small d-block">Shows the original message in a separate block under the reply box (Outlook-style). Users can delete it before sending.</span>
+                </label>
+            </div>
+
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" name="use_signature" id="use_signature" value="1" {% if prefs.use_signature %}checked{% endif %}>
+                <label class="form-check-label" for="use_signature">Append a signature to sent messages</label>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="signature">Signature</label>
+                <textarea name="signature" id="signature" class="form-control" rows="3" placeholder="Kind regards,&#10;Human Resources">{{ prefs.signature }}</textarea>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="default_mail_type">Default email type</label>
+                    <select name="default_mail_type" id="default_mail_type" class="form-select">
+                        {% for value, lbl in mail_type_choices %}
+                        <option value="{{ value }}" {% if prefs.default_mail_type == value %}selected{% endif %}>{{ lbl }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="forward_style">Forward style</label>
+                    <select name="forward_style" id="forward_style" class="form-select">
+                        {% for value, lbl in forward_style_choices %}
+                        <option value="{{ value }}" {% if prefs.forward_style == value %}selected{% endif %}>{{ lbl }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Save settings</button>
+            <a href="{% url 'collab_mail' %}" class="btn btn-outline-secondary">Back to Inbox</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

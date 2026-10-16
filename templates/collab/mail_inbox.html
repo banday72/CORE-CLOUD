@@ -26,7 +26,7 @@
                     <small class="text-muted ms-2 text-nowrap">{{ item.mail.created_at|date:"M d, H:i" }}</small>
                 </div>
                 <div class="text-truncate {% if item.is_read %}text-muted{% endif %}">{{ item.mail.subject }}</div>
-                <div class="text-muted small text-truncate">{{ item.mail.body|truncatechars:100 }}</div>
+                <div class="text-muted small text-truncate">{% if item.mail.mail_type == 'html' %}{{ item.mail.body|striptags|truncatechars:100 }}{% else %}{{ item.mail.body|truncatechars:100 }}{% endif %}</div>
             </div>
         </a>
         {% empty %}

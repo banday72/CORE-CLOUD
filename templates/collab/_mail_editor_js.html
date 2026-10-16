@@ -1,0 +1,69 @@
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<script>
+/* Plain text <-> HTML rich editor switch (Outlook-style "Email type").
+   The textarea always holds the value that gets submitted. */
+window.setupMailTypeSwitch = function (opts) {
+    var sel = document.getElementById(opts.typeId);
+    var ta = document.getElementById(opts.textareaId);
+    var box = document.getElementById(opts.editorId);
+    if (!sel || !ta || !box) return null;
+    var form = ta.form;
+    var quill = null;
+
+    function ensure() {
+        if (!quill) {
+            box.innerHTML = '';
+            quill = new Quill(box, {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['blockquote', 'link'],
+                        ['clean']
+                    ]
+                }
+            });
+            var prev = ta.value;
+            if (prev) {
+                if (prev.indexOf('<') === -1) quill.setText(prev);
+                else quill.root.innerHTML = prev;
+            }
+        }
+        return quill;
+    }
+
+    function apply() {
+        if (sel.value === 'html') {
+            ta.style.display = 'none';
+            box.style.display = '';
+            ensure();
+        } else {
+            if (quill) {
+                ta.value = quill.getText().replace(/\n+$/, '');
+            }
+            box.style.display = 'none';
+            ta.style.display = '';
+        }
+    }
+
+    function clear() {
+        if (sel.value === 'html' && quill) quill.setText('');
+        else ta.value = '';
+    }
+
+    function sync() {
+        if (sel.value !== 'html' || !quill) return;
+        var text = quill.getText().trim();
+        var rich = quill.root.querySelector('img, a, li, b, i, u, strong, em, blockquote, h1, h2, h3');
+        ta.value = (text === '' && !rich) ? '' : quill.root.innerHTML;
+    }
+
+    if (form) form.addEventListener('submit', sync);
+    sel.addEventListener('change', apply);
+    apply();
+
+    return { apply: apply, clear: clear, sync: sync };
+};
+</script>

@@ -16,4 +16,9 @@
     <a href="{% url 'collab_meetings' %}" class="btn btn-sm {% if collab_tab == 'meetings' %}btn-primary{% else %}btn-outline-primary{% endif %}">
         <i class="fas fa-video me-1"></i>Meetings
     </a>
+    {% if can.manage_mail_settings %}
+    <a href="{% url 'collab_mail_settings' %}" class="btn btn-sm {% if collab_tab == 'mail_settings' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+        <i class="fas fa-cog me-1"></i>Mail settings
+    </a>
+    {% endif %}
 </div>

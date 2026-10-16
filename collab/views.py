@@ -1,5 +1,7 @@
 """Views for the internal collaboration app (Mail, Chat, Meetings)."""
 
+from html import escape as html_escape
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Max
@@ -11,12 +13,16 @@ from django.utils.crypto import get_random_string
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.http import require_POST
 
+from employees.decorators import permission_required
 from employees.models import Department, Employee
 
 from .models import (
+    FORWARD_STYLE_CHOICES, FORWARD_STYLE_QUOTE,
+    MAIL_TYPE_CHOICES, MAIL_TYPE_HTML, MAIL_TYPE_PLAIN,
     ChatMessage, Conversation, ConversationMember,
-    MailMessage, MailRecipient, Meeting, MeetingAttendee,
+    MailMessage, MailRecipient, MailSettings, Meeting, MeetingAttendee,
 )
+from .sanitize import clean_html, html_to_text, message_html, plain_to_html
 
 
 def _me(request):
@@ -99,6 +105,7 @@ def _notify_recipients(me, mail):
         from hr_modules.emails import send_ticket_email
     except Exception:
         return
+    body_text = html_to_text(mail.body) if mail.mail_type == MAIL_TYPE_HTML else mail.body
     seen = set()
     for rec in mail.recipients.select_related('employee'):
         emp = rec.employee
@@ -110,10 +117,72 @@ def _notify_recipients(me, mail):
                 emp,
                 f'[CoreCloud Mail] {mail.subject}',
                 f'You have a new internal message from {me.full_name}.\n\n'
-                f'{mail.body}\n\n— Sent via CoreCloud internal mail.',
+                f'{body_text}\n\n— Sent via CoreCloud internal mail.',
             )
         except Exception:
             pass
+
+
+def _body_html(msg):
+    """Full HTML of a stored message: its body plus accumulated quote history."""
+    return message_html(msg.body, msg.mail_type, msg.quoted)
+
+
+def _reply_quote_html(parent):
+    """Outlook-style quoted block shown under a reply box."""
+    stamp = parent.created_at.strftime('%b %d, %Y %H:%M')
+    sender_name = parent.sender.full_name if parent.sender else 'System'
+    header = f'<div class="quote-header">On {stamp}, {sender_name} wrote:</div>'
+    return header + _body_html(parent)
+
+
+def _forward_quote_html(parent):
+    """Outlook-style forwarded block (or a simple quote, per HR settings)."""
+    settings = MailSettings.get()
+    if settings.forward_style == FORWARD_STYLE_QUOTE:
+        text = html_to_text(_body_html(parent))
+        quoted = '\n'.join('> ' + line for line in text.splitlines())
+        return plain_to_html(quoted)
+
+    sender = parent.sender
+    sender_name = sender.full_name if sender else 'System'
+    from_email = (sender.email if sender else '') or ''
+    stamp = parent.created_at.strftime('%b %d, %Y %H:%M')
+    to_names = ', '.join(
+        r.employee.full_name
+        for r in parent.recipients.select_related('employee')
+        if r.kind == MailRecipient.KIND_TO
+    ) or '—'
+    sender_line = html_escape(sender_name)
+    if from_email:
+        sender_line += f' &lt;{html_escape(from_email)}&gt;'
+    meta = (
+        f'<div class="quote-meta">From: {sender_line}<br>'
+        f'Date: {stamp}<br>'
+        f'Subject: {html_escape(parent.subject or "")}<br>'
+        f'To: {html_escape(to_names)}</div>'
+    )
+    return (
+        '<div class="quote-header">---------- Forwarded message ----------</div>'
+        + meta + _body_html(parent)
+    )
+
+
+def _build_quote(parent, quote_mode):
+    if quote_mode == 'forward':
+        return _forward_quote_html(parent)
+    return _reply_quote_html(parent)
+
+
+def _apply_signature(body, mail_type):
+    """Append the HR-configured signature to an outgoing message body."""
+    settings = MailSettings.get()
+    sig = (settings.signature or '').strip()
+    if not settings.use_signature or not sig:
+        return body
+    if mail_type == MAIL_TYPE_HTML:
+        return f'{body}<div class="mail-signature"><br>--<br>{plain_to_html(sig)}</div>'
+    return f'{body}\n\n-- \n{sig}'
 
 
 @login_required
@@ -122,16 +191,24 @@ def mail_compose(request):
     if me is None:
         return redirect('dashboard')
 
+    prefs = MailSettings.get()
     mode = request.GET.get('mode', 'reply')
     parent = None
     initial_to = []
     initial_cc = []
     initial_subject = ''
     initial_body = ''
+    initial_quote = ''
+    quote_mode = ''
+    mail_type = prefs.default_mail_type
 
     if request.method == 'POST':
         subject = (request.POST.get('subject') or '').strip()
-        body = (request.POST.get('body') or '').strip()
+        raw_body = (request.POST.get('body') or '').strip()
+        mail_type = request.POST.get('mail_type')
+        if mail_type != MAIL_TYPE_HTML:
+            mail_type = MAIL_TYPE_PLAIN
+        body = clean_html(raw_body) if mail_type == MAIL_TYPE_HTML else raw_body
         to_ids = set(int(x) for x in request.POST.getlist('recipients') if x.isdigit())
         cc_ids = set(int(x) for x in request.POST.getlist('cc_recipients') if x.isdigit())
 
@@ -154,17 +231,32 @@ def mail_compose(request):
         if parent_id.isdigit():
             parent = MailMessage.objects.filter(pk=int(parent_id)).first()
 
-        if not subject or not body or not (to_ids or cc_ids):
+        if mail_type == MAIL_TYPE_HTML:
+            has_body = bool(html_to_text(body).strip())
+        else:
+            has_body = bool(body.strip())
+
+        if not subject or not has_body or not (to_ids or cc_ids):
             messages.error(request, 'Subject, message and at least one recipient are required.')
             initial_to = sorted(to_ids)
             initial_cc = sorted(cc_ids)
             initial_subject = subject
-            initial_body = body
+            initial_body = raw_body
+            quote_mode = request.POST.get('quote_mode') or ''
+            if parent and request.POST.get('include_quote') == '1':
+                initial_quote = _build_quote(parent, quote_mode or 'reply')
         else:
             recipients_to = list(Employee.objects.filter(pk__in=to_ids, status='active'))
             recipients_cc = list(Employee.objects.filter(pk__in=cc_ids, status='active'))
+            quote_mode = request.POST.get('quote_mode') or 'reply'
+            include_quote = request.POST.get('include_quote') == '1'
+            if quote_mode != 'forward':
+                include_quote = include_quote and prefs.include_quote_in_reply
+            quoted = _build_quote(parent, quote_mode) if (parent and include_quote) else ''
             mail = MailMessage.objects.create(
-                sender=me, subject=subject, body=body, parent=parent,
+                sender=me, subject=subject,
+                body=_apply_signature(body, mail_type),
+                mail_type=mail_type, quoted=quoted, parent=parent,
             )
             rows = [
                 MailRecipient(mail=mail, employee=emp, kind=MailRecipient.KIND_TO)
@@ -189,28 +281,31 @@ def mail_compose(request):
                   .first())
         if parent and _can_access_mail(me, parent):
             subject = parent.subject or ''
-            initial_subject = subject if subject.lower().startswith('re:') else f'Re: {subject}'
-            others = [
-                r.employee_id for r in parent.recipients.select_related('employee')
-                if r.employee_id != me.pk
-            ]
-            sender = parent.sender
-            if mode == 'reply_all':
-                if sender and sender.pk != me.pk:
-                    initial_to.append(sender.pk)
-                initial_to.extend(others)
-            elif mode == 'cc':
-                if sender and sender.pk != me.pk:
-                    initial_to.append(sender.pk)
-                initial_cc = others
+            if mode == 'forward':
+                initial_subject = subject if subject.lower().startswith('fwd:') else f'Fwd: {subject}'
+                quote_mode = 'forward'
+                initial_quote = _build_quote(parent, 'forward')
             else:
-                if sender and sender.pk != me.pk:
-                    initial_to = [sender.pk]
-            quoted = '\n'.join('> ' + line for line in (parent.body or '').splitlines())
-            sender_name = parent.sender.full_name if parent.sender else 'System'
-            initial_body = (
-                f'\n\nOn {parent.created_at:%b %d, %Y %H:%M}, {sender_name} wrote:\n{quoted}'
-            )
+                initial_subject = subject if subject.lower().startswith('re:') else f'Re: {subject}'
+                others = [
+                    r.employee_id for r in parent.recipients.select_related('employee')
+                    if r.employee_id != me.pk
+                ]
+                sender = parent.sender
+                if mode == 'reply_all':
+                    if sender and sender.pk != me.pk:
+                        initial_to.append(sender.pk)
+                    initial_to.extend(others)
+                elif mode == 'cc':
+                    if sender and sender.pk != me.pk:
+                        initial_to.append(sender.pk)
+                    initial_cc = others
+                else:
+                    if sender and sender.pk != me.pk:
+                        initial_to = [sender.pk]
+                quote_mode = 'reply'
+                if prefs.include_quote_in_reply:
+                    initial_quote = _build_quote(parent, 'reply')
         else:
             parent = None
 
@@ -224,6 +319,9 @@ def mail_compose(request):
         'initial_cc': initial_cc,
         'initial_subject': initial_subject,
         'initial_body': initial_body,
+        'quote_html': initial_quote,
+        'quote_mode': quote_mode,
+        'mail_type': mail_type,
         'parent': parent,
         'collab_tab': 'mail_compose',
     })
@@ -242,40 +340,36 @@ def mail_reply(request, pk, mode='reply'):
 
 
 def _reply_variants(me, mail, to_recipients, cc_recipients):
-    """Pre-built Reply / Reply all / Forward fields (Outlook-like inline reply)."""
+    """Pre-built Reply / Reply all / Forward fields (Outlook-like inline reply).
+
+    ``body`` is intentionally empty: the user only types their own words.
+    ``quote`` carries the separate, deletable quoted-message HTML block.
+    """
+    prefs = MailSettings.get()
     sender = mail.sender
     subject = mail.subject or ''
     re_subject = subject if subject.lower().startswith('re:') else f'Re: {subject}'
     fwd_subject = subject if subject.lower().startswith('fwd:') else f'Fwd: {subject}'
-    quoted = '\n'.join('> ' + line for line in (mail.body or '').splitlines())
-    sender_name = sender.full_name if sender else 'System'
-    stamp = mail.created_at.strftime('%b %d, %Y %H:%M')
-    reply_body = f'\n\nOn {stamp}, {sender_name} wrote:\n{quoted}'
 
     sender_only = [sender] if (sender and sender.pk != me.pk) else []
     reply_all_to = _dedupe([e.pk for e in sender_only] + [e.pk for e in to_recipients if e.pk != me.pk])
     reply_all_cc = [e.pk for e in cc_recipients if e.pk != me.pk and e.pk not in reply_all_to]
 
-    to_names = ', '.join(e.full_name for e in to_recipients) or '—'
-    from_email = (sender.email if sender else '') or ''
-    forward_body = (
-        f'\n\n---------- Forwarded message ----------\n'
-        f'From: {sender_name} <{from_email}>\n'
-        f'Date: {stamp}\nSubject: {subject}\nTo: {to_names}\n\n{mail.body or ""}'
-    )
+    reply_quote = _reply_quote_html(mail) if prefs.include_quote_in_reply else ''
 
     return {
         'reply': {
             'to': [e.pk for e in sender_only], 'cc': [],
-            'subject': re_subject, 'body': reply_body,
+            'subject': re_subject, 'quote': reply_quote, 'mode': 'reply',
         },
         'reply_all': {
             'to': reply_all_to, 'cc': reply_all_cc,
-            'subject': re_subject, 'body': reply_body,
+            'subject': re_subject, 'quote': reply_quote, 'mode': 'reply',
         },
         'forward': {
             'to': [], 'cc': [],
-            'subject': fwd_subject, 'body': forward_body,
+            'subject': fwd_subject, 'quote': _forward_quote_html(mail),
+            'mode': 'forward',
         },
     }
 
@@ -301,6 +395,32 @@ def mail_detail(request, pk):
         'to_recipients': to_recipients, 'cc_recipients': cc_recipients,
         'employee_data': _employee_data(me),
         'reply_variants': _reply_variants(me, rec.mail, to_recipients, cc_recipients),
+        'mail_type': MailSettings.get().default_mail_type,
+    })
+
+
+@login_required
+@permission_required('manage_mail_settings')
+def mail_settings(request):
+    """HR-only preferences for the internal mail module."""
+    prefs = MailSettings.get()
+    if request.method == 'POST':
+        prefs.include_quote_in_reply = request.POST.get('include_quote_in_reply') == '1'
+        prefs.use_signature = request.POST.get('use_signature') == '1'
+        prefs.signature = (request.POST.get('signature') or '').strip()
+        mail_type = request.POST.get('default_mail_type')
+        if mail_type in dict(MAIL_TYPE_CHOICES):
+            prefs.default_mail_type = mail_type
+        forward_style = request.POST.get('forward_style')
+        if forward_style in dict(FORWARD_STYLE_CHOICES):
+            prefs.forward_style = forward_style
+        prefs.save()
+        messages.success(request, 'Mail settings saved.')
+        return redirect('collab_mail_settings')
+    return render(request, 'collab/mail_settings.html', {
+        'prefs': prefs, 'collab_tab': 'mail_settings',
+        'mail_type_choices': MAIL_TYPE_CHOICES,
+        'forward_style_choices': FORWARD_STYLE_CHOICES,
     })
 
 

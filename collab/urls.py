@@ -6,10 +6,12 @@ urlpatterns = [
     path('mail/', views.mail_inbox, name='collab_mail'),
     path('mail/sent/', views.mail_sent, name='collab_mail_sent'),
     path('mail/compose/', views.mail_compose, name='collab_mail_compose'),
+    path('mail/settings/', views.mail_settings, name='collab_mail_settings'),
     path('mail/<int:pk>/', views.mail_detail, name='collab_mail_detail'),
     path('mail/<int:pk>/reply/', views.mail_reply, {'mode': 'reply'}, name='collab_mail_reply'),
     path('mail/<int:pk>/reply-all/', views.mail_reply, {'mode': 'reply_all'}, name='collab_mail_reply_all'),
     path('mail/<int:pk>/cc/', views.mail_reply, {'mode': 'cc'}, name='collab_mail_cc'),
+    path('mail/<int:pk>/forward/', views.mail_reply, {'mode': 'forward'}, name='collab_mail_forward'),
     path('mail/<int:pk>/delete/', views.mail_delete, name='collab_mail_delete'),
 
     path('chat/', views.chat_home, name='collab_chat'),
