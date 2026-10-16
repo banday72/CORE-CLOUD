@@ -5,17 +5,17 @@
 {% block content %}
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-search me-1"></i> Search & Filter</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-search me-1"></i> Search & Filter</h6>
     </div>
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-3">
                 <label class="form-label small">Search</label>
-                <input type="text" name="search" class="form-control" placeholder="ID, name, email, phone, designation, manager..." value="{{ search }}">
+                <input type="text" name="search" class="form-control" placeholder="ID, name, email, phone, designation, manager..." value="{{ search }}" data-autosubmit>
             </div>
             <div class="col-md-2">
                 <label class="form-label small">Department</label>
-                <select name="department" class="form-select">
+                <select name="department" class="form-select" data-autosubmit>
                     <option value="">All Departments</option>
                     {% for dept in departments %}
                     <option value="{{ dept.id }}" {% if selected_department == dept.id|stringformat:"d" %}selected{% endif %}>{{ dept.name }}</option>
@@ -24,7 +24,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label small">Status</label>
-                <select name="status" class="form-select">
+                <select name="status" class="form-select" data-autosubmit>
                     <option value="">All Status</option>
                     <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
                     <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>Inactive</option>
@@ -35,7 +35,7 @@
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Search</button>
             </div>
             <div class="col-md-1">
-                <a href="{% url 'employee_list' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-times"></i></a>
+                <a href="{% url 'employee_list' %}" class="btn btn-outline-secondary w-100" aria-label="Clear filters"><i class="fas fa-times" aria-hidden="true"></i></a>
             </div>
             <div class="col-md-2">
                 <a href="{% url 'employee_create' %}" class="btn btn-success w-100 mb-2"><i class="fas fa-plus"></i> Add Employee</a>
@@ -49,7 +49,7 @@
 
 <div class="card shadow">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-users me-1"></i> Employee Records</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-users me-1"></i> Employee Records</h6>
         <span class="badge bg-primary fs-6">{{ page_obj.paginator.count }} Employee{{ page_obj.paginator.count|pluralize }}</span>
     </div>
     <div class="card-body">
@@ -118,7 +118,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="11" class="text-center py-4">No employees found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=11 icon="fa-users" title="No employees found" hint="Add your first employee or adjust the filters." cta_url_name="employee_create" cta_label="Add Employee" %}
                     {% endfor %}
                 </tbody>
             </table>

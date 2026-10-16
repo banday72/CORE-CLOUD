@@ -42,11 +42,11 @@
                             {% if not policy.is_active %}
                             <a href="{% url 'policy_activate' policy.pk %}" class="btn btn-sm btn-outline-success"><i class="fas fa-check"></i> Activate</a>
                             {% endif %}
-                            <a href="{% url 'policy_update' policy.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                            <a href="{% url 'policy_update' policy.pk %}" class="btn btn-sm btn-outline-primary" aria-label="Edit policy"><i class="fas fa-edit" aria-hidden="true"></i></a>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center">No policies found. Create one to configure auto payroll.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-cog" title="No policies found" hint="Create one to configure auto payroll." cta_url_name="policy_create" cta_label="Create Policy" %}
                     {% endfor %}
                 </tbody>
             </table>

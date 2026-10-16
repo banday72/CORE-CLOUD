@@ -7,13 +7,13 @@
     <div class="col-lg-8">
         <div class="card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-filter"></i> Search / Filter Range</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-filter"></i> Search / Filter Range</h6>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Department</label>
-                        <select name="department" form="auto-payroll-form" class="form-control">
+                        <select name="department" form="auto-payroll-form" class="form-select">
                             <option value="">All Departments</option>
                             {% for dept in departments %}
                             <option value="{{ dept.pk }}">{{ dept.name }}</option>
@@ -23,7 +23,7 @@
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Employee</label>
                         <input type="text" class="form-control mb-2" placeholder="Type to search name or ID..." id="employee-search">
-                        <select name="employee" form="auto-payroll-form" class="form-control" id="employee-select">
+                        <select name="employee" form="auto-payroll-form" class="form-select" id="employee-select">
                             <option value="">All Employees</option>
                             {% for emp in payroll_employees %}
                             <option value="{{ emp.employee_id }}">{{ emp.employee_id }} - {{ emp.first_name }} {{ emp.last_name }}</option>
@@ -32,7 +32,7 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Staff</label>
-                        <select name="staff" form="auto-payroll-form" class="form-control">
+                        <select name="staff" form="auto-payroll-form" class="form-select">
                             <option value="all">All Staff</option>
                             <option value="management">Management Only</option>
                         </select>
@@ -42,7 +42,7 @@
         </div>
         <div class="card shadow">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-magic"></i> Auto Generate Payroll</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-magic"></i> Auto Generate Payroll</h6>
             </div>
             <div class="card-body">
                 <div class="alert alert-info">
@@ -61,7 +61,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">Month</label>
-                            <select name="month" class="form-control">
+                            <select name="month" class="form-select">
                                 {% for m in "1,2,3,4,5,6,7,8,9,10,11,12"|make_list %}
                                 {% endfor %}
                                 <option value="1" {% if current_month == 1 %}selected{% endif %}>January</option>

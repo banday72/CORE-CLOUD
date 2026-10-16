@@ -37,7 +37,7 @@
                         <td><span class="badge bg-{% if record.status == 'present' %}success{% elif record.status == 'absent' %}danger{% elif record.status == 'half_day' %}warning{% elif record.status == 'late' %}info{% else %}secondary{% endif %}">{{ record.get_status_display }}</span></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center">No attendance records found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=4 icon="fa-clock" title="No attendance records yet" hint="Your clock-in and clock-out entries will appear here." %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -50,7 +50,7 @@
 <!-- HR / ADMIN VIEW -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Filter</h6>
+        <h6 class="m-0 fw-bold text-primary">Filter</h6>
     </div>
     <div class="card-body">
         <form method="get" class="row g-3">
@@ -121,7 +121,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center">No attendance records found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-clock" title="No attendance records found" hint="Try adjusting the employee or date filters." %}
                     {% endfor %}
                 </tbody>
             </table>

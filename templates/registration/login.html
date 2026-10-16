@@ -3,19 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - CoreCloud</title>
+    <title>Sign in - CoreCloud</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a5276'/%3E%3Ctext x='32' y='44' font-family='Arial' font-size='36' font-weight='900' fill='white' text-anchor='middle'%3EC%3C/text%3E%3C/svg%3E">
     <style>
+        :root {
+            --brand-deep: #16455f;
+            --brand: #1a5276;
+            --brand-light: #2980b9;
+            --ring: rgba(41, 128, 185, .28);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: linear-gradient(135deg, #1a5276 0%, #2980b9 50%, #5dade2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: linear-gradient(135deg, #0d2137 0%, #1a5276 50%, #2980b9 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 1.25rem;
         }
         .slideshow { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
         .slide {
@@ -24,40 +31,112 @@
             opacity: 0; transition: opacity 1.4s ease;
         }
         .slide.active { opacity: 1; }
-        .slideshow .overlay { position: absolute; inset: 0; z-index: 1; background: rgba(13, 33, 55, .45); }
-        .login-wrapper { position: relative; z-index: 2; width: 100%; max-width: 420px; padding: 1rem; }
+        .slideshow .overlay {
+            position: absolute; inset: 0; z-index: 1;
+            background: linear-gradient(135deg, rgba(9, 22, 38, .82), rgba(13, 33, 55, .62));
+        }
+        .login-wrapper { position: relative; z-index: 2; width: 100%; max-width: 430px; }
         .login-card {
             border: none;
-            border-radius: 1rem;
-            box-shadow: 0 0.5rem 2rem rgba(0,0,0,.25);
+            border-radius: 20px;
+            box-shadow: 0 24px 60px rgba(6, 20, 35, .45);
             overflow: hidden;
+            background: #fff;
+            animation: card-in .45s cubic-bezier(.4, 0, .2, 1) both;
+        }
+        @keyframes card-in {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
         .login-header {
-            background: white;
-            padding: 2.5rem 2rem 1.5rem;
+            background: linear-gradient(135deg, var(--brand-deep), var(--brand-light));
+            padding: 2rem 2rem 1.6rem;
             text-align: center;
+            color: #fff;
         }
-        .login-logo { margin-bottom: 1rem; }
-        .login-header h3 { color: #1a5276; font-weight: 700; margin-bottom: 0.25rem; font-size: 1.3rem; }
-        .login-header p { color: #5dade2; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.5px; }
-        .login-body { padding: 2rem; background: white; }
-        .form-control:focus { border-color: #2980b9; box-shadow: 0 0 0 0.2rem rgba(41,128,185,.25); }
-        .input-group-text { background: #f0f4f8; border-color: #dee2e6; }
+        .login-header .login-logo { margin-bottom: .85rem; }
+        .login-header h3 { font-weight: 800; font-size: 1.4rem; letter-spacing: .01em; margin-bottom: .15rem; }
+        .login-header p { color: rgba(255, 255, 255, .75); font-size: .82rem; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; margin: 0; }
+        .login-body { padding: 1.9rem 2rem 2rem; }
+        .form-label { font-size: .8rem; font-weight: 600; color: #33475b; margin-bottom: .35rem; }
+        .input-group-text {
+            background: #f2f6fa;
+            border: 1px solid #dde5ee;
+            border-right: none;
+            color: #7c8fa3;
+            border-radius: 11px 0 0 11px;
+        }
+        .form-control {
+            border: 1px solid #dde5ee;
+            border-radius: 0 11px 11px 0;
+            padding: .65rem .85rem;
+            font-size: .92rem;
+            min-height: 46px;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .form-control:focus {
+            border-color: var(--brand-light);
+            box-shadow: 0 0 0 .22rem var(--ring);
+        }
+        .form-control.is-invalid { border-color: #e74a3b; }
+        .invalid-feedback { color: #d64538; font-size: .76rem; font-weight: 500; }
+        .toggle-pw {
+            border: 1px solid #dde5ee;
+            border-left: none;
+            background: #fff;
+            color: #7c8fa3;
+            border-radius: 0 11px 11px 0;
+            padding: 0 .8rem;
+            cursor: pointer;
+        }
+        .input-group:focus-within .input-group-text,
+        .input-group:focus-within .toggle-pw { border-color: var(--brand-light); }
         .btn-login {
-            background: linear-gradient(135deg, #1a5276, #2980b9);
+            background: linear-gradient(135deg, var(--brand), var(--brand-light));
             border: none;
-            padding: 0.8rem;
-            font-weight: 600;
-            font-size: 1rem;
-            border-radius: 0.5rem;
+            padding: .78rem;
+            font-weight: 700;
+            font-size: .98rem;
+            border-radius: 11px;
+            color: #fff;
+            transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
         }
-        .btn-login:hover { background: linear-gradient(135deg, #154360, #1a5276); }
-        .alert { font-size: 0.85rem; }
+        .btn-login:hover { color: #fff; filter: brightness(1.06); box-shadow: 0 10px 24px rgba(26, 82, 118, .4); transform: translateY(-1px); }
+        .btn-login:active { transform: translateY(0) scale(.99); }
+        .btn-login .cc-spinner {
+            display: inline-block; width: 1em; height: 1em; margin-right: .4em;
+            border: 2px solid currentColor; border-right-color: transparent;
+            border-radius: 50%; animation: cc-spin .6s linear infinite; vertical-align: -.15em;
+        }
+        @keyframes cc-spin { to { transform: rotate(360deg); } }
+        .btn-face {
+            border: 1.5px solid var(--brand-light);
+            color: var(--brand);
+            font-weight: 600;
+            border-radius: 11px;
+            padding: .62rem;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .btn-face:hover { background: var(--brand-light); color: #fff; }
+        .login-footer { text-align: center; font-size: .74rem; color: #94a3b8; padding: 0 0 1.3rem; }
+        .alert { font-size: .84rem; border: none; border-radius: 11px; }
+        a { color: var(--brand-light); }
+        @media (prefers-color-scheme: dark) {
+            body { background: #0b141f; }
+            .login-card { background: #16202f; }
+            .login-header { background: linear-gradient(135deg, #0f2c40, #1f6da3); }
+            .form-label { color: #c3d1e0; }
+            .form-control, .toggle-pw { background: #101b29; border-color: #2a3b52; color: #dce5ee; }
+            .input-group-text { background: #1b2737; border-color: #2a3b52; color: #93a7bd; }
+            .toggle-pw { color: #93a7bd; }
+            .login-footer { color: #6b7d92; }
+            a { color: #5dade2; }
+        }
     </style>
 </head>
 <body>
     {% if login_slides %}
-    <div class="slideshow">
+    <div class="slideshow" aria-hidden="true">
         {% for slide in login_slides %}
         <div class="slide{% if forloop.first %} active{% endif %}" style="background-image:url('{{ slide }}')"></div>
         {% endfor %}
@@ -68,81 +147,104 @@
         <div class="card login-card">
             <div class="login-header">
                 <div class="login-logo">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="70" height="70" viewBox="0 0 100 100">
-                        <rect x="2" y="2" width="46" height="46" rx="6" fill="#1a5276"/>
-                        <text x="25" y="35" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="white" text-anchor="middle">M</text>
-                        <rect x="52" y="2" width="46" height="46" rx="6" fill="#2980b9"/>
-                        <text x="75" y="35" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="white" text-anchor="middle">T</text>
-                        <rect x="2" y="52" width="46" height="46" rx="6" fill="#5dade2"/>
-                        <text x="25" y="85" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="white" text-anchor="middle">B</text>
-                        <rect x="52" y="52" width="46" height="46" rx="6" fill="#aed6f1"/>
-                        <text x="75" y="85" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="#1a5276" text-anchor="middle">C</text>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 100 100" role="img" aria-label="CoreCloud logo">
+                        <rect x="2" y="2" width="46" height="46" rx="8" fill="#ffffff" fill-opacity="0.95"/>
+                        <text x="25" y="36" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="#1a5276" text-anchor="middle">M</text>
+                        <rect x="52" y="2" width="46" height="46" rx="8" fill="#ffffff" fill-opacity="0.75"/>
+                        <text x="75" y="36" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="#1a5276" text-anchor="middle">T</text>
+                        <rect x="2" y="52" width="46" height="46" rx="8" fill="#ffffff" fill-opacity="0.55"/>
+                        <text x="25" y="86" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="#1a5276" text-anchor="middle">B</text>
+                        <rect x="52" y="52" width="46" height="46" rx="8" fill="#ffffff" fill-opacity="0.35"/>
+                        <text x="75" y="86" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" fill="#16455f" text-anchor="middle">C</text>
                     </svg>
                 </div>
                 <h3>CoreCloud</h3>
+                <p>HR &amp; Payroll Portal</p>
             </div>
             <div class="login-body">
                 {% if messages %}
                     {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                     {% endfor %}
                 {% endif %}
-                {% if form.errors %}
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    <strong>Login failed!</strong> Invalid username or password, or your account is not authorized. Contact HR for access.
+                {% if form.errors or form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle me-1" aria-hidden="true"></i>
+                    <strong>Login failed.</strong> Invalid username or password, or your account is not authorized. Contact HR for access.
                 </div>
                 {% endif %}
-                <form method="post">
+                <form method="post" novalidate>
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Username</label>
+                        <label class="form-label" for="id_username">Username or Employee ID</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-user"></i></span>
-                            <input type="text" name="username" class="form-control" placeholder="Enter your username" required autofocus>
+                            <span class="input-group-text"><i class="fas fa-user" aria-hidden="true"></i></span>
+                            <input type="text" name="username" id="id_username" class="form-control" placeholder="Enter your username" autocomplete="username" required autofocus>
                         </div>
                     </div>
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Password</label>
+                    <div class="mb-3">
+                        <label class="form-label" for="id_password">Password</label>
                         <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                            <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+                            <span class="input-group-text"><i class="fas fa-lock" aria-hidden="true"></i></span>
+                            <input type="password" name="password" id="id_password" class="form-control" placeholder="Enter your password" autocomplete="current-password" required>
+                            <button type="button" class="toggle-pw" id="togglePw" aria-label="Show password" aria-pressed="false">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-login text-white w-100 mb-3">
-                        <i class="fas fa-sign-in-alt me-2"></i> Sign In
+                    <button type="submit" class="btn btn-login w-100 mb-3">
+                        <i class="fas fa-sign-in-alt me-2" aria-hidden="true"></i> Sign In
                     </button>
-                    <div class="text-center">
+                    <div class="text-center mb-3">
                         <a href="{% url 'password_reset' %}" class="text-decoration-none small">
-                            <i class="fas fa-key me-1"></i> Forgot Password?
+                            <i class="fas fa-key me-1" aria-hidden="true"></i> Forgot password?
                         </a>
                     </div>
-                    <div class="text-center mt-3">
-                        <a href="{% url 'face_login' %}" class="btn btn-outline-primary w-100" style="border-radius:0.5rem;">
-                            <i class="fas fa-fingerprint me-2"></i>Login with Face
-                        </a>
-                    </div>
+                    <a href="{% url 'face_login' %}" class="btn btn-face w-100">
+                        <i class="fas fa-fingerprint me-2" aria-hidden="true"></i>Login with Face
+                    </a>
                 </form>
             </div>
+            <div class="login-footer">&copy; CoreCloud &middot; Secure access to your workspace</div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    {% if login_slides %}
     <script>
     (function () {
+        var toggle = document.getElementById('togglePw');
+        var pw = document.getElementById('id_password');
+        if (toggle && pw) {
+            toggle.addEventListener('click', function () {
+                var show = pw.type === 'password';
+                pw.type = show ? 'text' : 'password';
+                toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+                toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                toggle.querySelector('i').className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+            });
+        }
+        var form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function () {
+                var btn = form.querySelector('button[type="submit"]');
+                if (btn && !btn.dataset.busy) {
+                    btn.dataset.busy = '1';
+                    btn.insertAdjacentHTML('afterbegin', '<span class="cc-spinner"></span>');
+                }
+            });
+        }
         var slides = document.querySelectorAll('.slideshow .slide');
-        if (slides.length < 2) { return; }
-        var i = 0;
-        setInterval(function () {
-            slides[i].classList.remove('active');
-            i = (i + 1) % slides.length;
-            slides[i].classList.add('active');
-        }, 6000);
+        if (slides.length > 1) {
+            var i = 0;
+            setInterval(function () {
+                slides[i].classList.remove('active');
+                i = (i + 1) % slides.length;
+                slides[i].classList.add('active');
+            }, 6000);
+        }
     })();
     </script>
-    {% endif %}
 </body>
 </html>

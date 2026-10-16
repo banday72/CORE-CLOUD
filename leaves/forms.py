@@ -18,8 +18,8 @@ class LeaveForm(forms.ModelForm):
         model = Leave
         fields = ['employee', 'leave_type', 'start_date', 'end_date', 'reason']
         widgets = {
-            'employee': forms.Select(attrs={'class': 'form-control'}),
-            'leave_type': forms.Select(attrs={'class': 'form-control'}),
+            'employee': forms.Select(attrs={'class': 'form-select'}),
+            'leave_type': forms.Select(attrs={'class': 'form-select'}),
             'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -30,7 +30,7 @@ class LeaveApprovalForm(forms.Form):
     STATUS_CHOICES = [('approved', 'Approve'), ('rejected', 'Reject')]
     status = forms.ChoiceField(
         choices=STATUS_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     approved_by = forms.CharField(
         max_length=100,

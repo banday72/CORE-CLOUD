@@ -7,7 +7,7 @@
     <div class="col-lg-8">
         <div class="card shadow">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-file-alt me-1"></i> Ticket #{{ ticket.pk }}</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-file-alt me-1"></i> Ticket #{{ ticket.pk }}</h6>
                 <span class="badge {% if ticket.status == 'pending' %}bg-warning text-dark{% elif ticket.status == 'approved' %}bg-secondary{% elif ticket.status == 'in_progress' %}bg-info{% elif ticket.status == 'resolved' %}bg-success{% else %}bg-danger{% endif %}">
                     {{ ticket.get_status_display }}
                 </span>

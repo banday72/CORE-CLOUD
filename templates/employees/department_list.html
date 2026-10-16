@@ -26,12 +26,12 @@
                         <td>{{ dept.description|default:"-" }}</td>
                         <td>{{ dept.created_at|date:"M d, Y" }}</td>
                         <td>
-                            <a href="{% url 'department_update' dept.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
-                            <a href="{% url 'department_delete' dept.pk %}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></a>
+<a href="{% url 'department_update' dept.pk %}" class="btn btn-sm btn-outline-primary" aria-label="Edit department"><i class="fas fa-edit" aria-hidden="true"></i></a>
+                        <a href="{% url 'department_delete' dept.pk %}" class="btn btn-sm btn-outline-danger" aria-label="Delete department"><i class="fas fa-trash" aria-hidden="true"></i></a>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center">No departments found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=4 icon="fa-building" title="No departments yet" hint="Add departments to organise your workforce." cta_url_name="department_create" cta_label="Add Department" %}
                     {% endfor %}
                 </tbody>
             </table>

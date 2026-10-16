@@ -7,7 +7,7 @@
     <div class="col-lg-6">
         <div class="card shadow">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Leave Request Details</h6>
+                <h6 class="m-0 fw-bold text-primary">Leave Request Details</h6>
             </div>
             <div class="card-body">
                 <p><strong>Employee:</strong> {{ leave.employee.employee_id }} - {{ leave.employee.full_name }}</p>
@@ -17,12 +17,13 @@
                 <hr>
                 <form method="post">
                     {% csrf_token %}
+                    {% include "includes/form_errors.html" %}
                     {% for field in form %}
                     <div class="mb-3">
-                        <label class="form-label fw-bold">{{ field.label }}</label>
+                        <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                         {% if field.errors %}
-                        <div class="text-danger small">{{ field.errors.0 }}</div>
+                        <div class="field-errors">{{ field.errors|join:"<br>" }}</div>
                         {% endif %}
                     </div>
                     {% endfor %}

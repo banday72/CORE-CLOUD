@@ -57,7 +57,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center text-muted">No budget loans found</td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-hand-holding-usd" title="No budget loans found" hint="Record a loan to track repayments." cta_url_name="loan_create" cta_label="Add Loan" %}
                     {% endfor %}
                 </tbody>
             </table>

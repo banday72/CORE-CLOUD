@@ -13,9 +13,9 @@
                 (links, badges, message pickers and meeting invites). Only the Networks / IT team can change these settings.
             </div>
             <form method="get" class="d-flex gap-2">
-                <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm"
+                <input type="text" name="search" value="{{ search }}" class="form-control form-control-sm" data-autosubmit
                        placeholder="Search name / ID / designation" style="width:260px;">
-                <button type="submit" class="btn btn-outline-primary btn-sm"><i class="fas fa-magnifying-glass"></i></button>
+                <button type="submit" class="btn btn-outline-primary btn-sm" aria-label="Search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
                 {% if search %}
                 <a href="{% url 'collab_access_admin' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
                 {% endif %}
@@ -88,7 +88,7 @@
                         {% endfor %}
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center text-muted py-4">No employees found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=4 icon="fa-user-lock" title="No employees found" hint="Adjust the filters to see more people." %}
                     {% endfor %}
                 </tbody>
             </table>

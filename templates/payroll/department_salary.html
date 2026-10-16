@@ -49,11 +49,7 @@
         </div>
     </div>
     {% empty %}
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body text-center text-muted">No departments found</div>
-        </div>
-    </div>
+    {% include "includes/empty_state.html" with variant="plain" extra_class="col-12" icon="fa-building" title="No departments found" hint="No salary data to show for the current selection." %}
     {% endfor %}
 </div>
 

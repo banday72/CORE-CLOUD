@@ -27,7 +27,7 @@
             {% endif %}
         </a>
         {% empty %}
-        <div class="list-group-item text-center py-4 text-muted small">No upcoming meetings.</div>
+        {% include "includes/empty_state.html" with variant="plain" extra_class="list-group-item" icon="fa-calendar-plus" title="No upcoming meetings" hint="Schedule a meeting to see it here." %}
         {% endfor %}
     </div>
 </div>
@@ -44,7 +44,7 @@
             <span class="badge bg-secondary">{{ m.get_status_display }}</span>
         </a>
         {% empty %}
-        <div class="list-group-item text-center py-4 text-muted small">You have not organized any meetings.</div>
+        {% include "includes/empty_state.html" with variant="plain" extra_class="list-group-item" icon="fa-video" title="No organized meetings" hint="Meetings you create will appear here." %}
         {% endfor %}
     </div>
 </div>
@@ -58,7 +58,7 @@
             <small class="text-muted">{{ m.start_at|date:"M d, Y H:i" }}</small>
         </a>
         {% empty %}
-        <div class="list-group-item text-center py-4 text-muted small">No past meetings.</div>
+        {% include "includes/empty_state.html" with variant="plain" extra_class="list-group-item" icon="fa-clock-rotate-left" title="No past meetings" hint="Completed meetings will appear here." %}
         {% endfor %}
     </div>
 </div>

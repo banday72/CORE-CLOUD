@@ -12,11 +12,11 @@
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-5">
                 <label class="form-label fw-bold small mb-1">Search</label>
-                <input type="text" name="search" class="form-control" placeholder="ID, name or designation" value="{{ search }}">
+                <input type="text" name="search" class="form-control" placeholder="ID, name or designation" value="{{ search }}" data-autosubmit>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold small mb-1">Filter by Team</label>
-                <select name="team" class="form-select">
+                <select name="team" class="form-select" data-autosubmit>
                     <option value="">All employees</option>
                     {% for val, label in team_choices %}
                     <option value="{{ val }}" {% if team_filter == val %}selected{% endif %}>{{ label }}</option>
@@ -108,7 +108,7 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="6" class="text-center py-4 text-muted">No employees found.</td></tr>
+                        {% include "includes/empty_state.html" with colspan=6 icon="fa-users" title="No employees found" hint="Adjust the filters to see more team members." %}
                         {% endfor %}
                     </tbody>
                 </table>

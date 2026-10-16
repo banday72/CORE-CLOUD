@@ -7,7 +7,7 @@
     <div class="col-lg-8">
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-info-circle me-1"></i> Training Details</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-info-circle me-1"></i> Training Details</h6>
                 {% if training.status == 'completed' %}
                 <span class="badge bg-success fs-6">Completed</span>
                 {% elif training.status == 'ongoing' %}
@@ -40,7 +40,7 @@
 
         <div class="card shadow">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-users me-1"></i> Enrolled Employees</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-users me-1"></i> Enrolled Employees</h6>
                 <a href="{% url 'training_enroll' training.pk %}" class="btn btn-sm btn-primary"><i class="fas fa-user-plus me-1"></i> Add More</a>
             </div>
             <div class="card-body">
@@ -85,7 +85,7 @@
                                 <td><small>{{ enroll.score|default:"-" }}</small></td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="5" class="text-center py-3 text-muted">No employees enrolled yet.</td></tr>
+                            {% include "includes/empty_state.html" with colspan=5 icon="fa-user-graduate" title="No enrollments yet" hint="Enrolled employees will appear here." %}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -97,7 +97,7 @@
     <div class="col-lg-4">
         <div class="card shadow">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-cog me-1"></i> Actions</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-cog me-1"></i> Actions</h6>
             </div>
             <div class="card-body">
                 <a href="{% url 'training_enroll' training.pk %}" class="btn btn-primary w-100 mb-2"><i class="fas fa-user-plus me-1"></i> Enroll Employees</a>

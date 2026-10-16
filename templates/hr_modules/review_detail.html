@@ -16,7 +16,7 @@
     <div class="col-lg-8">
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-star me-1"></i> Review: {{ review.get_period_display }} {{ review.year }}</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-star me-1"></i> Review: {{ review.get_period_display }} {{ review.year }}</h6>
                 <span class="badge bg-{% if review.status == 'completed' %}success{% else %}secondary{% endif %}">{{ review.get_status_display }}</span>
             </div>
             <div class="card-body">
@@ -107,7 +107,7 @@
     <div class="col-lg-4">
         <div class="card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-chart-pie me-1"></i> Radar Chart</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-chart-pie me-1"></i> Radar Chart</h6>
             </div>
             <div class="card-body">
                 <canvas id="radarChart" width="400" height="400"></canvas>
@@ -116,7 +116,7 @@
 
         <div class="card shadow">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-info-circle me-1"></i> Summary</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-info-circle me-1"></i> Summary</h6>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-2">

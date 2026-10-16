@@ -5,17 +5,17 @@
 {% block content %}
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-shield-alt me-1"></i> Filter</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-shield-alt me-1"></i> Filter</h6>
     </div>
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small">Search</label>
-                <input type="text" name="search" class="form-control" placeholder="Description, user, object..." value="{{ search }}">
+                <input type="text" name="search" class="form-control" placeholder="Description, user, object..." value="{{ search }}" data-autosubmit>
             </div>
             <div class="col-md-3">
                 <label class="form-label small">Action Type</label>
-                <select name="action" class="form-select">
+                <select name="action" class="form-select" data-autosubmit>
                     <option value="">All Actions</option>
                     <option value="login" {% if action_filter == 'login' %}selected{% endif %}>Login</option>
                     <option value="logout" {% if action_filter == 'logout' %}selected{% endif %}>Logout</option>
@@ -31,7 +31,7 @@
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Filter</button>
             </div>
             <div class="col-md-1">
-                <a href="{% url 'audit_log' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-times"></i></a>
+                <a href="{% url 'audit_log' %}" class="btn btn-outline-secondary w-100" aria-label="Clear filters"><i class="fas fa-times" aria-hidden="true"></i></a>
             </div>
         </form>
     </div>
@@ -39,7 +39,7 @@
 
 <div class="card shadow">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-history me-1"></i> Activity Log</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-history me-1"></i> Activity Log</h6>
         <span class="badge bg-primary fs-6">{{ page_obj.paginator.count }} Record{{ page_obj.paginator.count|pluralize }}</span>
     </div>
     <div class="card-body">
@@ -82,7 +82,7 @@
                         <td><small class="text-muted">{{ log.ip_address|default:"-" }}</small></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" class="text-center py-4">No activity logs found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=5 icon="fa-history" title="No activity yet" hint="Actions performed in the system will be logged here." %}
                     {% endfor %}
                 </tbody>
             </table>

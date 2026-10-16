@@ -70,9 +70,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-4 text-muted">
-                        <i class="fas fa-clock fa-2x mb-2 d-block"></i> No overtime records found.
-                    </td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-clock" title="No overtime records" hint="Log overtime to keep track of extra hours." cta_url_name="overtime_create" cta_label="Log Overtime" %}
                     {% endfor %}
                 </tbody>
             </table>

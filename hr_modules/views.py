@@ -50,13 +50,15 @@ def notification_list(request):
     from .models import Notification
     emp = Employee.objects.filter(user=request.user).first()
     if emp:
-        notifs = Notification.objects.filter(employee=emp)
+        base = Notification.objects.filter(employee=emp)
     elif request.user.is_superuser:
-        notifs = Notification.objects.all()[:100]
+        base = Notification.objects.all()
     else:
-        notifs = Notification.objects.none()
+        base = Notification.objects.none()
+    unread_count = base.filter(is_read=False).count()
+    notifs = base if emp else base[:100]
     return render(request, 'hr_modules/notification_list.html', {
-        'notifications': notifs, 'unread_count': notifs.filter(is_read=False).count()
+        'notifications': notifs, 'unread_count': unread_count
     })
 
 
@@ -168,7 +170,7 @@ def review_list(request):
     employee_filter = request.GET.get('employee', '')
 
     if has_any_permission(request.user, 'manage_reviews'):
-        reviews = PerformanceReview.objects.all()
+        reviews = PerformanceReview.objects.select_related('employee', 'reviewer').all()
     elif emp:
         reviews = PerformanceReview.objects.filter(employee=emp)
     else:
@@ -187,12 +189,12 @@ def review_list(request):
 
     emp_stats = []
     if has_any_permission(request.user, 'manage_reviews'):
-        all_emps = Employee.objects.filter(status='active')
-        for e in all_emps:
-            e_reviews = PerformanceReview.objects.filter(employee=e)
-            e_avg = e_reviews.aggregate(avg=Avg('overall_rating'))['avg'] or 0
-            e_count = e_reviews.count()
-            emp_stats.append({'employee': e, 'avg_rating': e_avg, 'review_count': e_count})
+        from django.db.models import Avg as _Avg, Count
+        active_emps = (Employee.objects.filter(status='active')
+                       .select_related('department')
+                       .annotate(_avg=Avg('reviews__overall_rating'), _count=Count('reviews')))
+        emp_stats = [{'employee': e, 'avg_rating': e._avg or 0, 'review_count': e._count}
+                     for e in active_emps]
 
     return render(request, 'hr_modules/review_list.html', {
         'reviews': reviews, 'avg_rating': round(float(avg_rating), 2),

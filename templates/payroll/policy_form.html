@@ -9,6 +9,7 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
+                    {% include "includes/form_errors.html" %}
                     <h5 class="text-primary mb-3">Basic Settings</h5>
                     <div class="row">
                         <div class="col-md-6 mb-3">

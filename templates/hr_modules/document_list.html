@@ -14,19 +14,19 @@
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-filter me-1"></i> Filter</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-filter me-1"></i> Filter</h6>
     </div>
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small">Employee ID</label>
-                <input type="text" name="employee" class="form-control" placeholder="e.g. EMP001" value="{{ request.GET.employee|default:'' }}">
+                <input type="text" name="employee" class="form-control" placeholder="e.g. EMP001" value="{{ request.GET.employee|default:'' }}" data-autosubmit>
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Filter</button>
             </div>
             <div class="col-md-1">
-                <a href="{% url 'document_list' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-times"></i></a>
+                <a href="{% url 'document_list' %}" class="btn btn-outline-secondary w-100" aria-label="Clear filters"><i class="fas fa-times" aria-hidden="true"></i></a>
             </div>
         </form>
     </div>
@@ -34,7 +34,7 @@
 
 <div class="card shadow">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-file-alt me-1"></i> Documents</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-file-alt me-1"></i> Documents</h6>
         <span class="badge bg-primary fs-6">{{ documents|length }} Document{{ documents|length|pluralize }}</span>
     </div>
     <div class="card-body">
@@ -96,9 +96,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-4 text-muted">
-                        <i class="fas fa-folder-open fa-2x mb-2 d-block"></i> No documents found.
-                    </td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-folder-open" title="No documents yet" hint="Upload documents to keep employee records organised." cta_url_name="document_upload" cta_label="Upload Document" %}
                     {% endfor %}
                 </tbody>
             </table>

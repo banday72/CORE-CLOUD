@@ -21,16 +21,16 @@
 
 <div class="card shadow mb-4">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-shield-alt me-1"></i>Manage Employee Faces</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-shield-alt me-1"></i>Manage Employee Faces</h6>
         <span class="badge bg-primary">{{ employees|length }} employees</span>
     </div>
     <div class="card-body">
         <form method="get" class="row g-3 mb-4">
             <div class="col-md-4">
-                <input type="text" name="search" class="form-control" placeholder="Search ID or name..." value="{{ search }}">
+                <input type="text" name="search" class="form-control" placeholder="Search ID or name..." value="{{ search }}" data-autosubmit>
             </div>
             <div class="col-md-3">
-                <select name="department" class="form-select">
+                <select name="department" class="form-select" data-autosubmit>
                     <option value="">All Departments</option>
                     {% for dept in departments %}
                     <option value="{{ dept.pk }}" {% if selected_dept == dept.pk|stringformat:"d" %}selected{% endif %}>{{ dept.name }}</option>
@@ -38,7 +38,7 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <select name="face_status" class="form-select">
+                <select name="face_status" class="form-select" data-autosubmit>
                     <option value="">All Status</option>
                     <option value="registered" {% if face_filter == 'registered' %}selected{% endif %}>Face Registered</option>
                     <option value="not_registered" {% if face_filter == 'not_registered' %}selected{% endif %}>Not Registered</option>
@@ -83,7 +83,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="5" class="text-center text-muted">No employees found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=5 icon="fa-user-shield" title="No employees found" hint="Employees will appear here once they register a face." %}
                     {% endfor %}
                 </tbody>
             </table>

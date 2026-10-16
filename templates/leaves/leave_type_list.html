@@ -26,7 +26,7 @@
                         <td>{{ lt.description|default:"-" }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="3" class="text-center">No leave types found.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=3 icon="fa-calendar-plus" title="No leave types yet" hint="Create leave types to let employees request time off." cta_url_name="leave_type_create" cta_label="Add Leave Type" %}
                     {% endfor %}
                 </tbody>
             </table>

@@ -7,7 +7,7 @@
     <div class="col-lg-6">
         <div class="card shadow">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-user-edit me-1"></i> Edit Profile</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-user-edit me-1"></i> Edit Profile</h6>
             </div>
             <div class="card-body text-center">
                 <div class="mb-3">
@@ -27,12 +27,13 @@
                 </div>
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
+                    {% include "includes/form_errors.html" %}
                     {% for field in form %}
                     <div class="mb-3 text-start">
-                        <label class="form-label fw-bold">{{ field.label }}</label>
+                        <label class="form-label fw-bold" for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
                         {% if field.errors %}
-                        <div class="text-danger small">{{ field.errors.0 }}</div>
+                        <div class="field-errors">{{ field.errors|join:"<br>" }}</div>
                         {% endif %}
                     </div>
                     {% endfor %}

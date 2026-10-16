@@ -72,9 +72,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-4 text-muted">
-                        <i class="fas fa-plane fa-2x mb-2 d-block"></i> No travel requests found.
-                    </td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-plane" title="No travel requests" hint="Submit a travel request to get started." cta_url_name="travel_create" cta_label="New Request" %}
                     {% endfor %}
                 </tbody>
             </table>

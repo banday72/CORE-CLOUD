@@ -367,7 +367,7 @@
             if (e.key === "Escape" && sidebar.classList.contains("show")) setOpen(false);
         });
         sidebar.addEventListener("click", function (e) {
-            if (e.target.closest(".nav-link") && window.innerWidth <= 768) setOpen(false);
+            if (e.target.closest(".nav-link") && window.innerWidth <= 991) setOpen(false);
         });
     }
 
@@ -386,11 +386,106 @@
         });
     }
 
+    /* ------------------------------ theme ------------------------------- */
+
+    function initTheme() {
+        var btn = document.getElementById("themeToggle");
+        if (!btn) return;
+        var icon = btn.querySelector("i");
+
+        function sync() {
+            var dark = document.documentElement.getAttribute("data-bs-theme") === "dark";
+            if (icon) icon.className = dark ? "fas fa-sun" : "fas fa-moon";
+            btn.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+        }
+
+        btn.addEventListener("click", function () {
+            var next = document.documentElement.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-bs-theme", next);
+            try { localStorage.setItem("cc-theme", next); } catch (e) { /* ignore */ }
+            sync();
+            dispatch("cc:theme", { mode: next });
+        });
+        sync();
+    }
+
+    /* --------------------------- form guards ---------------------------- */
+
+    function initFormGuards() {
+        // Native validation UX: highlight fields the browser rejects.
+        document.addEventListener("invalid", function (e) {
+            var field = e.target;
+            if (!field.classList) return;
+            field.classList.add("is-invalid");
+            field.setAttribute("aria-invalid", "true");
+            var form = field.form;
+            if (form) form.classList.add("was-validated");
+        }, true);
+
+        document.addEventListener("input", function (e) {
+            var field = e.target;
+            if (field.classList && field.classList.contains("is-invalid") && field.validity && field.validity.valid) {
+                field.classList.remove("is-invalid");
+                field.removeAttribute("aria-invalid");
+            }
+        }, true);
+
+        // Double-submit guard for regular (non-AJAX) forms.
+        document.addEventListener("submit", function (e) {
+            var form = e.target;
+            if (form.hasAttribute("data-ajax") || form.hasAttribute("data-no-guard")) return;
+            if (form.dataset.ccSubmitting === "1") { e.preventDefault(); return; }
+            form.dataset.ccSubmitting = "1";
+            var submitter = e.submitter;
+            if (submitter) {
+                submitter.classList.add("is-busy");
+                if (submitter.tagName === "BUTTON" && !submitter.dataset.ccOriginal) {
+                    submitter.dataset.ccOriginal = submitter.innerHTML;
+                    submitter.insertAdjacentHTML("afterbegin", '<span class="cc-spinner"></span>');
+                }
+            } else {
+                form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (b) {
+                    b.classList.add("is-busy");
+                });
+            }
+            // Safety: if navigation never happens, unlock the form.
+            setTimeout(function () {
+                if (!form.isConnected) return;
+                form.dataset.ccSubmitting = "";
+                form.querySelectorAll(".is-busy").forEach(function (b) {
+                    b.classList.remove("is-busy");
+                    if (b.dataset.ccOriginal !== undefined) {
+                        b.innerHTML = b.dataset.ccOriginal;
+                        delete b.dataset.ccOriginal;
+                    }
+                });
+            }, 4000);
+        });
+
+        // Debounced auto-submit for filter/search forms.
+        document.querySelectorAll("[data-autosubmit]").forEach(function (el) {
+            var form = el.form;
+            if (!form) return;
+            var timer = null;
+            var eventName = el.tagName === "SELECT" || el.type === "date" || el.type === "checkbox" ? "change" : "input";
+            el.addEventListener(eventName, function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    if (form.hasAttribute("data-ajax")) return;
+                    if (form.requestSubmit) form.requestSubmit();
+                    else form.submit();
+                }, 450);
+            });
+        });
+    }
+
     /* ------------------------------- init -------------------------------- */
 
     function init() {
         initSidebar();
         initMessages();
+        initTheme();
+        initFormGuards();
         runCounters(document);
         var wrapper = document.querySelector(".content-wrapper");
         if (wrapper) wrapper.classList.add("cc-animate-in");

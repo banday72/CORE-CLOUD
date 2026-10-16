@@ -30,10 +30,7 @@
             </div>
         </a>
         {% empty %}
-        <div class="list-group-item text-center py-5 text-muted">
-            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-            Your inbox is empty.
-        </div>
+        {% include "includes/empty_state.html" with variant="plain" extra_class="list-group-item" icon="fa-inbox" title="Your inbox is empty" hint="New mail will appear here." %}
         {% endfor %}
     </div>
 </div>

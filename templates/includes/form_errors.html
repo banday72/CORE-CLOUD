@@ -1,0 +1,6 @@
+{% if form.non_field_errors %}
+<div class="form-error-summary" role="alert">
+    <strong><i class="fas fa-triangle-exclamation me-1" aria-hidden="true"></i>Please fix the following:</strong>
+    <ul class="mb-0">{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+</div>
+{% endif %}

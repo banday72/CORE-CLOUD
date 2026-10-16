@@ -1,0 +1,6 @@
+{% if variant == "plain" %}<div class="cc-empty{% if extra_class %} {{ extra_class }}{% endif %}">{% else %}<tr><td colspan="{{ colspan|default:8 }}" class="cc-empty">{% endif %}
+<i class="fas {{ icon|default:'fa-inbox' }}" aria-hidden="true"></i>
+<p class="cc-empty-title">{{ title|default:"Nothing here yet" }}</p>
+{% if hint %}<p class="cc-empty-hint">{{ hint }}</p>{% endif %}
+{% if cta_url or cta_url_name %}<a href="{% if cta_url_name %}{% url cta_url_name %}{% else %}{{ cta_url }}{% endif %}" class="btn btn-sm btn-primary mt-2"><i class="fas {{ cta_icon|default:'fa-plus' }} me-1" aria-hidden="true"></i>{{ cta_label }}</a>{% endif %}
+{% if variant == "plain" %}</div>{% else %}</td></tr>{% endif %}

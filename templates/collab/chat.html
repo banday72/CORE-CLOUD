@@ -114,14 +114,14 @@
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center text-muted py-5">No messages yet — say hello.</div>
+                {% include "includes/empty_state.html" with variant="plain" extra_class="list-group-item" icon="fa-comments" title="No messages yet" hint="Say hello to start the conversation." %}
                 {% endfor %}
             </div>
             <div class="card-footer bg-white">
                 <form id="chatForm" class="d-flex gap-2" method="post" action="{% url 'collab_chat_send' active.pk %}">
                     {% csrf_token %}
                     <input type="text" name="body" id="chatInput" class="form-control" placeholder="Type a message…" autocomplete="off" required>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
+                    <button type="submit" class="btn btn-primary" aria-label="Send message"><i class="fas fa-paper-plane" aria-hidden="true"></i></button>
                 </form>
             </div>
         </div>

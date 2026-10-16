@@ -134,20 +134,20 @@ def payroll_anomaly_detection():
                 'actual': net, 'expected': avg_salary,
             })
 
-        if p.allowances > p.basic_salary * 0.5:
+        if float(p.allowances) > float(p.basic_salary) * 0.5:
             anomalies.append({
                 'employee': p.employee, 'payroll': p,
                 'type': 'high_allowance', 'severity': 'medium',
                 'description': f'Allowances Rs. {p.allowances:,.0f} exceed 50% of basic salary Rs. {p.basic_salary:,.0f}',
-                'actual': float(p.allowances), 'expected': float(p.basic_salary * 0.5),
+                'actual': float(p.allowances), 'expected': float(p.basic_salary) * 0.5,
             })
 
-        if p.deductions > p.basic_salary * 0.3:
+        if float(p.deductions) > float(p.basic_salary) * 0.3:
             anomalies.append({
                 'employee': p.employee, 'payroll': p,
                 'type': 'high_deduction', 'severity': 'high',
                 'description': f'Deductions Rs. {p.deductions:,.0f} exceed 30% of basic salary Rs. {p.basic_salary:,.0f}',
-                'actual': float(p.deductions), 'expected': float(p.basic_salary * 0.3),
+                'actual': float(p.deductions), 'expected': float(p.basic_salary) * 0.3,
             })
 
         if p.net_salary < 0:
@@ -182,18 +182,37 @@ def payroll_anomaly_detection():
 
 def employee_risk_prediction():
     today = date.today()
+    window_start = today - timedelta(days=90)
     employees = Employee.objects.filter(status='active').select_related('department')
+
+    att_map = {
+        row['employee']: row for row in
+        Attendance.objects.filter(date__gte=window_start)
+        .values('employee')
+        .annotate(total=Count('id'),
+                  absent=Count('id', filter=Q(status='absent')),
+                  late=Count('id', filter=Q(status='late')))
+    }
+    leave_map = {
+        row['employee']: row['c'] for row in
+        Leave.objects.filter(status='approved', start_date__gte=window_start)
+        .values('employee').annotate(c=Count('id'))
+    }
+    loan_map = {
+        row['employee']: row['c'] for row in
+        BudgetLoan.objects.filter(is_active=True).values('employee').annotate(c=Count('id'))
+    }
 
     risk_data = []
     for emp in employees:
         score = 0
         reasons = []
 
-        att_records = Attendance.objects.filter(employee=emp, date__gte=today - timedelta(days=90))
-        total_att = att_records.count()
-        if total_att > 0:
-            absent_pct = (att_records.filter(status='absent').count() / total_att) * 100
-            late_pct = (att_records.filter(status='late').count() / total_att) * 100
+        att = att_map.get(emp.pk)
+        if att and att['total']:
+            total_att = att['total']
+            absent_pct = (att['absent'] / total_att) * 100
+            late_pct = (att['late'] / total_att) * 100
             if absent_pct > 20:
                 score += 30
                 reasons.append(f'High absenteeism ({absent_pct:.0f}%)')
@@ -204,8 +223,7 @@ def employee_risk_prediction():
                 score += 20
                 reasons.append(f'Frequent lateness ({late_pct:.0f}%)')
 
-        leave_count = Leave.objects.filter(employee=emp, status='approved',
-            start_date__gte=today - timedelta(days=90)).count()
+        leave_count = leave_map.get(emp.pk, 0)
         if leave_count > 8:
             score += 25
             reasons.append(f'Excessive leaves ({leave_count} in 3 months)')
@@ -218,7 +236,7 @@ def employee_risk_prediction():
             score += 10
             reasons.append('Long tenure - may seek new opportunities')
 
-        pending_loans = BudgetLoan.objects.filter(employee=emp, is_active=True).count()
+        pending_loans = loan_map.get(emp.pk, 0)
         if pending_loans > 0:
             score += 5
             reasons.append('Has active budget loan')

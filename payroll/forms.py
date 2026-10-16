@@ -9,8 +9,8 @@ class PayrollForm(forms.ModelForm):
         fields = ['employee', 'month', 'year', 'basic_salary', 'allowances',
                   'deductions', 'tax', 'status', 'payment_date', 'notes']
         widgets = {
-            'employee': forms.Select(attrs={'class': 'form-control'}),
-            'month': forms.Select(attrs={'class': 'form-control'}, choices=[
+            'employee': forms.Select(attrs={'class': 'form-select'}),
+            'month': forms.Select(attrs={'class': 'form-select'}, choices=[
                 (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
                 (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
                 (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December'),
@@ -20,7 +20,7 @@ class PayrollForm(forms.ModelForm):
             'allowances': forms.NumberInput(attrs={'class': 'form-control'}),
             'deductions': forms.NumberInput(attrs={'class': 'form-control'}),
             'tax': forms.NumberInput(attrs={'class': 'form-control'}),
-            'status': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
             'payment_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
@@ -34,16 +34,16 @@ class PayrollFilterForm(forms.Form):
             (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
             (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December'),
         ],
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-select', 'data-autosubmit': True})
     )
     year = forms.IntegerField(
         required=False,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Year'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Year', 'data-autosubmit': True})
     )
     status = forms.ChoiceField(
         required=False,
         choices=[('', 'All')] + Payroll.STATUS_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-select', 'data-autosubmit': True})
     )
 
 
@@ -90,8 +90,8 @@ class BoutiqueIssueForm(forms.ModelForm):
         model = BoutiqueIssue
         fields = ['product', 'employee', 'quantity', 'issue_date', 'issued_by', 'notes']
         widgets = {
-            'product': forms.Select(attrs={'class': 'form-control'}),
-            'employee': forms.Select(attrs={'class': 'form-control'}),
+            'product': forms.Select(attrs={'class': 'form-select', 'data-autosubmit': True}),
+            'employee': forms.Select(attrs={'class': 'form-select', 'data-autosubmit': True}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'issue_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'issued_by': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Boutique manager name'}),
@@ -104,7 +104,7 @@ class BudgetLoanForm(forms.ModelForm):
         model = BudgetLoan
         fields = ['employee', 'loan_amount', 'monthly_deduction', 'reason', 'start_date', 'end_date']
         widgets = {
-            'employee': forms.Select(attrs={'class': 'form-control'}),
+            'employee': forms.Select(attrs={'class': 'form-select', 'data-autosubmit': True}),
             'loan_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
             'monthly_deduction': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.00'}),
             'reason': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Emergency loan, Advance salary'}),

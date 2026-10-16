@@ -53,7 +53,7 @@
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Monthly Breakdown - {{ year }}</h6>
+        <h6 class="m-0 fw-bold text-primary">Monthly Breakdown - {{ year }}</h6>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -77,7 +77,7 @@
                         <td>Rs. {{ item.avg_salary|floatformat:2 }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center text-muted">No payroll data for {{ year }}.</td></tr>
+                    {% include "includes/empty_state.html" with colspan=4 icon="fa-chart-bar" title="No payroll data" hint="There is no payroll data for the selected period." %}
                     {% endfor %}
                 </tbody>
             </table>

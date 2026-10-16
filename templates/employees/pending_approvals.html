@@ -7,7 +7,7 @@
     <div class="col-md-12">
         <div class="card shadow">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-clipboard-check me-1"></i> Approval Instructions</h6>
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-clipboard-check me-1"></i> Approval Instructions</h6>
             </div>
             <div class="card-body">
                 <div class="alert alert-warning mb-0">
@@ -22,19 +22,19 @@
 
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-search me-1"></i> Search</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-search me-1"></i> Search</h6>
     </div>
     <div class="card-body">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label small">Search</label>
-                <input type="text" name="search" class="form-control" placeholder="Employee ID or Name..." value="{{ search }}">
+                <input type="text" name="search" class="form-control" placeholder="Employee ID or Name..." value="{{ search }}" data-autosubmit>
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Search</button>
             </div>
             <div class="col-md-1">
-                <a href="{% url 'pending_approvals' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-times"></i></a>
+                <a href="{% url 'pending_approvals' %}" class="btn btn-outline-secondary w-100" aria-label="Clear filters"><i class="fas fa-times" aria-hidden="true"></i></a>
             </div>
         </form>
     </div>
@@ -42,7 +42,7 @@
 
 <div class="card shadow">
     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-clock me-1"></i> Pending Approvals</h6>
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-clock me-1"></i> Pending Approvals</h6>
         <span class="badge bg-warning text-dark fs-6 js-pending-count" data-count-value="{{ page_obj.paginator.count }}">{{ page_obj.paginator.count }} Pending</span>
     </div>
     <div class="card-body">
@@ -130,10 +130,7 @@
                         </div>
                     </div>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center py-4">
-                        <i class="fas fa-check-circle text-success fa-2x mb-2"></i><br>
-                        No pending approvals. All caught up!
-                    </td></tr>
+                    {% include "includes/empty_state.html" with colspan=6 icon="fa-clipboard-check" title="No pending approvals" hint="Everything is reviewed. New requests will appear here." %}
                     {% endfor %}
                 </tbody>
             </table>

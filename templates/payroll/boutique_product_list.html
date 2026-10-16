@@ -48,16 +48,16 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{% url 'boutique_product_edit' product.pk %}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit"></i>
+                            <a href="{% url 'boutique_product_edit' product.pk %}" class="btn btn-sm btn-outline-primary" aria-label="Edit product">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
                             </a>
-                            <a href="{% url 'boutique_product_delete' product.pk %}" class="btn btn-sm btn-outline-danger">
-                                <i class="fas fa-trash"></i>
+                            <a href="{% url 'boutique_product_delete' product.pk %}" class="btn btn-sm btn-outline-danger" aria-label="Delete product">
+                                <i class="fas fa-trash" aria-hidden="true"></i>
                             </a>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center text-muted">No products found. Add your first product!</td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-box" title="No products yet" hint="Add your first product to start issuing items." cta_url_name="boutique_product_create" cta_label="Add Product" %}
                     {% endfor %}
                 </tbody>
             </table>

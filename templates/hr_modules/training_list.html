@@ -15,7 +15,7 @@
     <div class="col-lg-4 col-md-6 mb-4">
         <div class="card shadow h-100">
             <div class="card-header py-3 d-flex justify-content-between align-items-center" style="border-top: 3px solid {% if training.status == 'completed' %}#1cc88a{% elif training.status == 'ongoing' %}#2980b9{% elif training.status == 'planned' %}#f6c23e{% else %}#e74a3b{% endif %};">
-                <h6 class="m-0 font-weight-bold text-primary" style="font-size:0.9rem;">{{ training.title|truncatewords:5 }}</h6>
+                <h6 class="m-0 fw-bold text-primary" style="font-size:0.9rem;">{{ training.title|truncatewords:5 }}</h6>
                 {% if training.status == 'completed' %}
                 <span class="badge bg-success">Completed</span>
                 {% elif training.status == 'ongoing' %}
@@ -43,16 +43,7 @@
         </div>
     </div>
     {% empty %}
-    <div class="col-12">
-        <div class="card shadow">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-graduation-cap fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">No Trainings Found</h5>
-                <p class="text-muted">Create your first training program to get started.</p>
-                <a href="{% url 'training_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i> New Training</a>
-            </div>
-        </div>
-    </div>
+    {% include "includes/empty_state.html" with variant="plain" extra_class="col-12" icon="fa-graduation-cap" title="No trainings yet" hint="Create your first training program to get started." cta_url_name="training_create" cta_label="New Training" %}
     {% endfor %}
 </div>
 {% endblock %}

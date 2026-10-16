@@ -57,7 +57,7 @@
                         <td>{{ item.notes|truncatewords:10 }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center text-muted">No boutique items found</td></tr>
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-boxes" title="No boutique items found" hint="Items assigned to employees will appear here." %}
                     {% endfor %}
                 </tbody>
             </table>

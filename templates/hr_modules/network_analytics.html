@@ -63,7 +63,7 @@
                     </div>
                 </div>
                 {% empty %}
-                <p class="text-muted mb-0">No tickets yet.</p>
+                {% include "includes/empty_state.html" with variant="plain" icon="fa-ticket-alt" title="No tickets yet" hint="Ticket activity will appear here." %}
                 {% endfor %}
             </div>
         </div>
@@ -90,7 +90,7 @@
                             <td class="text-center fw-bold {% if m.open_load %}text-primary{% else %}text-muted{% endif %}">{{ m.open_load }}</td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="3" class="text-muted">No team members assigned. <a href="{% url 'network_teams' %}">Assign teams</a>.</td></tr>
+                        {% include "includes/empty_state.html" with colspan=3 icon="fa-users" title="No team members assigned" cta_url_name="network_teams" cta_label="Assign Teams" %}
                         {% endfor %}
                     </tbody>
                 </table>
