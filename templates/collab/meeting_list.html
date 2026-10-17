@@ -5,10 +5,8 @@
 {% block content %}
 {% include "collab/_nav.html" %}
 
-<div class="d-flex justify-content-between mb-3">
-    <span class="text-muted small align-self-center">Schedule meetings and join by video (Jitsi).</span>
-    <a href="{% url 'collab_meeting_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Schedule meeting</a>
-</div>
+{% url 'collab_meeting_create' as meeting_create_url %}
+{% include "includes/page_header.html" with sub="Schedule meetings and join by video (Jitsi)." cta_url=meeting_create_url cta_label="Schedule meeting" cta_icon="fas fa-plus me-1" only %}
 
 <div class="card shadow mb-3">
     <div class="card-header bg-white fw-bold"><i class="fas fa-calendar-day me-2"></i>Upcoming</div>

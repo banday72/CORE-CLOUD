@@ -55,10 +55,17 @@ def reports_dashboard(request):
         payroll_months.append({'label': d.strftime('%b %y'), 'value': float(total)})
 
     attendance_trend = []
+    trend_start = today - timedelta(days=13)
+    trend_rows = (
+        Attendance.objects.filter(date__gte=trend_start, date__lte=today)
+        .values('date', 'status').annotate(c=Count('id'))
+    )
+    trend_map = {}
+    for row in trend_rows:
+        trend_map.setdefault(row['date'], {})[row['status']] = row['c']
     for i in range(13, -1, -1):
         d = today - timedelta(days=i)
-        day_stats = Attendance.objects.filter(date=d).values('status').annotate(c=Count('id'))
-        counts = {r['status']: r['c'] for r in day_stats}
+        counts = trend_map.get(d, {})
         attendance_trend.append({
             'label': d.strftime('%d %b'),
             'present': counts.get('present', 0) + counts.get('late', 0),
@@ -80,7 +87,7 @@ def reports_dashboard(request):
     upcoming_birthdays = Employee.objects.filter(
         status='active',
         date_of_birth__isnull=False,
-    ).order_by('date_of_birth')[:100]
+    ).select_related('department').order_by('date_of_birth')[:100]
     bday_list = []
     for e in upcoming_birthdays:
         try:

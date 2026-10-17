@@ -15,11 +15,12 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">{{ form.name.label }}</label>
                             {{ form.name }}
-                            {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors.0 }}</div>{% endif %}
+                            {% if form.name.errors %}<div class="field-errors">{{ form.name.errors|join:"<br>" }}</div>{% endif %}
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">{{ form.working_days_per_month.label }}</label>
                             {{ form.working_days_per_month }}
+                            {% if form.working_days_per_month.errors %}<div class="field-errors">{{ form.working_days_per_month.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">{{ form.working_days_per_month.help_text }}</small>
                         </div>
                     </div>
@@ -37,10 +38,12 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.absent_deduction_per_day.label }}</label>
                             {{ form.absent_deduction_per_day }}
+                            {% if form.absent_deduction_per_day.errors %}<div class="field-errors">{{ form.absent_deduction_per_day.errors|join:"<br>" }}</div>{% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.half_day_deduction_percent.label }}</label>
                             {{ form.half_day_deduction_percent }}
+                            {% if form.half_day_deduction_percent.errors %}<div class="field-errors">{{ form.half_day_deduction_percent.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">% of daily salary</small>
                         </div>
                     </div>
@@ -48,20 +51,23 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.late_allowed_per_month.label }}</label>
                             {{ form.late_allowed_per_month }}
+                            {% if form.late_allowed_per_month.errors %}<div class="field-errors">{{ form.late_allowed_per_month.errors|join:"<br>" }}</div>{% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.late_deduction_amount.label }}</label>
                             {{ form.late_deduction_amount }}
+                            {% if form.late_deduction_amount.errors %}<div class="field-errors">{{ form.late_deduction_amount.errors|join:"<br>" }}</div>{% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.tax_rate_percent.label }}</label>
                             {{ form.tax_rate_percent }}
+                            {% if form.tax_rate_percent.errors %}<div class="field-errors">{{ form.tax_rate_percent.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">% of gross salary</small>
                         </div><!--  -->
                     </div>
 
                     <hr>
-                    <h5 class="text-primary mb-3">Leave Policy</hAD ALL OTHER USERS HR 
+                    <h5 class="text-primary mb-3">Leave Policy</h5>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-bold">{{ form.approved_leave_paid.label }}</label>
@@ -87,21 +93,25 @@
                         <div class="col-md-3 mb-3">
                             <label class="form-label fw-bold">{{ form.bonus_100_percent.label }}</label>
                             {{ form.bonus_100_percent }}
+                            {% if form.bonus_100_percent.errors %}<div class="field-errors">{{ form.bonus_100_percent.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">100% attendance</small>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label fw-bold">{{ form.bonus_95_percent.label }}</label>
                             {{ form.bonus_95_percent }}
+                            {% if form.bonus_95_percent.errors %}<div class="field-errors">{{ form.bonus_95_percent.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">95-99% attendance</small>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label fw-bold">{{ form.bonus_90_percent.label }}</label>
                             {{ form.bonus_90_percent }}
+                            {% if form.bonus_90_percent.errors %}<div class="field-errors">{{ form.bonus_90_percent.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">90-94% attendance</small>
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label fw-bold">{{ form.bonus_below_90_percent.label }}</label>
                             {{ form.bonus_below_90_percent }}
+                            {% if form.bonus_below_90_percent.errors %}<div class="field-errors">{{ form.bonus_below_90_percent.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">Below 90%</small>
                         </div>
                     </div>
@@ -112,14 +122,17 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.medical_allowance.label }}</label>
                             {{ form.medical_allowance }}
+                            {% if form.medical_allowance.errors %}<div class="field-errors">{{ form.medical_allowance.errors|join:"<br>" }}</div>{% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.transport_allowance.label }}</label>
                             {{ form.transport_allowance }}
+                            {% if form.transport_allowance.errors %}<div class="field-errors">{{ form.transport_allowance.errors|join:"<br>" }}</div>{% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-bold">{{ form.house_allowance_percent.label }}</label>
                             {{ form.house_allowance_percent }}
+                            {% if form.house_allowance_percent.errors %}<div class="field-errors">{{ form.house_allowance_percent.errors|join:"<br>" }}</div>{% endif %}
                             <small class="text-muted">% of basic salary</small>
                         </div>
                     </div>

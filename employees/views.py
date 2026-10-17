@@ -1,7 +1,8 @@
 import csv
 import io
 import base64
-from datetime import date
+import json
+from datetime import date, timedelta
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.files.uploadedfile import UploadedFile
@@ -11,7 +12,7 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.core.paginator import Paginator
 from .models import Department, Employee, AuditLog, LoginSlide, managers_queryset, chief_id_prefix, MANAGEMENT_DEPARTMENT_NAMES, default_password_for
 from .forms import DepartmentForm, EmployeeForm, ProfileForm, LoginSlideForm
@@ -51,6 +52,33 @@ PROFILE_MIME = {
 }
 
 
+def _compress_image(payload, ext):
+    """Shrink large photos before base64-encoding them into the database.
+
+    Returns (payload, ext) on success, or None when the input is not an
+    image we can safely re-encode (e.g. SVG, PDF, animated GIF, corrupt file).
+    """
+    if ext not in ('png', 'jpg', 'jpeg', 'webp', 'bmp'):
+        return None
+    try:
+        from io import BytesIO
+        from PIL import Image
+
+        img = Image.open(BytesIO(payload))
+        img.load()
+        if img.width > 1600:
+            ratio = 1600 / float(img.width)
+            img = img.resize((1600, max(1, int(img.height * ratio))), Image.LANCZOS)
+        out = BytesIO()
+        if img.mode in ('RGBA', 'LA', 'P'):
+            img.save(out, format='PNG', optimize=True)
+            return out.getvalue(), 'png'
+        img.convert('RGB').save(out, format='JPEG', quality=82, optimize=True)
+        return out.getvalue(), 'jpg'
+    except Exception:
+        return None
+
+
 def store_picture_as_b64(form, instance):
     upload = form.cleaned_data.get('profile_picture')
     if not isinstance(upload, UploadedFile):
@@ -63,6 +91,10 @@ def store_picture_as_b64(form, instance):
         payload = upload.read()
     except (ValueError, OSError):
         return
+    compressed = _compress_image(payload, ext)
+    if compressed:
+        payload, ext = compressed
+        mime = PROFILE_MIME.get(ext, mime)
     instance.profile_picture_b64 = 'data:%s;base64,%s' % (
         mime, base64.b64encode(payload).decode('utf-8'))
     instance.profile_picture = None
@@ -77,6 +109,10 @@ def file_to_data_uri(upload):
         payload = upload.read()
     except (ValueError, OSError):
         return None
+    compressed = _compress_image(payload, ext)
+    if compressed:
+        payload, ext = compressed
+        mime = PROFILE_MIME.get(ext, mime)
     return 'data:%s;base64,%s' % (mime, base64.b64encode(payload).decode('utf-8'))
 
 
@@ -101,12 +137,60 @@ def dashboard(request):
         my_leaves = Leave.objects.filter(employee=employee).count()
         my_pending_leaves = Leave.objects.filter(employee=employee, status='pending').count()
         my_payrolls = Payroll.objects.filter(employee=employee)[:5]
+
+        status_colors = {
+            'present': '#1cc88a', 'absent': '#e74a3b', 'half_day': '#36b9cc',
+            'late': '#f6c23e', 'holiday': '#9b59b6',
+        }
+        label_map = dict(Attendance.STATUS_CHOICES)
+        att_labels, att_counts, att_colors = [], [], []
+        att_rows = (Attendance.objects.filter(employee=employee, date__gt=today - timedelta(days=30))
+                    .values('status').annotate(total=Count('id')).order_by('status'))
+        for row in att_rows:
+            att_labels.append(label_map.get(row['status'], row['status']))
+            att_counts.append(row['total'])
+            att_colors.append(status_colors.get(row['status'], '#2980b9'))
+
+        att_chart = ''
+        if att_labels:
+            att_chart = json.dumps({
+                'type': 'doughnut',
+                'data': {'labels': att_labels, 'datasets': [{
+                    'data': att_counts, 'backgroundColor': att_colors, 'borderWidth': 0}]},
+                'options': {'responsive': True, 'cutout': '62%',
+                            'plugins': {'legend': {'position': 'bottom', 'labels': {
+                                'font': {'size': 10}, 'boxWidth': 10, 'usePointStyle': True}}}},
+            })
+
+        salary_months, salary_values = [], []
+        for p in my_payrolls:
+            salary_months.append(f'{p.get_month_display()} {p.year}')
+            salary_values.append(float(p.net_salary))
+        salary_months.reverse()
+        salary_values.reverse()
+
+        salary_chart = ''
+        if salary_months:
+            salary_chart = json.dumps({
+                'type': 'line',
+                'data': {'labels': salary_months, 'datasets': [{
+                    'label': 'Net Salary', 'data': salary_values,
+                    'borderColor': '#2980b9', 'backgroundColor': 'rgba(41,128,185,.15)',
+                    'fill': True, 'tension': .3, 'pointRadius': 3}]},
+                'options': {'responsive': True,
+                            'plugins': {'legend': {'display': False}},
+                            'scales': {'y': {'beginAtZero': True, 'ticks': {'font': {'size': 10}}},
+                                       'x': {'ticks': {'font': {'size': 10}}}}},
+            })
+
         context = {
             'employee': employee,
             'my_attendance': my_attendance,
             'my_leaves_count': my_leaves,
             'my_pending_leaves': my_pending_leaves,
             'my_payrolls': my_payrolls,
+            'att_chart': att_chart,
+            'salary_chart': salary_chart,
             'is_employee': True,
             'is_hr': False,
             'permissions': perms,
@@ -114,7 +198,7 @@ def dashboard(request):
     else:
         total_employees = Employee.objects.filter(status='active').count()
         total_departments = Department.objects.count()
-        recent_employees = Employee.objects.all()[:5]
+        recent_employees = Employee.objects.select_related('department', 'reports_to').all()[:5]
         pending_leaves = Leave.objects.filter(status='pending').count()
         draft_payrolls = Payroll.objects.filter(status='draft').count()
         today_birthdays = Employee.objects.filter(

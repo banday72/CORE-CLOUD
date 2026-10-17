@@ -3,10 +3,8 @@
 {% block page_title %}<i class="fas fa-people-group me-2"></i>IT Teams Assignment{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="text-muted small"><i class="fas fa-circle-info me-1"></i> Assign IT teams, set Manager / Assistant Manager roles, and grant analytics access.</div>
-    <a href="{% url 'networks_ticket_create' %}" class="btn btn-sm btn-primary"><i class="fas fa-plus me-1"></i> Raise IT Ticket</a>
-</div>
+{% url 'networks_ticket_create' as ticket_create_url %}
+{% include "includes/page_header.html" with sub="<i class='fas fa-circle-info me-1'></i> Assign IT teams, set Manager / Assistant Manager roles, and grant analytics access." cta_url=ticket_create_url cta_label="Raise IT Ticket" cta_icon="fas fa-plus me-1" cta_sm=1 only %}
 <div class="card shadow mb-3">
     <div class="card-body py-3">
         <form method="get" class="row g-2 align-items-end">

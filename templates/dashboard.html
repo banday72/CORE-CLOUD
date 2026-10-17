@@ -162,21 +162,27 @@
     </div>
 </div>
 
+{% if att_chart or salary_chart %}
 <!-- Employee Progress -->
 <div class="row mb-4">
-    <div class="col-lg-6 mb-3">
+    {% if att_chart %}
+    <div class="{% if salary_chart %}col-lg-6{% else %}col-12{% endif %} mb-3">
         <div class="card shadow h-100">
-            <div class="card-header py-2"><h6 class="m-0 fw-bold text-primary" style="font-size:0.85rem;"><i class="fas fa-chart-pie me-1"></i> Attendance Progress</h6></div>
+            <div class="card-header py-2"><h6 class="m-0 fw-bold text-primary" style="font-size:0.85rem;"><i class="fas fa-chart-pie me-1"></i> Attendance Progress <span class="text-muted fw-normal">(last 30 days)</span></h6></div>
             <div class="card-body"><canvas id="myAttendanceChart" height="200"></canvas></div>
         </div>
     </div>
-    <div class="col-lg-6 mb-3">
+    {% endif %}
+    {% if salary_chart %}
+    <div class="{% if att_chart %}col-lg-6{% else %}col-12{% endif %} mb-3">
         <div class="card shadow h-100">
-            <div class="card-header py-2"><h6 class="m-0 fw-bold text-success" style="font-size:0.85rem;"><i class="fas fa-chart-line me-1"></i> Salary Trend</h6></div>
+            <div class="card-header py-2"><h6 class="m-0 fw-bold text-success" style="font-size:0.85rem;"><i class="fas fa-chart-line me-1"></i> Salary Trend <span class="text-muted fw-normal">(last payslips)</span></h6></div>
             <div class="card-body"><canvas id="mySalaryChart" height="200"></canvas></div>
         </div>
     </div>
+    {% endif %}
 </div>
+{% endif %}
 
 <!-- My Manager & CEO -->
 <div class="row mb-4">
@@ -523,6 +529,17 @@ document.addEventListener('cc:success', function (e) {
     if (d.clock_out) el.innerHTML = '<span class="text-success">Clocked Out</span>';
     else if (d.clock_in) el.innerHTML = '<span class="text-info">Clocked In</span>';
 });
+
+{% if att_chart or salary_chart %}
+document.addEventListener('DOMContentLoaded', function () {
+    {% if att_chart %}
+    new Chart(document.getElementById('myAttendanceChart'), {{ att_chart|safe }});
+    {% endif %}
+    {% if salary_chart %}
+    new Chart(document.getElementById('mySalaryChart'), {{ salary_chart|safe }});
+    {% endif %}
+});
+{% endif %}
 
 {% if not is_employee %}
 document.addEventListener('DOMContentLoaded', function () {

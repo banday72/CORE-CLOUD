@@ -10,9 +10,8 @@
         <a href="{% url 'travel_list' %}?status=approved" class="btn btn-{% if status_filter == 'approved' %}success{% else %}outline-success{% endif %} btn-sm">Approved</a>
         <a href="{% url 'travel_list' %}?status=rejected" class="btn btn-{% if status_filter == 'rejected' %}danger{% else %}outline-danger{% endif %} btn-sm">Rejected</a>
     </div>
-    <div>
-        <a href="{% url 'travel_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i> New Request</a>
-    </div>
+    {% url 'travel_create' as travel_create_url %}
+    {% include "includes/page_header.html" with norow=1 cta_url=travel_create_url cta_label="New Request" cta_icon="fas fa-plus me-1" only %}
 </div>
 
 <div class="card shadow">

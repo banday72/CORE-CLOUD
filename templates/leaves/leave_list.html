@@ -10,12 +10,13 @@
         <a href="{% url 'leave_list' %}?status=approved" class="btn btn-{% if status_filter == 'approved' %}success{% else %}outline-success{% endif %} btn-sm">Approved</a>
         <a href="{% url 'leave_list' %}?status=rejected" class="btn btn-{% if status_filter == 'rejected' %}danger{% else %}outline-danger{% endif %} btn-sm">Rejected</a>
     </div>
-    <div>
-        {% if not is_employee %}
-        <a href="{% url 'leave_type_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-list"></i> Leave Types</a>
-        {% endif %}
-        <a href="{% url 'leave_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Apply Leave</a>
-    </div>
+    {% url 'leave_type_list' as leave_type_list_url %}
+    {% url 'leave_create' as leave_create_url %}
+    {% if not is_employee %}
+    {% include "includes/page_header.html" with norow=1 sec_url=leave_type_list_url sec_label="Leave Types" sec_icon="fas fa-list me-1" sec_sm=1 cta_url=leave_create_url cta_label="Apply Leave" cta_icon="fas fa-plus me-1" only %}
+    {% else %}
+    {% include "includes/page_header.html" with norow=1 cta_url=leave_create_url cta_label="Apply Leave" cta_icon="fas fa-plus me-1" only %}
+    {% endif %}
 </div>
 
 {% if is_employee and balances %}

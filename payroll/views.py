@@ -170,10 +170,10 @@ def calculate_auto_payroll(employee, month, year, policy):
 def payroll_list(request):
     employee = get_employee(request.user)
     if employee:
-        payrolls = Payroll.objects.filter(employee=employee)
+        payrolls = Payroll.objects.filter(employee=employee).select_related('employee')
     else:
         form = PayrollFilterForm(request.GET)
-        payrolls = Payroll.objects.all()
+        payrolls = Payroll.objects.select_related('employee').all()
         if form.is_valid():
             if form.cleaned_data.get('month'):
                 payrolls = payrolls.filter(month=form.cleaned_data['month'])
@@ -181,6 +181,7 @@ def payroll_list(request):
                 payrolls = payrolls.filter(year=form.cleaned_data['year'])
             if form.cleaned_data.get('status'):
                 payrolls = payrolls.filter(status=form.cleaned_data['status'])
+    payrolls = payrolls.order_by('-year', '-month', '-id')
 
     paginator = Paginator(payrolls, 50)
     page_number = request.GET.get('page')

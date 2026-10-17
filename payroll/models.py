@@ -173,7 +173,7 @@ class BudgetLoan(models.Model):
 
 class PublicPayrollLink(models.Model):
     employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='public_link')
-    token = models.CharField(max_length=64, unique=True, default=lambda: str(uuid.uuid4()))
+    token = models.CharField(max_length=64, unique=True, default=uuid.uuid4)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

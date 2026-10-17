@@ -2,12 +2,8 @@
 {% block title %}Boutique Products - CoreCloud{% endblock %}
 {% block page_title %}Boutique Products{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <p class="text-muted mb-0">Manage boutique inventory. Add products, update stock.</p>
-    <a href="{% url 'boutique_product_create' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add Product
-    </a>
-</div>
+{% url 'boutique_product_create' as product_create_url %}
+{% include "includes/page_header.html" with sub="Manage boutique inventory. Add products, update stock." cta_url=product_create_url cta_label="Add Product" cta_icon="fas fa-plus me-1" lg=1 only %}
 <div class="card">
     <div class="card-header">
         <h6 class="m-0 fw-bold text-primary"><i class="fas fa-boxes"></i> All Products</h6>
@@ -62,23 +58,7 @@
                 </tbody>
             </table>
         </div>
-        {% if products.has_other_pages %}
-        <nav>
-            <ul class="pagination justify-content-center">
-                {% if products.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ products.previous_page_number }}">Previous</a></li>
-                {% endif %}
-                {% for num in products.paginator.page_range %}
-                <li class="page-item {% if products.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                </li>
-                {% endfor %}
-                {% if products.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ products.next_page_number }}">Next</a></li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
+        {% include "includes/pagination.html" with page_obj=products %}
     </div>
 </div>
 {% endblock %}

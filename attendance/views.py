@@ -14,10 +14,10 @@ from employees.ajax import is_ajax, json_ok, json_err
 def attendance_list(request):
     employee = get_employee(request.user)
     if employee:
-        attendance = Attendance.objects.filter(employee=employee)
+        attendance = Attendance.objects.filter(employee=employee).select_related('employee')
     else:
         form = AttendanceFilterForm(request.GET)
-        attendance = Attendance.objects.all()
+        attendance = Attendance.objects.select_related('employee').all()
         if form.is_valid():
             if form.cleaned_data.get('date_from'):
                 attendance = attendance.filter(date__gte=form.cleaned_data['date_from'])
@@ -27,6 +27,7 @@ def attendance_list(request):
                 attendance = attendance.filter(employee__employee_id__icontains=form.cleaned_data['employee'])
             if form.cleaned_data.get('status'):
                 attendance = attendance.filter(status=form.cleaned_data['status'])
+    attendance = attendance.order_by('-date', '-id')
 
     paginator = Paginator(attendance, 50)
     page_number = request.GET.get('page')

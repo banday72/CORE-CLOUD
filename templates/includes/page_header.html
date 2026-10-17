@@ -1,0 +1,33 @@
+{% comment %}
+Reusable page header row.
+
+  title  optional bold label (left)
+  sub    optional muted label under/next to title (HTML allowed)
+
+  cta_url / cta_label / cta_icon / cta_style / cta_sm   primary action
+  sec_url / sec_label / sec_icon / sec_style / sec_sm   secondary action
+  (icons are full classes, e.g. cta_icon="fas fa-plus me-1")
+
+  norow=1  emit only the actions cluster (the page keeps its own row/left content)
+  lg=1     use mb-4 instead of mb-3
+
+Always pass "only" so context variables such as "title" never leak in.
+{% endcomment %}
+{% if norow %}
+<div class="d-flex flex-wrap gap-2 align-items-center">
+{% else %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2{% if lg %} mb-4{% else %} mb-3{% endif %}">
+    <div class="me-2">
+        {% if title %}<div class="fw-semibold">{{ title }}</div>{% endif %}
+        {% if sub %}<div class="text-muted small">{{ sub|safe }}</div>{% endif %}
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+{% endif %}
+    {% if cta_url %}
+    <a href="{{ cta_url }}" class="btn btn-{{ cta_style|default:'primary' }}{% if cta_sm %} btn-sm{% endif %}">{% if cta_icon %}<i class="{{ cta_icon }}" aria-hidden="true"></i> {% endif %}{{ cta_label }}</a>
+    {% endif %}
+    {% if sec_url %}
+    <a href="{{ sec_url }}" class="btn btn-{{ sec_style|default:'outline-secondary' }}{% if sec_sm %} btn-sm{% endif %}">{% if sec_icon %}<i class="{{ sec_icon }}" aria-hidden="true"></i> {% endif %}{{ sec_label }}</a>
+    {% endif %}
+{% if norow %}</div>{% else %}</div>
+</div>{% endif %}

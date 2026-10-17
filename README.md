@@ -9,6 +9,9 @@ A complete HR &amp; Payroll portal built with Django.
 - Auto payroll generation from attendance + leave data
 - Salary slips (PDF export)
 - Payroll policies (configurable deductions, bonuses, tax)
+- HR modules: training, travel, overtime, documents, announcements, IT help desk
+- Collaboration: internal mail, chat and meetings
+- Reports &amp; analytics dashboards (light/dark theme)
 
 ## Deployment to Vercel
 
@@ -27,6 +30,13 @@ git push -u origin main
 3. Click "New Project"
 4. Import your GitHub repository
 5. Click "Deploy"
+
+The project is built by `api/index.py` (WSGI entry point). Static files are
+served from the committed `staticfiles/` directory via `vercel.json`, so run
+`python manage.py collectstatic --noinput` and commit `staticfiles/` whenever
+`static/` assets change.
+
+`runtime.txt` pins the Python version. Django 6 requires Python 3.12+.
 
 ### Step 3: Set Environment Variables
 Set these in your Vercel project settings (and never commit them to Git):
@@ -55,8 +65,11 @@ pip install -r requirements.txt
 # Run migrations
 python manage.py migrate
 
-# Seed sample data
-python manage.py seed_data
+# Seed sample data (standalone script)
+python seed_data.py
+
+# Collect static files
+python manage.py collectstatic --noinput
 
 # Run server
 python manage.py runserver
@@ -65,14 +78,19 @@ python manage.py runserver
 ## Project Structure
 ```
 hr-payroll-system/
-├── hr_payroll/          # Main settings
-├── employees/           # Employee module
-├── attendance/          # Attendance module
-├── leaves/              # Leave module
-├── payroll/             # Payroll module
-├── templates/           # HTML templates
-├── vercel_app/          # Vercel deployment
-├── vercel.json          # Vercel config
-├── requirements.txt     # Python dependencies
-└── runtime.txt          # Python version
+|- hr_payroll/          # Project settings, URLs, context processors
+|- employees/           # Employee module + auth, slides, face login
+|- attendance/          # Attendance module
+|- leaves/              # Leave module
+|- payroll/             # Payroll module (incl. PDF slips)
+|- hr_modules/          # Training, travel, overtime, documents, help desk
+|- collab/              # Internal mail, chat, meetings
+|- ai_engine/           # Insights / risk helpers
+|- templates/           # HTML templates
+|- static/              # Source CSS/JS
+|- staticfiles/         # Collected static assets (committed for Vercel)
+|- api/                 # Vercel WSGI entry point
+|- vercel.json          # Vercel config
+|- requirements.txt     # Python dependencies
+|- runtime.txt          # Python version
 ```

@@ -7,9 +7,8 @@
     <div>
         <a href="{% url 'document_list' %}" class="btn btn-{% if not request.GET.employee %}primary{% else %}outline-primary{% endif %} btn-sm">All</a>
     </div>
-    <div>
-        <a href="{% url 'document_upload' %}" class="btn btn-primary"><i class="fas fa-upload me-1"></i> Upload Document</a>
-    </div>
+    {% url 'document_upload' as document_upload_url %}
+    {% include "includes/page_header.html" with norow=1 cta_url=document_upload_url cta_label="Upload Document" cta_icon="fas fa-upload me-1" only %}
 </div>
 
 <div class="card shadow mb-4">

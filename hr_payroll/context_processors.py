@@ -6,13 +6,16 @@ def role_context(request):
         'permissions': set(), 'can': Perms(set()), 'permission_group': 'employee',
     }
     if request.user.is_authenticated:
+        from django.core.cache import cache
         from employees.models import Employee
 
-        try:
-            ceo = Employee.objects.get(employee_id='CEO001')
-            context['ceo_employee'] = ceo
-        except Exception:
-            pass
+        context['ceo_employee'] = cache.get('cc_ceo_employee')
+        if context['ceo_employee'] is None:
+            try:
+                context['ceo_employee'] = Employee.objects.get(employee_id='CEO001')
+                cache.set('cc_ceo_employee', context['ceo_employee'], 300)
+            except Exception:
+                pass
 
         try:
             perms = permissions_for_user(request.user)
@@ -60,25 +63,30 @@ def role_context(request):
             pass
 
         try:
-            from collab.models import Conversation, ConversationMember
+            from django.db.models import Count, Q, F
+            from collab.models import ConversationMember
             if context.get('current_employee'):
                 me = context['current_employee']
                 if 'chat' in context.get('collab_blocked', set()):
                     context['collab_unread_chat'] = 0
                 else:
-                    total = 0
-                    for membership in ConversationMember.objects.filter(employee=me).select_related('conversation'):
-                        unread = membership.conversation.messages.exclude(sender=me)
-                        if membership.last_read_at:
-                            unread = unread.filter(created_at__gt=membership.last_read_at)
-                        total += unread.count()
-                    context['collab_unread_chat'] = total
+                    rows = ConversationMember.objects.filter(employee=me).annotate(
+                        n=Count('conversation__messages', filter=(
+                            Q(conversation__messages__isnull=False)
+                            & (Q(last_read_at__isnull=True)
+                               | Q(conversation__messages__created_at__gt=F('last_read_at')))
+                            & ~Q(conversation__messages__sender=me)
+                        ))
+                    )
+                    context['collab_unread_chat'] = sum(r.n for r in rows)
         except Exception:
             pass
     return context
 
 
 def login_slides(request):
+    if request.user.is_authenticated:
+        return {'login_slides': []}
     slides = []
     try:
         from employees.models import LoginSlide

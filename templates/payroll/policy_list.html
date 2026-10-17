@@ -3,10 +3,8 @@
 {% block page_title %}Payroll Policies{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h6 class="text-muted">Configure how payroll is auto-calculated from attendance and leave data</h6>
-    <a href="{% url 'policy_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Policy</a>
-</div>
+{% url 'policy_create' as policy_create_url %}
+{% include "includes/page_header.html" with sub="Configure how payroll is auto-calculated from attendance and leave data" cta_url=policy_create_url cta_label="Add Policy" cta_icon="fas fa-plus me-1" only %}
 
 <div class="card shadow">
     <div class="card-body">

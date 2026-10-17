@@ -3,10 +3,8 @@
 {% block page_title %}Leave Types{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h5></h5>
-    <a href="{% url 'leave_type_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Leave Type</a>
-</div>
+{% url 'leave_type_create' as leave_type_create_url %}
+{% include "includes/page_header.html" with cta_url=leave_type_create_url cta_label="Add Leave Type" cta_icon="fas fa-plus me-1" only %}
 <div class="card shadow">
     <div class="card-body">
         <div class="table-responsive">

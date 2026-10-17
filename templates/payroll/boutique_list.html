@@ -62,23 +62,7 @@
                 </tbody>
             </table>
         </div>
-        {% if items.has_other_pages %}
-        <nav>
-            <ul class="pagination justify-content-center">
-                {% if items.has_previous %}
-                <li class="page-item"><a class="page-link" href="?page={{ items.previous_page_number }}">Previous</a></li>
-                {% endif %}
-                {% for num in items.paginator.page_range %}
-                <li class="page-item {% if items.number == num %}active{% endif %}">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                </li>
-                {% endfor %}
-                {% if items.has_next %}
-                <li class="page-item"><a class="page-link" href="?page={{ items.next_page_number }}">Next</a></li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
+        {% include "includes/pagination.html" with page_obj=items %}
     </div>
 </div>
 {% endblock %}

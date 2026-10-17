@@ -3,10 +3,8 @@
 {% block page_title %}Departments{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between mb-3">
-    <h5></h5>
-    <a href="{% url 'department_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Department</a>
-</div>
+{% url 'department_create' as department_create_url %}
+{% include "includes/page_header.html" with cta_url=department_create_url cta_label="Add Department" cta_icon="fas fa-plus me-1" only %}
 <div class="card shadow">
     <div class="card-body">
         <div class="table-responsive">

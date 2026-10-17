@@ -35,26 +35,31 @@
                 <h6 class="text-info fw-bold mb-3">Attendance Summary</h6>
                 <div class="row mb-3">
                     <div class="col-md-6">
+                        <div class="table-responsive">
                         <table class="table table-sm">
                             <tr><td>Working Days</td><td class="text-end">{{ breakdown.total_working_days }}</td></tr>
                             <tr><td>Days Present</td><td class="text-end text-success">{{ breakdown.days_present }}</td></tr>
                             <tr><td>Days Absent</td><td class="text-end text-danger">{{ breakdown.days_absent }}</td></tr>
                             <tr><td>Half Days</td><td class="text-end text-warning">{{ breakdown.days_half_day }}</td></tr>
                         </table>
+                        </div>
                     </div>
                     <div class="col-md-6">
+                        <div class="table-responsive">
                         <table class="table table-sm">
                             <tr><td>Late Arrivals</td><td class="text-end text-info">{{ breakdown.days_late }}</td></tr>
                             <tr><td>Holidays</td><td class="text-end">{{ breakdown.days_holiday }}</td></tr>
                             <tr><td>Approved Leaves</td><td class="text-end text-primary">{{ breakdown.days_approved_leave }}</td></tr>
                             <tr><td><strong>Attendance %</strong></td><td class="text-end"><strong>{{ breakdown.attendance_percentage }}%</strong></td></tr>
                         </table>
+                        </div>
                     </div>
                 </div>
 
                 <h6 class="text-info fw-bold mb-3">Calculation Breakdown</h6>
                 <div class="row mb-3">
                     <div class="col-md-6">
+                        <div class="table-responsive">
                         <table class="table table-sm">
                             <tr><td>Basic Earned</td><td class="text-end">Rs. {{ breakdown.basic_earned|floatformat:2 }}</td></tr>
                             <tr><td>Medical Allowance</td><td class="text-end">Rs. {{ breakdown.medical_allowance|floatformat:2 }}</td></tr>
@@ -62,13 +67,16 @@
                             <tr><td>House Allowance</td><td class="text-end">Rs. {{ breakdown.house_allowance|floatformat:2 }}</td></tr>
                             <tr class="table-success"><td><strong>Performance Bonus ({{ breakdown.bonus_percentage }}%)</strong></td><td class="text-end">+Rs. {{ breakdown.performance_bonus|floatformat:2 }}</td></tr>
                         </table>
+                        </div>
                     </div>
                     <div class="col-md-6">
+                        <div class="table-responsive">
                         <table class="table table-sm">
                             <tr><td>Attendance Deduction</td><td class="text-end text-danger">-Rs. {{ breakdown.attendance_deduction|floatformat:2 }}</td></tr>
                             <tr><td>Late Deduction</td><td class="text-end text-danger">-Rs. {{ breakdown.late_deduction|floatformat:2 }}</td></tr>
                             <tr><td>Tax</td><td class="text-end text-danger">-Rs. {{ breakdown.tax_computed|floatformat:2 }}</td></tr>
                         </table>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
@@ -77,19 +85,23 @@
                 <div class="row">
                     <div class="col-md-6">
                         <h6 class="text-success fw-bold">Earnings</h6>
+                        <div class="table-responsive">
                         <table class="table table-sm">
                             <tr><td>Basic Salary</td><td class="text-end">Rs. {{ payroll.basic_salary|floatformat:2 }}</td></tr>
                              <tr><td>Allowances</td><td class="text-end">Rs. {{ payroll.allowances|floatformat:2 }}</td></tr>
                              <tr class="table-success fw-bold"><td>Total Earnings</td><td class="text-end">Rs. {{ payroll.basic_salary|add:payroll.allowances|floatformat:2 }}</td></tr>
                         </table>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <h6 class="text-danger fw-bold">Deductions</h6>
+                        <div class="table-responsive">
                         <table class="table table-sm">
                             <tr><td>Deductions</td><td class="text-end">Rs. {{ payroll.deductions|floatformat:2 }}</td></tr>
                              <tr><td>Tax</td><td class="text-end">Rs. {{ payroll.tax|floatformat:2 }}</td></tr>
                              <tr class="table-danger fw-bold"><td>Total Deductions</td><td class="text-end">Rs. {{ payroll.deductions|add:payroll.tax|floatformat:2 }}</td></tr>
                         </table>
+                        </div>
                     </div>
                 </div>
                 <hr>

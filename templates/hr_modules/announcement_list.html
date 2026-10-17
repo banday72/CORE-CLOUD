@@ -6,7 +6,8 @@
 <div class="d-flex justify-content-between mb-3">
     <span class="text-muted small align-self-center">{{ announcements|length }} announcement{{ announcements|length|pluralize }}</span>
     {% if can_manage %}
-    <a href="{% url 'announcement_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i> New Announcement</a>
+    {% url 'announcement_create' as announcement_create_url %}
+    {% include "includes/page_header.html" with norow=1 cta_url=announcement_create_url cta_label="New Announcement" cta_icon="fas fa-plus me-1" only %}
     {% endif %}
 </div>
 
