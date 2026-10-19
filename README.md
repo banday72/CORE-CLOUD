@@ -45,8 +45,9 @@ python manage.py run_soc_rules
 python manage.py run_soc_rules --loop --interval 300
 ```
 
-Production re-scan runs via the Vercel cron (`/cron/soc/`, every 5 min,
-guarded by `CRON_SECRET`).
+Production re-scan runs daily via the Vercel cron (`/cron/soc/`, guarded by
+`CRON_SECRET`). Detection is primarily inline — every audit event is evaluated
+in real time, so the cron is just a safety-net sweep.
 
 ## Deployment to Vercel
 

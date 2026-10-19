@@ -13,7 +13,7 @@
     "crons": [
         {
             "path": "/cron/soc/",
-            "schedule": "*/5 * * * *"
+            "schedule": "0 0 * * *"
         }
     ],
     "routes": [
