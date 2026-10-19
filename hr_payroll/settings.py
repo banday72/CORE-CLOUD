@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'leaves',
     'hr_modules',
     'collab',
+    'soc',
 ]
 
 MIDDLEWARE = [
@@ -139,5 +140,51 @@ else:
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+# SOC: automated response playbooks (lock account, revoke sessions, open
+# ticket) fire on critical alerts when enabled.
+SOC_AUTO_RESPONSE = os.environ.get('SOC_AUTO_RESPONSE', 'True') == 'True'
+# Secret required by the /cron/soc/ endpoint (Vercel cron).
+SOC_CRON_SECRET = os.environ.get('SOC_CRON_SECRET', '')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'activity.log',
+            'maxBytes': 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'employees': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'soc': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

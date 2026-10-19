@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Alert #{{ alert.pk }} - CoreCloud{% endblock %}
+{% block page_title %}Alert #{{ alert.pk }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <span class="badge" style="background-color: {% if alert.severity == 'critical' %}#e74a3b{% elif alert.severity == 'high' %}#f6c23e{% elif alert.severity == 'medium' %}#4e73df{% else %}#36b9cc{% endif %} !important;">{{ alert.get_severity_display }}</span>
+        <span class="badge bg-secondary">{{ alert.get_status_display }}</span>
+        {% if alert.incident %}
+        <a href="{% url 'soc_incident_detail' alert.incident.pk %}" class="badge bg-dark text-decoration-none">Incident #{{ alert.incident.pk }} →</a>
+        {% endif %}
+    </div>
+    {% if can.respond_soc %}
+    <form method="post" action="{% url 'soc_alert_action' alert.pk %}" class="d-flex gap-2">
+        {% csrf_token %}
+        {% if alert.status == 'new' %}
+        <button name="action" value="ack" class="btn btn-warning btn-sm"><i class="fas fa-check me-1"></i>Acknowledge</button>
+        {% endif %}
+        <button name="action" value="lock" class="btn btn-danger btn-sm" onclick="return confirm('Lock this account and revoke its sessions?');"><i class="fas fa-lock me-1"></i>Lock Account</button>
+        {% if not alert.incident %}
+        <button name="action" value="escalate" class="btn btn-primary btn-sm"><i class="fas fa-rocket me-1"></i>Escalate to Incident</button>
+        {% endif %}
+        {% if alert.status != 'closed' %}
+        <button name="action" value="close" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times me-1"></i>Close</button>
+        {% endif %}
+    </form>
+    {% endif %}
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card shadow mb-3">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-bell me-1"></i> {{ alert.title }}</h6></div>
+            <div class="card-body">
+                <p>{{ alert.detail|linebreaksbr }}</p>
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Rule</dt><dd class="col-sm-9">{{ alert.rule.name }}</dd>
+                    <dt class="col-sm-3">Subject</dt><dd class="col-sm-9">{{ alert.subject_username|default:"—" }}</dd>
+                    <dt class="col-sm-3">First seen</dt><dd class="col-sm-9">{{ alert.first_seen|date:"d M Y H:i:s" }} UTC</dd>
+                    <dt class="col-sm-3">Last seen</dt><dd class="col-sm-9">{{ alert.last_seen|date:"d M Y H:i:s" }} UTC</dd>
+                    <dt class="col-sm-3">Occurrences</dt><dd class="col-sm-9">{{ alert.count }}</dd>
+                    <dt class="col-sm-3">Fingerprint</dt><dd class="col-sm-9"><code class="small">{{ alert.fingerprint }}</code></dd>
+                </dl>
+            </div>
+        </div>
+        {% if alert.event %}
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-file-alt me-1"></i> Triggering Event</h6></div>
+            <div class="card-body">
+                <p class="mb-1"><strong>{{ alert.event.get_action_display }}</strong> — {{ alert.event.description }}</p>
+                <small class="text-muted">{{ alert.event.timestamp|date:"d M Y H:i:s" }} UTC · {{ alert.event.ip_address|default:"-" }} · {{ alert.event.user|default:"system" }}</small>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-bolt me-1"></i> Response Actions</h6></div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for r in actions %}
+                    <li class="list-group-item">
+                        <span class="badge {% if r.success %}bg-success{% else %}bg-secondary{% endif %}">{{ r.get_action_display }}</span>
+                        <small class="text-muted">by {{ r.actor }} · {{ r.created_at|date:"d M H:i" }}</small>
+                        <br><small>{{ r.result }}</small>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted text-center py-3">No response actions</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

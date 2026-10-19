@@ -911,20 +911,74 @@ class LockoutLoginView(LoginView):
     def form_valid(self, form):
         from .models import find_employee_by_id
         from .lockout import clear_login_lock
-        employee = find_employee_by_id(self.request.POST.get('username', ''))
+        from .audit import log_audit
+        username = self.request.POST.get('username', '')
+        employee = find_employee_by_id(username)
+        unlocked = False
         if employee and not employee.is_login_locked:
+            unlocked = bool(employee.failed_login_attempts or employee.login_locked_until)
             clear_login_lock(employee)
-        return super().form_valid(form)
+        result = super().form_valid(form)
+        log_audit(
+            user=form.get_user(),
+            action='login', model_name='User',
+            object_id=form.get_user().username,
+            description=f'User logged in ({username})',
+            request=self.request, category='auth', outcome='success',
+        )
+        if unlocked and employee:
+            log_audit(
+                user=form.get_user(), action='unlock', model_name='Employee',
+                object_id=employee.employee_id,
+                description=f'Login lock cleared for {employee.full_name}',
+                request=self.request, category='auth', outcome='success',
+            )
+        return result
 
     def form_invalid(self, form):
         from .models import find_employee_by_id
         from .lockout import register_failed_login, locked_message
+        from .audit import log_audit
         username = (self.request.POST.get('username') or '').strip()
         employee = find_employee_by_id(username)
         if employee is not None:
             if employee.is_login_locked:
+                log_audit(
+                    user=employee.user, action='login_failed',
+                    model_name='Employee', object_id=employee.employee_id,
+                    description=f'Login attempt while account is locked ({username})',
+                    request=self.request, category='auth', outcome='failure',
+                    severity='medium',
+                )
                 messages.error(self.request, locked_message(employee))
             elif register_failed_login(employee):
+                from .lockout import MAX_LOGIN_ATTEMPTS
+                log_audit(
+                    user=employee.user, action='lockout',
+                    model_name='Employee', object_id=employee.employee_id,
+                    description=(
+                        f'Account locked after {MAX_LOGIN_ATTEMPTS} '
+                        f'failed login attempts ({username})'
+                    ),
+                    request=self.request, category='auth', outcome='failure',
+                    severity='high',
+                )
                 messages.error(self.request, locked_message(employee))
+            else:
+                log_audit(
+                    user=employee.user, action='login_failed',
+                    model_name='Employee', object_id=employee.employee_id,
+                    description=f'Failed login for {username}',
+                    request=self.request, category='auth', outcome='failure',
+                    severity='low',
+                )
+        else:
+            log_audit(
+                user=None, action='login_failed',
+                model_name='User', object_id=username[:100],
+                description=f'Failed login for unknown account "{username}"',
+                request=self.request, category='auth', outcome='failure',
+                severity='low',
+            )
         return super().form_invalid(form)
 

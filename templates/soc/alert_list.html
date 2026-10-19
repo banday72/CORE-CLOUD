@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load soc_filters %}
+{% block title %}Alerts - CoreCloud{% endblock %}
+{% block page_title %}SOC Alerts{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-filter me-1"></i> Filter</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Title, detail, subject..." value="{{ search }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="new" {% if status_filter == 'new' %}selected{% endif %}>New</option>
+                    <option value="acknowledged" {% if status_filter == 'acknowledged' %}selected{% endif %}>Acknowledged</option>
+                    <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Severity</label>
+                <select name="severity" class="form-select">
+                    <option value="">All</option>
+                    <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>Critical</option>
+                    <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-bell me-1"></i> Alerts</h6>
+        <span class="badge bg-primary fs-6">{{ page_obj.paginator.count }} Alert{{ page_obj.paginator.count|pluralize }}</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Severity</th><th>Alert</th><th>Rule</th><th>Times</th>
+                        <th>Subject</th><th>Status</th><th>Last Seen</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in alerts %}
+                    <tr>
+                        <td><span class="badge" style="background-color: {% if a.severity == 'critical' %}#e74a3b{% elif a.severity == 'high' %}#f6c23e{% elif a.severity == 'medium' %}#4e73df{% else %}#36b9cc{% endif %} !important;">{{ a.get_severity_display }}</span></td>
+                        <td>
+                            <a href="{% url 'soc_alert_detail' a.pk %}" class="fw-bold text-decoration-none">{{ a.title }}</a>
+                            {% if a.incident %}<br><small class="text-muted">incident #{{ a.incident.pk }}</small>{% endif %}
+                        </td>
+                        <td><small>{{ a.rule.name }}</small></td>
+                        <td><span class="badge bg-secondary">×{{ a.count }}</span></td>
+                        <td><small>{{ a.subject_username|default:"—" }}</small></td>
+                        <td><span class="badge bg-{{ STATUS_BADGE|dict_key:a.status }}">{{ a.get_status_display }}</span></td>
+                        <td><small>{{ a.last_seen|date:"d M H:i" }}</small></td>
+                        <td><a class="btn btn-sm btn-outline-primary" href="{% url 'soc_alert_detail' a.pk %}"><i class="fas fa-eye"></i></a></td>
+                    </tr>
+                    {% empty %}
+                    {% include "includes/empty_state.html" with colspan=8 icon="fa-shield-check" title="No alerts" hint="When detection rules fire, alerts appear here." %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "includes/pagination.html" %}
+    </div>
+</div>
+{% endblock %}

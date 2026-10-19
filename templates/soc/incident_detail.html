@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load soc_filters %}
+{% block title %}Incident #{{ incident.pk }} - CoreCloud{% endblock %}
+{% block page_title %}Incident #{{ incident.pk }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <span class="badge" style="background-color: {% if incident.severity == 'critical' %}#e74a3b{% elif incident.severity == 'high' %}#f6c23e{% elif incident.severity == 'medium' %}#4e73df{% else %}#36b9cc{% endif %} !important;">{{ incident.get_severity_display }}</span>
+        <span class="badge bg-{{ STATUS_BADGE|dict_key:incident.status }}">{{ incident.get_status_display }}</span>
+        {% if incident.team %}<span class="badge bg-dark">{{ incident.get_team_display }}</span>{% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card shadow mb-3">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-fire-extinguisher me-1"></i> {{ incident.title }}</h6></div>
+            <div class="card-body">
+                <p>{{ incident.detail|linebreaksbr }}</p>
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Assignee</dt><dd class="col-sm-9">{{ incident.assignee|default:"Unassigned" }}</dd>
+                    <dt class="col-sm-3">Team</dt><dd class="col-sm-9">{{ incident.get_team_display|default:"—" }}</dd>
+                    <dt class="col-sm-3">Created</dt><dd class="col-sm-9">{{ incident.created_at|date:"d M Y H:i" }} UTC</dd>
+                    <dt class="col-sm-3">Closed</dt><dd class="col-sm-9">{{ incident.closed_at|date:"d M Y H:i"|default:"—" }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        {% if linked_alerts %}
+        <div class="card shadow mb-3">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-bell me-1"></i> Linked Alerts</h6></div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for a in linked_alerts %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <a href="{% url 'soc_alert_detail' a.pk %}">{{ a.title }}</a>
+                        <small class="text-muted">{{ a.last_seen|date:"d M H:i" }} · ×{{ a.count }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-comments me-1"></i> Timeline</h6></div>
+            <div class="card-body">
+                {% for n in notes %}
+                <div class="d-flex mb-3">
+                    <div class="flex-shrink-0 me-2">
+                        <span class="badge bg-{% if n.kind == 'status_change' %}info{% elif n.kind == 'auto_action' %}warning text-dark{% else %}secondary{% endif %}">{{ n.get_kind_display }}</span>
+                    </div>
+                    <div>
+                        <strong>{{ n.author|default:"system" }}</strong> <small class="text-muted">{{ n.created_at|date:"d M Y H:i" }}</small>
+                        <div>{{ n.body|linebreaksbr }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center mb-0">No activity yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        {% if can.respond_soc %}
+        <div class="card shadow mb-3">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-sliders-h me-1"></i> Triage</h6></div>
+            <div class="card-body">
+                <form method="post" action="{% url 'soc_incident_update' incident.pk %}">
+                    {% csrf_token %}
+                    <label class="form-label small">Status</label>
+                    <select name="status" class="form-select form-select-sm mb-2">
+                        {% for value, label in incident.STATUS_CHOICES %}
+                        <option value="{{ value }}" {% if incident.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <label class="form-label small">Team</label>
+                    <select name="team" class="form-select form-select-sm mb-2">
+                        <option value="">— keep —</option>
+                        {% for value, label in incident.TEAM_CHOICES %}
+                        <option value="{{ value }}" {% if incident.team == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <label class="form-label small">Assignee</label>
+                    <select name="assignee" class="form-select form-select-sm mb-2">
+                        <option value="">— keep —</option>
+                        {% for u in assignable_users %}
+                        <option value="{{ u.pk }}">{{ u.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <label class="form-label small">Add note</label>
+                    <textarea name="note" class="form-control form-control-sm mb-2" rows="3" placeholder="What did you find / do?"></textarea>
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fas fa-save me-1"></i>Update Incident</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if actions %}
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-bolt me-1"></i> Response Actions</h6></div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for r in actions %}
+                    <li class="list-group-item">
+                        <span class="badge {% if r.success %}bg-success{% else %}bg-secondary{% endif %}">{{ r.get_action_display }}</span>
+                        <small class="text-muted">by {{ r.actor }}</small>
+                        <br><small>{{ r.result }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

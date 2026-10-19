@@ -42,11 +42,16 @@ ALL_PERMISSIONS = {
     'manage_it_teams',
     'manage_announcements',
     'manage_mail_settings',
+    'view_soc',
+    'respond_soc',
+    'manage_soc',
 }
 
 IT_RESOLVE_PERMISSIONS = {'resolve_networks', 'resolve_software', 'resolve_hardware'}
 
-HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - {'manage_it_teams'}
+SOC_PERMISSIONS = {'view_soc', 'respond_soc', 'manage_soc'}
+
+HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - {'manage_it_teams'} - SOC_PERMISSIONS
 
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
@@ -105,8 +110,11 @@ def permissions_for(employee):
     team = getattr(employee, 'support_team', '')
     if team in ('networks', 'software', 'hardware'):
         perms.add('resolve_' + team)
+        # IT support staff run the SOC: view alerts, respond (ack/escalate/lock).
+        perms.update({'view_soc', 'respond_soc'})
     if getattr(employee, 'is_it_manager', False) or getattr(employee, 'it_role', ''):
         perms.add('manage_it_teams')
+        perms.update({'view_soc', 'respond_soc', 'manage_soc'})
     return perms
 
 

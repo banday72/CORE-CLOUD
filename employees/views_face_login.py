@@ -47,7 +47,25 @@ def face_login_check(request):
                                 best_match = emp
 
             if best_match and best_match.user:
+                if best_match.is_login_locked:
+                    from employees.lockout import locked_message
+                    from employees.audit import log_audit
+                    log_audit(
+                        user=best_match.user, action='login_failed',
+                        model_name='Employee', object_id=best_match.employee_id,
+                        description='Face login attempt while account is locked',
+                        request=request, category='auth', outcome='failure',
+                        severity='medium',
+                    )
+                    return JsonResponse({'status': 'error', 'message': locked_message(best_match)})
                 login(request, best_match.user, backend='hr_payroll.backends.AuthorizedUserBackend')
+                from employees.audit import log_audit
+                log_audit(
+                    user=best_match.user, action='face_login',
+                    model_name='Employee', object_id=best_match.employee_id,
+                    description=f'Face login for {best_match.full_name} (match distance {best_distance:.3f})',
+                    request=request, category='auth', outcome='success', severity='medium',
+                )
                 return JsonResponse({
                     'status': 'ok',
                     'message': f'Welcome {best_match.full_name}',
@@ -55,6 +73,13 @@ def face_login_check(request):
                     'redirect': '/'
                 })
 
+            from employees.audit import log_audit
+            log_audit(
+                user=None, action='face_login',
+                model_name='Employee', object_id='',
+                description='Face login failed — no matching face',
+                request=request, category='auth', outcome='failure', severity='low',
+            )
             return JsonResponse({'status': 'error', 'message': 'No matching face found. Try again or use password login.'})
 
         except Exception as e:

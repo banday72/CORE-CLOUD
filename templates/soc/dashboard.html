@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}SOC Dashboard - CoreCloud{% endblock %}
+{% block page_title %}Security Operations Center{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs fw-bold text-danger text-uppercase mb-1">New Alerts</div>
+                <div class="h5 mb-0 fw-bold text-gray-800">{{ new_alerts }}</div>
+                <small class="text-muted">critical {{ sev_map.critical|default:0 }} · high {{ sev_map.high|default:0 }} · medium {{ sev_map.medium|default:0 }} · low {{ sev_map.low|default:0 }} (24h)</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs fw-bold text-warning text-uppercase mb-1">Open Incidents</div>
+                <div class="h5 mb-0 fw-bold text-gray-800">{{ open_incidents }}</div>
+                <small class="text-muted">active cases needing triage</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs fw-bold text-primary text-uppercase mb-1">Events (24h)</div>
+                <div class="h5 mb-0 fw-bold text-gray-800">{{ events_24h }}</div>
+                <small class="text-muted">{{ alerts_week }} alerts this week</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="text-xs fw-bold text-success text-uppercase mb-1">Avg Response</div>
+                <div class="h5 mb-0 fw-bold text-gray-800">
+                    {% if mttr_minutes is not None %}{{ mttr_minutes }} min{% else %}—{% endif %}
+                </div>
+                <small class="text-muted">mean time to resolve (incidents)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-chart-area me-1"></i> Event Volume by Severity (24h)</h6>
+                <span class="badge bg-primary" id="feed-status">live</span>
+            </div>
+            <div class="card-body"><canvas id="volumeChart" height="110"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 fw-bold text-primary"><i class="fas fa-bell me-1"></i> Recent Alerts</h6>
+            </div>
+            <div class="card-body p-0" style="max-height:320px; overflow-y:auto;">
+                <ul class="list-group list-group-flush">
+                    {% for a in recent_alerts %}
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div class="me-2">
+                            <a href="{% url 'soc_alert_detail' a.pk %}" class="fw-bold text-decoration-none">{{ a.title }}</a>
+                            <br><small class="text-muted">{{ a.rule.name }} · {{ a.last_seen|date:"d M H:i" }} · ×{{ a.count }}</small>
+                        </div>
+                        <span class="badge" style="background-color: {% if a.severity == 'critical' %}#e74a3b{% elif a.severity == 'high' %}#f6c23e{% elif a.severity == 'medium' %}#4e73df{% elif a.severity == 'low' %}#36b9cc{% else %}#858796{% endif %} !important;">{{ a.get_severity_display }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted text-center py-4"><i class="fas fa-check-circle me-1"></i> No alerts yet</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-fingerprint me-1"></i> Alerts by Rule (7d)</h6></div>
+            <div class="card-body"><canvas id="rulesChart" height="140"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-globe me-1"></i> Top Source IPs (24h)</h6></div>
+            <div class="card-body"><canvas id="ipsChart" height="140"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-user-secret me-1"></i> Top Actors (24h)</h6></div>
+            <div class="card-body"><canvas id="actorsChart" height="140"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary"><i class="fas fa-tasks me-1"></i> Action Mix (7d)</h6></div>
+            <div class="card-body"><canvas id="actionsChart" height="140"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-bolt me-1"></i> Live Event Feed</h6>
+        <small class="text-muted">refreshes every 10s</small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr><th>Time</th><th>User</th><th>Action</th><th>Severity</th><th>Details</th><th>IP</th></tr>
+                </thead>
+                <tbody id="live-feed">
+                    <tr><td colspan="6" class="text-center text-muted py-3">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SEV_COLORS = {critical:'#e74a3b', high:'#f6c23e', medium:'#4e73df', low:'#36b9cc', info:'#858796'};
+const sevBadge = s => `<span class="badge" style="background-color:${SEV_COLORS[s]||'#858796'} !important;">${s}</span>`;
+
+fetch("{% url 'soc_api_stats' %}").then(r => r.json()).then(data => {
+    new Chart(document.getElementById('volumeChart'), {
+        type: 'line',
+        data: {
+            labels: data.volume.labels,
+            datasets: ['critical','high','medium','low','info'].map(sev => ({
+                label: sev,
+                data: data.volume.series[sev],
+                borderColor: SEV_COLORS[sev],
+                backgroundColor: SEV_COLORS[sev] + '33',
+                tension: 0.3, fill: true, pointRadius: 0,
+            })),
+        },
+        options: {plugins: {legend: {position: 'bottom'}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}},
+    });
+    new Chart(document.getElementById('rulesChart'), {
+        type: 'bar',
+        data: {labels: data.top_rules.labels, datasets: [{label: 'alerts', data: data.top_rules.counts, backgroundColor: '#e74a3b'}]},
+        options: {plugins: {legend: {display: false}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}},
+    });
+    new Chart(document.getElementById('ipsChart'), {
+        type: 'bar',
+        data: {labels: data.top_ips.labels, datasets: [{label: 'events', data: data.top_ips.counts, backgroundColor: '#4e73df'}]},
+        options: {indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: {beginAtZero: true, ticks: {precision: 0}}}},
+    });
+    new Chart(document.getElementById('actorsChart'), {
+        type: 'bar',
+        data: {labels: data.top_actors.labels, datasets: [{label: 'events', data: data.top_actors.counts, backgroundColor: '#1cc88a'}]},
+        options: {indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: {beginAtZero: true, ticks: {precision: 0}}}},
+    });
+    new Chart(document.getElementById('actionsChart'), {
+        type: 'doughnut',
+        data: {labels: data.action_mix.labels, datasets: [{data: data.action_mix.counts, backgroundColor: ['#4e73df','#1cc88a','#f6c23e','#e74a3b','#36b9cc','#858796','#9b59b6','#2ecc71']}]},
+        options: {plugins: {legend: {position: 'bottom'}}},
+    });
+});
+
+let lastTs = null;
+function refreshFeed() {
+    let url = "{% url 'soc_api_live' %}";
+    if (lastTs) url += '?since=' + encodeURIComponent(lastTs);
+    fetch(url).then(r => r.json()).then(data => {
+        if (!data.events.length) return;
+        const body = document.getElementById('live-feed');
+        if (body.querySelector('td[colspan]')) body.innerHTML = '';
+        lastTs = data.events[data.events.length - 1].timestamp;
+        data.events.slice().reverse().forEach(e => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><small>${e.time}</small></td><td><strong>${e.user}</strong></td>
+                <td><span class="badge bg-secondary">${e.action}</span></td>
+                <td>${sevBadge(e.severity)}</td><td><small>${e.description}</small></td>
+                <td><small class="text-muted">${e.ip}</small></td>`;
+            body.prepend(tr);
+        });
+        while (body.children.length > 25) body.removeChild(body.lastChild);
+    }).catch(() => {});
+}
+refreshFeed();
+setInterval(refreshFeed, 10000);
+</script>
+{% endblock %}

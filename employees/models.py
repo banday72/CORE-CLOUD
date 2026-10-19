@@ -220,6 +220,10 @@ class LoginSlide(models.Model):
 class AuditLog(models.Model):
     ACTION_CHOICES = [
         ('login', 'Login'),
+        ('login_failed', 'Login Failed'),
+        ('lockout', 'Account Lockout'),
+        ('unlock', 'Account Unlock'),
+        ('face_login', 'Face Login'),
         ('logout', 'Logout'),
         ('create', 'Create'),
         ('update', 'Update'),
@@ -228,6 +232,16 @@ class AuditLog(models.Model):
         ('deauthorize', 'Deauthorize'),
         ('password_change', 'Password Change'),
         ('export', 'Export'),
+        ('response', 'Response Action'),
+    ]
+    SEVERITY_CHOICES = [
+        ('info', 'Info'), ('low', 'Low'), ('medium', 'Medium'),
+        ('high', 'High'), ('critical', 'Critical'),
+    ]
+    OUTCOME_CHOICES = [('success', 'Success'), ('failure', 'Failure')]
+    CATEGORY_CHOICES = [
+        ('auth', 'Authentication'), ('access', 'Access'), ('data', 'Data'),
+        ('config', 'Configuration'), ('system', 'System'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
@@ -236,6 +250,11 @@ class AuditLog(models.Model):
     object_id = models.CharField(max_length=100, blank=True)
     description = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
+    severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='info')
+    outcome = models.CharField(max_length=10, choices=OUTCOME_CHOICES, blank=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+    path = models.CharField(max_length=300, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

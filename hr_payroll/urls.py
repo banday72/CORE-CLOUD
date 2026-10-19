@@ -7,6 +7,7 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect
 
 from employees.views import LockoutLoginView
+from soc import views as soc_views
 
 
 def custom_logout(request):
@@ -49,6 +50,8 @@ urlpatterns = [
     path('hr/', include('hr_modules.urls')),
     path('ai/', include('ai_engine.urls')),
     path('collab/', include('collab.urls')),
+    path('soc/', include('soc.urls')),
+    path('cron/soc/', soc_views.cron_scan, name='soc_cron_scan'),
 ]
 
 if settings.DEBUG:

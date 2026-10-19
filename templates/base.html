@@ -214,6 +214,29 @@
             {% endif %}
         </nav>
 
+        {% if can.view_soc %}
+        <div class="sidebar-heading bright"><i class="fas fa-user-secret me-1"></i> SOC</div>
+        <nav class="nav flex-column">
+            <a class="nav-link {% if request.resolver_match.namespace == 'soc' and request.resolver_match.url_name == 'soc_dashboard' %}active{% endif %}" href="{% url 'soc_dashboard' %}">
+                <i class="fas fa-tachometer-alt nav-icon" style="color:#e74a3b;"></i> SOC Dashboard
+            </a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'soc_alert_list' or request.resolver_match.url_name == 'soc_alert_detail' %}active{% endif %}" href="{% url 'soc_alert_list' %}">
+                <i class="fas fa-bell nav-icon" style="color:#f6c23e;"></i> Alerts
+            </a>
+            <a class="nav-link {% if 'soc_incident' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'soc_incident_list' %}">
+                <i class="fas fa-fire-extinguisher nav-icon" style="color:#36b9cc;"></i> Incidents
+            </a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'soc_event_list' %}active{% endif %}" href="{% url 'soc_event_list' %}">
+                <i class="fas fa-stream nav-icon" style="color:#1cc88a;"></i> Events
+            </a>
+            {% if can.manage_soc %}
+            <a class="nav-link {% if 'soc_rule' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'soc_rule_list' %}">
+                <i class="fas fa-cogs nav-icon" style="color:#858796;"></i> Detection Rules
+            </a>
+            {% endif %}
+        </nav>
+        {% endif %}
+
         {% if can.view_employees or can.manage_employees or can.bulk_import or can.manage_departments or can.manage_access or can.approve_access or can.view_audit or can.manage_slides %}
         <div class="sidebar-heading bright"><i class="fas fa-users me-1"></i> HR MANAGEMENT</div>
         <nav class="nav flex-column">

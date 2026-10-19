@@ -13,6 +13,16 @@ from attendance.models import Attendance
 from payroll.models import Payroll
 
 
+def _audit_export(request, model_name, count):
+    from employees.audit import log_audit
+    log_audit(
+        user=request.user, action='export', model_name=model_name,
+        object_id=model_name,
+        description=f'Exported {count} {model_name} records to CSV',
+        request=request, category='data', severity='low',
+    )
+
+
 @login_required
 @permission_required('view_reports')
 def reports_dashboard(request):
@@ -142,51 +152,57 @@ def reports_dashboard(request):
 @login_required
 @permission_required('view_reports')
 def export_employees_csv(request):
+    rows = list(Employee.objects.select_related('department', 'reports_to')
+                .order_by('employee_id'))
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="employees.csv"'
     writer = csv.writer(response)
     writer.writerow(['Employee ID', 'Name', 'Email', 'Department', 'Designation',
                      'Salary', 'Status', 'Role', 'Manager'])
-    for e in (Employee.objects.select_related('department', 'reports_to')
-              .order_by('employee_id')):
+    for e in rows:
         writer.writerow([
             e.employee_id, e.full_name, e.email,
             e.department.name if e.department else '',
             e.designation, e.salary, e.status, e.role,
             e.reports_to.employee_id if e.reports_to else '',
         ])
+    _audit_export(request, 'Employee', len(rows))
     return response
 
 
 @login_required
 @permission_required('manage_attendance')
 def export_attendance_csv(request):
+    rows = list(Attendance.objects.select_related('employee').order_by('-date'))
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="attendance.csv"'
     writer = csv.writer(response)
     writer.writerow(['Employee ID', 'Name', 'Date', 'Status', 'Clock In', 'Clock Out'])
-    for a in Attendance.objects.select_related('employee').order_by('-date'):
+    for a in rows:
         writer.writerow([
             a.employee.employee_id, a.employee.full_name,
             a.date.isoformat(), a.status,
             a.clock_in.strftime('%H:%M') if a.clock_in else '',
             a.clock_out.strftime('%H:%M') if a.clock_out else '',
         ])
+    _audit_export(request, 'Attendance', len(rows))
     return response
 
 
 @login_required
 @permission_required('view_reports')
 def export_payroll_csv(request):
+    rows = list(Payroll.objects.select_related('employee').order_by('-year', '-month'))
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="payroll.csv"'
     writer = csv.writer(response)
     writer.writerow(['Employee ID', 'Name', 'Month', 'Year', 'Basic', 'Allowances',
                      'Deductions', 'Tax', 'Net', 'Status'])
-    for p in Payroll.objects.select_related('employee').order_by('-year', '-month'):
+    for p in rows:
         writer.writerow([
             p.employee.employee_id, p.employee.full_name,
             p.get_month_display(), p.year, p.basic_salary, p.allowances,
             p.deductions, p.tax, p.net_salary, p.status,
         ])
+    _audit_export(request, 'Payroll', len(rows))
     return response

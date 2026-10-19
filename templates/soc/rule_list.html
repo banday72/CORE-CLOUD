@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Detection Rules - CoreCloud{% endblock %}
+{% block page_title %}SOC Detection Rules{% endblock %}
+
+{% block content %}
+<div class="card shadow">
+    <div class="card-header py-3">
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-cogs me-1"></i> Rules</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Rule</th><th>Severity</th><th>Window</th><th>Threshold</th>
+                        <th>Enabled</th><th>Auto-response</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr>
+                        <td>
+                            <strong>{{ rule.name }}</strong><br>
+                            <small class="text-muted">{{ rule.description }}</small><br>
+                            <code class="small">{{ rule.key }}</code>
+                        </td>
+                        <td><span class="badge" style="background-color: {% if rule.severity == 'critical' %}#e74a3b{% elif rule.severity == 'high' %}#f6c23e{% elif rule.severity == 'medium' %}#4e73df{% else %}#36b9cc{% endif %} !important;">{{ rule.get_severity_display }}</span></td>
+                        <td><small>{{ rule.window_minutes }} min</small></td>
+                        <td><small>{{ rule.threshold }}</small></td>
+                        <td>
+                            <span class="badge {% if rule.enabled %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if rule.enabled %}on{% else %}off{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {% if rule.auto_response %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {% if rule.auto_response %}active{% else %}manual{% endif %}
+                            </span>
+                        </td>
+                        <td class="text-nowrap">
+                            {% if can.manage_soc %}
+                            <form method="post" action="{% url 'soc_rule_toggle' rule.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="field" value="enabled">
+                                <button class="btn btn-sm btn-outline-{% if rule.enabled %}secondary{% else %}success{% endif %}">
+                                    {% if rule.enabled %}Disable{% else %}Enable{% endif %}
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'soc_rule_toggle' rule.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="field" value="auto_response">
+                                <button class="btn btn-sm btn-outline-{% if rule.auto_response %}warning{% else %}light{% endif %}">
+                                    {% if rule.auto_response %}Disable auto{% else %}Auto{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    {% include "includes/empty_state.html" with colspan=7 icon="fa-cogs" title="No rules" hint="Run python manage.py run_soc_rules to seed the default rules." %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

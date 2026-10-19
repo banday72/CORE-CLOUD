@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Security Events - CoreCloud{% endblock %}
+{% block page_title %}Security Events{% endblock %}
+
+{% block content %}
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-filter me-1"></i> Filter</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Description, user, IP, object..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Action</label>
+                <select name="action" class="form-select">
+                    <option value="">All</option>
+                    {% for value, label in ACTION_CHOICES %}
+                    <option value="{{ value }}" {% if action_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Severity</label>
+                <select name="severity" class="form-select">
+                    <option value="">All</option>
+                    {% for value, label in SEVERITY_CHOICES %}
+                    <option value="{{ value }}" {% if severity_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Category</label>
+                <select name="category" class="form-select">
+                    <option value="">All</option>
+                    {% for value, label in CATEGORY_CHOICES %}
+                    <option value="{{ value }}" {% if category_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Filter</button>
+            </div>
+            <div class="col-md-1">
+                <a href="{% url 'soc_event_list' %}" class="btn btn-outline-secondary w-100" aria-label="Clear"><i class="fas fa-times"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary"><i class="fas fa-stream me-1"></i> Security Event Stream</h6>
+        <span class="badge bg-primary fs-6">{{ page_obj.paginator.count }} Record{{ page_obj.paginator.count|pluralize }}</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Time (UTC)</th><th>User</th><th>Action</th><th>Severity</th>
+                        <th>Category</th><th>Outcome</th><th>Details</th><th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td><small>{{ log.timestamp|date:"d M Y H:i:s" }}</small></td>
+                        <td><strong>{{ log.user|default:"system" }}</strong></td>
+                        <td><span class="badge bg-secondary">{{ log.get_action_display }}</span></td>
+                        <td>
+                            <span class="badge" style="background-color: {% if log.severity == 'critical' %}#e74a3b{% elif log.severity == 'high' %}#f6c23e{% elif log.severity == 'medium' %}#4e73df{% elif log.severity == 'low' %}#36b9cc{% else %}#858796{% endif %} !important;">{{ log.get_severity_display }}</span>
+                        </td>
+                        <td><small>{{ log.get_category_display|default:"—" }}</small></td>
+                        <td>
+                            {% if log.outcome == 'failure' %}<span class="badge bg-danger">failure</span>
+                            {% elif log.outcome == 'success' %}<span class="badge bg-success">success</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td><small>{{ log.description|truncatechars:140 }}</small></td>
+                        <td><small class="text-muted">{{ log.ip_address|default:"-" }}</small></td>
+                    </tr>
+                    {% empty %}
+                    {% include "includes/empty_state.html" with colspan=8 icon="fa-stream" title="No events" hint="Security events will stream here as users interact with the system." %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "includes/pagination.html" %}
+    </div>
+</div>
+{% endblock %}
