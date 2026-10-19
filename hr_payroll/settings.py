@@ -3,6 +3,7 @@ Django settings for hr_payroll project.
 """
 
 import os
+import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -147,6 +148,13 @@ SOC_AUTO_RESPONSE = os.environ.get('SOC_AUTO_RESPONSE', 'True') == 'True'
 # Secret required by the /cron/soc/ endpoint (Vercel cron).
 SOC_CRON_SECRET = os.environ.get('SOC_CRON_SECRET', '')
 
+# File logging: on Vercel serverless only /tmp is writable, so the activity
+# log must live there; locally it stays next to the project root.
+if os.environ.get('VERCEL'):
+    _ACTIVITY_LOG = Path(tempfile.gettempdir()) / 'activity.log'
+else:
+    _ACTIVITY_LOG = BASE_DIR / 'activity.log'
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -163,7 +171,7 @@ LOGGING = {
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'activity.log',
+            'filename': _ACTIVITY_LOG,
             'maxBytes': 1024 * 1024,
             'backupCount': 3,
             'formatter': 'verbose',
