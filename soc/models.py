@@ -109,9 +109,27 @@ class IncidentNote(models.Model):
         return f'{self.incident_id}: {self.kind}'
 
 
+class SOCIPEntry(models.Model):
+    LIST_CHOICES = [('whitelist', 'Whitelist'), ('blacklist', 'Blacklist')]
+
+    ip_address = models.GenericIPAddressField(unique=True)
+    list_type = models.CharField(max_length=10, choices=LIST_CHOICES)
+    reason = models.CharField(max_length=200, blank=True)
+    added_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='soc_ip_entries')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.ip_address} ({self.get_list_type_display()})'
+
+
 class ResponseAction(models.Model):
     ACTION_CHOICES = [
         ('lock_account', 'Lock account'),
+        ('unlock_account', 'Unlock account'),
         ('revoke_sessions', 'Revoke sessions'),
         ('open_ticket', 'Open ticket'),
         ('notify', 'Notify team'),

@@ -9,8 +9,8 @@ from employees.audit import log_audit
 from employees.models import AuditLog, Employee
 from soc.management.commands.run_soc_rules import seed_rules
 
-from .engine import evaluate_event, open_alert, run_scan
-from .models import Alert, DetectionRule, Incident, IncidentNote
+from .engine import evaluate_event, is_blacklisted, is_whitelisted, open_alert, run_scan
+from .models import Alert, DetectionRule, Incident, IncidentNote, SOCIPEntry
 
 
 def make_employee(username='EMP901', **kwargs):
@@ -32,7 +32,7 @@ class RuleSeedingTests(TestCase):
         first = DetectionRule.objects.count()
         seed_rules()
         self.assertEqual(DetectionRule.objects.count(), first)
-        self.assertEqual(first, 9)
+        self.assertEqual(first, 10)
 
 
 class EngineTests(TestCase):
@@ -309,3 +309,132 @@ class LoginAuditTests(TestCase):
         event = AuditLog.objects.filter(action='export').first()
         self.assertIsNotNone(event)
         self.assertEqual(event.category, 'data')
+
+
+class IPListTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        seed_rules()
+
+    def test_whitelist_skips_suspicious_ip(self):
+        SOCIPEntry.objects.create(ip_address='10.0.0.9', list_type='whitelist')
+        self.assertTrue(is_whitelisted('10.0.0.9'))
+        users = [make_employee(f'EMPW{i}') for i in range(6)]
+        for emp in users:
+            log_audit(user=emp.user, action='login', model_name='User',
+                      object_id=emp.employee_id,
+                      severity='info', outcome='success', category='auth')
+        AuditLog.objects.filter(action='login').update(ip_address='10.0.0.9')
+        evaluate_event(AuditLog.objects.filter(action='login').first())
+        self.assertFalse(Alert.objects.filter(rule__key='suspicious_ip').exists())
+
+    def test_blacklist_fires_immediately(self):
+        SOCIPEntry.objects.create(ip_address='198.51.100.7', list_type='blacklist')
+        self.assertTrue(is_blacklisted('198.51.100.7'))
+        emp = make_employee('EMPBL')
+        log_audit(user=emp.user, action='login_failed', model_name='Employee',
+                  object_id=emp.employee_id,
+                  severity='low', outcome='failure', category='auth')
+        AuditLog.objects.filter(action='login_failed').update(ip_address='198.51.100.7')
+        evaluate_event(AuditLog.objects.filter(action='login_failed').first())
+        alert = Alert.objects.filter(rule__key='blacklist_hit').first()
+        self.assertIsNotNone(alert)
+        self.assertIn('198.51.100.7', alert.title)
+
+    def test_non_blacklisted_ip_does_not_fire(self):
+        emp = make_employee('EMPNB')
+        log_audit(user=emp.user, action='login_failed', model_name='Employee',
+                  object_id=emp.employee_id,
+                  severity='low', outcome='failure', category='auth')
+        AuditLog.objects.filter(action='login_failed').update(ip_address='203.0.113.9')
+        evaluate_event(AuditLog.objects.filter(action='login_failed').first())
+        self.assertFalse(Alert.objects.filter(rule__key='blacklist_hit').exists())
+
+    def test_ip_list_page_requires_manage_soc(self):
+        emp = make_employee('EMPNM')
+        self.client.force_login(emp.user)
+        resp = self.client.get(reverse('soc_ip_list'))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_admin_sees_ip_list_page(self):
+        from django.contrib.auth.models import User as AuthUser
+        admin = AuthUser.objects.create_superuser('admsoc', 'a@a.com', 'x12345')
+        self.client.force_login(admin)
+        resp = self.client.get(reverse('soc_ip_list'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_ip_add_and_remove(self):
+        from django.contrib.auth.models import User as AuthUser
+        admin = AuthUser.objects.create_superuser('admsoc2', 'b@b.com', 'x12345')
+        self.client.force_login(admin)
+        self.client.post(reverse('soc_ip_add'), {
+            'ip_address': '203.0.113.1', 'list_type': 'whitelist',
+            'reason': 'office'})
+        entry = SOCIPEntry.objects.get(ip_address='203.0.113.1')
+        self.assertEqual(entry.list_type, 'whitelist')
+        self.client.post(reverse('soc_ip_add'), {
+            'ip_address': '203.0.113.1', 'list_type': 'blacklist',
+            'reason': 'turned hostile'})
+        entry.refresh_from_db()
+        self.assertEqual(entry.list_type, 'blacklist')
+        self.client.post(reverse('soc_ip_remove', args=[entry.pk]))
+        self.assertFalse(SOCIPEntry.objects.filter(ip_address='203.0.113.1').exists())
+
+    def test_ip_add_rejects_invalid_ip(self):
+        from django.contrib.auth.models import User as AuthUser
+        admin = AuthUser.objects.create_superuser('admsoc3', 'c@c.com', 'x12345')
+        self.client.force_login(admin)
+        before = SOCIPEntry.objects.count()
+        resp = self.client.post(reverse('soc_ip_add'), {
+            'ip_address': 'not-an-ip', 'list_type': 'whitelist'})
+        self.assertEqual(SOCIPEntry.objects.count(), before)
+        self.assertEqual(resp.status_code, 302)
+
+
+class UnlockActionTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User as AuthUser
+        self.admin = AuthUser.objects.create_superuser('admsocu', 'u@u.com', 'x12345')
+        self.emp = make_employee('EMPU1')
+        seed_rules()
+
+    def _locked_alert(self):
+        from employees.lockout import LOCKOUT_MINUTES
+        self.emp.login_locked_until = timezone.now() + timedelta(minutes=LOCKOUT_MINUTES)
+        self.emp.save(update_fields=['login_locked_until'])
+        rule = DetectionRule.objects.get(key='account_lockout')
+        return open_alert(rule, 'fp-unlock', 'Locked: EMPU1', 'locked',
+                          subject_username='EMPU1')
+
+    def test_unlock_clears_lock(self):
+        alert = self._locked_alert()
+        self.client.force_login(self.admin)
+        resp = self.client.post(reverse('soc_alert_action', args=[alert.pk]),
+                                {'action': 'unlock'})
+        self.emp.refresh_from_db()
+        self.assertFalse(self.emp.is_login_locked)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(AuditLog.objects.filter(action='unlock').exists())
+        self.assertTrue(alert.actions.filter(action='unlock_account').exists())
+
+    def test_unlock_on_unlocked_account_is_noop(self):
+        alert = self._locked_alert()
+        self.emp.login_locked_until = None
+        self.emp.save(update_fields=['login_locked_until'])
+        self.client.force_login(self.admin)
+        self.client.post(reverse('soc_alert_action', args=[alert.pk]),
+                         {'action': 'unlock'})
+        self.assertFalse(alert.actions.filter(action='unlock_account').exists())
+
+    def test_blacklist_ip_action_from_alert(self):
+        rule = DetectionRule.objects.get(key='blacklist_hit')
+        alert = open_alert(rule, 'fp-blip', 'Bad IP', 'from 10.9.9.9')
+        alert.event = AuditLog.objects.create(
+            action='login', model_name='User', object_id='x',
+            ip_address='10.9.9.9', severity='info')
+        alert.save(update_fields=['event'])
+        self.client.force_login(self.admin)
+        self.client.post(reverse('soc_alert_action', args=[alert.pk]),
+                         {'action': 'blacklist_ip', 'ip': '10.9.9.9'})
+        self.assertTrue(SOCIPEntry.objects.filter(
+            ip_address='10.9.9.9', list_type='blacklist').exists())

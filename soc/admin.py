@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Alert, DetectionRule, Incident, IncidentNote, ResponseAction
+from .models import Alert, DetectionRule, Incident, IncidentNote, ResponseAction, SOCIPEntry
 
 
 @admin.register(DetectionRule)
@@ -8,6 +8,13 @@ class DetectionRuleAdmin(admin.ModelAdmin):
     list_display = ('key', 'name', 'severity', 'window_minutes', 'threshold', 'enabled', 'auto_response')
     list_filter = ('enabled', 'severity', 'auto_response')
     search_fields = ('key', 'name')
+
+
+@admin.register(SOCIPEntry)
+class SOCIPEntryAdmin(admin.ModelAdmin):
+    list_display = ('ip_address', 'list_type', 'reason', 'added_by', 'created_at')
+    list_filter = ('list_type',)
+    search_fields = ('ip_address', 'reason')
 
 
 @admin.register(Alert)

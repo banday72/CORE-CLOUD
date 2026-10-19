@@ -12,12 +12,17 @@
         {% endif %}
     </div>
     {% if can.respond_soc %}
-    <form method="post" action="{% url 'soc_alert_action' alert.pk %}" class="d-flex gap-2">
+    <form method="post" action="{% url 'soc_alert_action' alert.pk %}" class="d-flex gap-2 flex-wrap">
         {% csrf_token %}
         {% if alert.status == 'new' %}
         <button name="action" value="ack" class="btn btn-warning btn-sm"><i class="fas fa-check me-1"></i>Acknowledge</button>
         {% endif %}
         <button name="action" value="lock" class="btn btn-danger btn-sm" onclick="return confirm('Lock this account and revoke its sessions?');"><i class="fas fa-lock me-1"></i>Lock Account</button>
+        <button name="action" value="unlock" class="btn btn-success btn-sm" onclick="return confirm('Unlock this account?');"><i class="fas fa-lock-open me-1"></i>Unlock Account</button>
+        {% if alert.event and alert.event.ip_address and can.manage_soc %}
+        <input type="hidden" name="ip" value="{{ alert.event.ip_address }}">
+        <button name="action" value="blacklist_ip" class="btn btn-dark btn-sm" onclick="return confirm('Blacklist IP {{ alert.event.ip_address }}?');"><i class="fas fa-ban me-1"></i>Blacklist IP {{ alert.event.ip_address }}</button>
+        {% endif %}
         {% if not alert.incident %}
         <button name="action" value="escalate" class="btn btn-primary btn-sm"><i class="fas fa-rocket me-1"></i>Escalate to Incident</button>
         {% endif %}

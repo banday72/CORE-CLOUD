@@ -16,6 +16,13 @@ from soc.engine import run_scan
 
 DEFAULT_RULES = [
     {
+        'key': 'blacklist_hit',
+        'name': 'Blacklisted IP activity',
+        'description': 'Any event originating from a blacklisted IP (no threshold).',
+        'severity': 'critical', 'window_minutes': 15, 'threshold': 1,
+        'auto_response': False,
+    },
+    {
         'key': 'brute_force',
         'name': 'Brute force login attempts',
         'description': '5+ failed logins for the same account within 15 minutes.',

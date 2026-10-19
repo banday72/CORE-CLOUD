@@ -15,6 +15,9 @@ urlpatterns = [
     path('incidents/<int:pk>/update/', views.incident_update, name='soc_incident_update'),
     path('rules/', views.rule_list, name='soc_rule_list'),
     path('rules/<int:pk>/toggle/', views.rule_toggle, name='soc_rule_toggle'),
+    path('ip-list/', views.ip_list, name='soc_ip_list'),
+    path('ip-list/add/', views.ip_add, name='soc_ip_add'),
+    path('ip-list/<int:pk>/remove/', views.ip_remove, name='soc_ip_remove'),
 ]
 
 # Root-level cron route is wired in hr_payroll/urls.py as /cron/soc/.

@@ -32,6 +32,20 @@ def _rule(key):
         return None
 
 
+def is_whitelisted(ip):
+    if not ip:
+        return False
+    from .models import SOCIPEntry
+    return SOCIPEntry.objects.filter(ip_address=ip, list_type='whitelist').exists()
+
+
+def is_blacklisted(ip):
+    if not ip:
+        return False
+    from .models import SOCIPEntry
+    return SOCIPEntry.objects.filter(ip_address=ip, list_type='blacklist').exists()
+
+
 def open_alert(rule, fingerprint, title, detail, event=None, subject_username=''):
     """Create an alert or increment the matching open one. Returns the alert."""
     from .models import Alert
@@ -73,6 +87,7 @@ def evaluate_event(event):
     if not DetectionRule.objects.filter(enabled=True).exists():
         return
     for check in (
+        check_blacklist_hit,
         check_brute_force,
         check_credential_stuffing,
         check_account_lockout,
@@ -101,6 +116,23 @@ def run_scan(hours=24):
     return count
 
 
+def check_blacklist_hit(event):
+    """Any event from a blacklisted IP fires immediately — no threshold."""
+    if not event.ip_address or not is_blacklisted(event.ip_address):
+        return
+    rule = _rule('blacklist_hit')
+    if not rule:
+        return
+    open_alert(
+        rule, _fingerprint('blacklist_hit', event.ip_address),
+        f'Blacklisted IP activity: {event.ip_address}',
+        f'Event "{event.action}" from blacklisted IP {event.ip_address} '
+        f'({event.description or "no detail"}).',
+        event=event,
+        subject_username=event.user.username if event.user else '',
+    )
+
+
 def check_brute_force(event):
     if event.action != 'login_failed' or not event.user:
         return
@@ -123,6 +155,8 @@ def check_brute_force(event):
 
 def check_credential_stuffing(event):
     if event.action != 'login_failed' or not event.ip_address:
+        return
+    if is_whitelisted(event.ip_address):
         return
     rule = _rule('credential_stuffing')
     if not rule:
@@ -162,6 +196,8 @@ def check_account_lockout(event):
 
 def check_suspicious_ip(event):
     if event.action not in AUTH_ACTIONS or not event.ip_address:
+        return
+    if is_whitelisted(event.ip_address):
         return
     rule = _rule('suspicious_ip')
     if not rule:
@@ -245,6 +281,8 @@ def check_privilege_change(event):
 
 def check_ip_switch(event):
     if event.action != 'login' or not (event.user and event.ip_address):
+        return
+    if is_whitelisted(event.ip_address):
         return
     rule = _rule('ip_switch')
     if not rule:

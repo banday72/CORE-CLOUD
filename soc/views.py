@@ -13,7 +13,7 @@ from employees.audit import log_audit
 from employees.decorators import permission_required
 from employees.models import AuditLog
 
-from .models import Alert, DetectionRule, Incident, IncidentNote, ResponseAction
+from .models import Alert, DetectionRule, Incident, IncidentNote, ResponseAction, SOCIPEntry
 
 SEVERITY_BADGE = {
     'critical': 'danger', 'high': 'warning', 'medium': 'primary',
@@ -247,13 +247,7 @@ def alert_action(request, pk):
         messages.success(request, f'Escalated to incident #{incident.pk}.')
     elif action == 'lock':
         from .playbooks import lock_account
-        employee = None
-        if alert.subject_username:
-            from employees.models import Employee
-            employee = (Employee.objects.filter(employee_id=alert.subject_username)
-                        .select_related('user').first()
-                        or Employee.objects.filter(user__username=alert.subject_username)
-                        .select_related('user').first())
+        employee = _alert_employee(alert)
         if employee is None:
             messages.error(request, 'No employee matches this alert subject.')
         else:
@@ -265,7 +259,53 @@ def alert_action(request, pk):
                 request=request, category='auth', severity='high',
             )
             messages.success(request, f'Locked {employee.employee_id} and revoked sessions.')
+    elif action == 'unlock':
+        from employees.lockout import clear_login_lock
+        employee = _alert_employee(alert)
+        if employee is None:
+            messages.error(request, 'No employee matches this alert subject.')
+        elif not (employee.is_login_locked or employee.failed_login_attempts):
+            messages.info(request, f'{employee.employee_id} is not locked.')
+        else:
+            clear_login_lock(employee)
+            ResponseAction.objects.create(
+                alert=alert, action='unlock_account', actor=request.user.username,
+                result=f'Unlocked {employee.employee_id}', params={})
+            log_audit(
+                user=request.user, action='unlock', model_name='Employee',
+                object_id=employee.employee_id,
+                description=f'Manual SOC unlock of {employee.employee_id} (alert #{alert.pk})',
+                request=request, category='auth', severity='medium', outcome='success',
+            )
+            messages.success(request, f'Unlocked {employee.employee_id}.')
+    elif action == 'blacklist_ip':
+        ip = (request.POST.get('ip') or '').strip()
+        if not ip:
+            messages.error(request, 'No IP address on this alert to blacklist.')
+        else:
+            SOCIPEntry.objects.update_or_create(
+                ip_address=ip,
+                defaults={'list_type': 'blacklist',
+                          'reason': f'Blacklisted from alert #{alert.pk}',
+                          'added_by': request.user})
+            log_audit(
+                user=request.user, action='update', model_name='SOCIPEntry',
+                object_id=ip,
+                description=f'IP {ip} blacklisted from alert #{alert.pk}',
+                request=request, category='config', severity='high',
+            )
+            messages.success(request, f'IP {ip} blacklisted. Future activity from it will raise alerts instantly.')
     return redirect('soc_alert_detail', pk=pk)
+
+
+def _alert_employee(alert):
+    if not alert.subject_username:
+        return None
+    from employees.models import Employee
+    return (Employee.objects.filter(employee_id=alert.subject_username)
+            .select_related('user').first()
+            or Employee.objects.filter(user__username=alert.subject_username)
+            .select_related('user').first())
 
 
 @login_required
@@ -374,6 +414,68 @@ def rule_toggle(request, pk):
         )
         messages.success(request, f'{rule.name}: {field} is now {getattr(rule, field)}.')
     return redirect('soc_rule_list')
+
+
+@login_required
+@permission_required('manage_soc')
+def ip_list(request):
+    entries = SOCIPEntry.objects.select_related('added_by')
+    q = request.GET.get('search', '').strip()
+    if q:
+        entries = entries.filter(ip_address__icontains=q)
+    from django.core.paginator import Paginator
+    page_obj = Paginator(entries, 50).get_page(request.GET.get('page'))
+    return render(request, 'soc/ip_list.html', {
+        'page_obj': page_obj, 'entries': page_obj, 'search': q,
+    })
+
+
+@login_required
+@permission_required('manage_soc')
+@require_POST
+def ip_add(request):
+    from django.core.exceptions import ValidationError
+    from django.core.validators import validate_ipv46_address
+    ip = (request.POST.get('ip_address') or '').strip()
+    list_type = request.POST.get('list_type', 'whitelist')
+    reason = (request.POST.get('reason') or '').strip()
+    if list_type not in ('whitelist', 'blacklist'):
+        list_type = 'whitelist'
+    try:
+        validate_ipv46_address(ip)
+    except ValidationError:
+        messages.error(request, f'"{ip}" is not a valid IP address.')
+        return redirect('soc_ip_list')
+    entry, created = SOCIPEntry.objects.update_or_create(
+        ip_address=ip,
+        defaults={'list_type': list_type, 'reason': reason, 'added_by': request.user})
+    log_audit(
+        user=request.user, action='update', model_name='SOCIPEntry',
+        object_id=ip,
+        description=f'IP {ip} added to {entry.get_list_type_display()}'
+                    + (f' ({reason})' if reason else ''),
+        request=request, category='config', severity='medium',
+    )
+    messages.success(request, f'IP {ip} {"added to" if created else "moved to"} '
+                              f'{entry.get_list_type_display()}.')
+    return redirect('soc_ip_list')
+
+
+@login_required
+@permission_required('manage_soc')
+@require_POST
+def ip_remove(request, pk):
+    entry = get_object_or_404(SOCIPEntry, pk=pk)
+    ip, list_type = entry.ip_address, entry.get_list_type_display()
+    entry.delete()
+    log_audit(
+        user=request.user, action='update', model_name='SOCIPEntry',
+        object_id=ip,
+        description=f'IP {ip} removed from {list_type}',
+        request=request, category='config', severity='medium',
+    )
+    messages.success(request, f'IP {ip} removed from {list_type}.')
+    return redirect('soc_ip_list')
 
 
 def cron_scan(request):
