@@ -1,0 +1,261 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoreCloud — Complete Company Portal | HR, Payroll &amp; Security</title>
+    <meta name="description" content="CoreCloud is a complete company portal: HR &amp; payroll automation, attendance, leaves, employee self-service, collaboration, reports and a built-in Security Operations Center.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a5276'/%3E%3Ctext x='32' y='44' font-family='Arial' font-size='36' font-weight='900' fill='white' text-anchor='middle'%3EC%3C/text%3E%3C/svg%3E">
+    <style>
+        :root { --brand-deep:#16455f; --brand:#1a5276; --brand-light:#2980b9; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; color:#243447; background:#fff; }
+        .hero {
+            background: linear-gradient(135deg, #0d2137 0%, #1a5276 55%, #2980b9 100%);
+            color:#fff; padding:1.1rem 0 0; position:relative; overflow:hidden;
+        }
+        .hero::after { content:""; position:absolute; right:-120px; top:-80px; width:420px; height:420px; border-radius:50%; background:rgba(255,255,255,.05); }
+        .navbar-brand { font-weight:800; font-size:1.35rem; letter-spacing:.02em; }
+        .navbar-brand i { color:#7fc0ee; }
+        .nav-link { color:rgba(255,255,255,.85) !important; font-weight:500; margin-left:.4rem; }
+        .nav-link:hover { color:#fff !important; }
+        .hero-inner { padding:5.5rem 0 6rem; position:relative; z-index:1; }
+        .hero h1 { font-weight:800; font-size:2.7rem; line-height:1.15; margin-bottom:1.1rem; }
+        .hero h1 span { color:#7fc0ee; }
+        .hero p.lead { color:rgba(255,255,255,.82); font-size:1.12rem; max-width:640px; margin-bottom:1.9rem; }
+        .btn-hero-primary { background:#fff; color:var(--brand); font-weight:700; border-radius:12px; padding:.75rem 1.7rem; }
+        .btn-hero-primary:hover { background:#eaf4fb; color:var(--brand-deep); transform:translateY(-1px); }
+        .btn-hero-ghost { border:1.5px solid rgba(255,255,255,.55); color:#fff; font-weight:600; border-radius:12px; padding:.75rem 1.7rem; }
+        .btn-hero-ghost:hover { border-color:#fff; background:rgba(255,255,255,.08); color:#fff; }
+        .hero-pills { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:2.4rem; }
+        .hero-pill { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:.4rem .95rem; font-size:.82rem; font-weight:600; color:#e8f3fb; }
+        .section { padding:4.5rem 0; }
+        .section-alt { background:#f4f8fb; }
+        .section-title { font-weight:800; font-size:1.9rem; margin-bottom:.6rem; color:var(--brand-deep); }
+        .section-sub { color:#5b6b7c; max-width:680px; margin-bottom:2.6rem; }
+        .feature-card { background:#fff; border:1px solid #e3ebf2; border-radius:16px; padding:1.6rem 1.4rem; height:100%; transition:.2s; }
+        .feature-card:hover { box-shadow:0 14px 34px rgba(16,42,67,.12); transform:translateY(-3px); }
+        .feature-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.35rem; color:#fff; margin-bottom:1rem; }
+        .feature-card h5 { font-weight:700; font-size:1.05rem; margin-bottom:.5rem; }
+        .feature-card p { color:#5b6b7c; font-size:.92rem; margin:0; }
+        .steps-num { width:44px; height:44px; border-radius:50%; background:var(--brand); color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:1rem; font-size:1.05rem; }
+        .cta-band { background:linear-gradient(135deg, var(--brand-deep), var(--brand-light)); color:#fff; border-radius:20px; padding:3rem 2.4rem; text-align:center; }
+        .cta-band h3 { font-weight:800; margin-bottom:.7rem; }
+        .cta-band p { color:rgba(255,255,255,.85); margin-bottom:1.6rem; }
+        footer { background:#0d2137; color:rgba(255,255,255,.72); padding:2.6rem 0 1.6rem; font-size:.9rem; }
+        footer a { color:#9fd0f0; text-decoration:none; }
+        footer a:hover { text-decoration:underline; }
+        .footer-links { display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:1.1rem; }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand text-white" href="{% url 'landing' %}"><i class="fas fa-cloud me-2"></i>CoreCloud</a>
+            <button class="navbar-toggler border-white" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+                <i class="fas fa-bars text-white"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="nav">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#how">How it works</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#security">Security</a></li>
+                    <li class="nav-item ms-lg-2"><a class="btn btn-sm btn-hero-ghost" href="{% url 'login' %}">Sign in</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container hero-inner">
+        <h1>The complete <span>company portal</span><br>for modern teams</h1>
+        <p class="lead">
+            CoreCloud brings HR, payroll, attendance, leaves, collaboration, analytics and a
+            built-in Security Operations Center into one portal — so your whole company
+            runs on a single, secure system.
+        </p>
+        <div class="d-flex flex-wrap gap-3">
+            <a href="{% url 'login' %}" class="btn btn-hero-primary"><i class="fas fa-sign-in-alt me-2"></i>Sign in to your portal</a>
+            <a href="{% url 'face_login' %}" class="btn btn-hero-ghost"><i class="fas fa-fingerprint me-2"></i>Login with Face</a>
+        </div>
+        <div class="hero-pills">
+            <span class="hero-pill"><i class="fas fa-check me-1"></i> HR &amp; Payroll</span>
+            <span class="hero-pill"><i class="fas fa-check me-1"></i> Attendance &amp; Leaves</span>
+            <span class="hero-pill"><i class="fas fa-check me-1"></i> Face Login</span>
+            <span class="hero-pill"><i class="fas fa-check me-1"></i> SOC / SIEM Security</span>
+            <span class="hero-pill"><i class="fas fa-check me-1"></i> Reports &amp; Payroll PDFs</span>
+            <span class="hero-pill"><i class="fas fa-check me-1"></i> Chat, Mail &amp; Meetings</span>
+        </div>
+    </div>
+</div>
+
+<section class="section" id="features">
+    <div class="container">
+        <h2 class="section-title">Everything your company needs</h2>
+        <p class="section-sub">One portal instead of five different tools — from onboarding an employee to paying them, and keeping the whole system secure.</p>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#1a5276;"><i class="fas fa-users"></i></div>
+                    <h5>Employee Management</h5>
+                    <p>Full employee lifecycle: departments, designations, org chart, approvals, authorized users and bulk CSV import.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#2980b9;"><i class="fas fa-money-check-alt"></i></div>
+                    <h5>Automated Payroll</h5>
+                    <p>Payroll generated from attendance and leave data, configurable policies, tax/deductions and downloadable salary slips.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#16a085;"><i class="fas fa-calendar-check"></i></div>
+                    <h5>Attendance &amp; Leaves</h5>
+                    <p>Clock in/out tracking, leave requests with manager approval, and everything feeds straight into payroll.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#8e44ad;"><i class="fas fa-fingerprint"></i></div>
+                    <h5>AI Face Login</h5>
+                    <p>Passwordless sign-in with live camera face recognition — no shared passwords, no forgotten credentials.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#e67e22;"><i class="fas fa-shield-alt"></i></div>
+                    <h5>Security Operations Center</h5>
+                    <p>Built-in SOC/SIEM: event audit trail, threat detection rules, alerts, incidents and automated response (auto-lock, session revoke).</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#c0392b;"><i class="fas fa-chart-line"></i></div>
+                    <h5>Reports &amp; Analytics</h5>
+                    <p>Dashboards for HR, attendance and payroll with light/dark themes and CSV exports for management.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#2c3e50;"><i class="fas fa-comments"></i></div>
+                    <h5>Collaboration</h5>
+                    <p>Internal mail, team chat and meetings built in — your team never needs a separate messaging tool.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#16a085;"><i class="fas fa-book-open"></i></div>
+                    <h5>HR Modules</h5>
+                    <p>Training, travel, overtime, documents, announcements and an IT help desk — the full HR toolkit out of the box.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:#2980b9;"><i class="fas fa-link"></i></div>
+                    <h5>Public Payslip Links</h5>
+                    <p>Secure, revocable links so employees can fetch their payslip without an account — great for contractors.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="how">
+    <div class="container">
+        <h2 class="section-title">Live in three simple steps</h2>
+        <p class="section-sub">From signup to your whole team working on the portal — usually the same week.</p>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="steps-num">1</div>
+                <h5 class="fw-bold mb-2">Set up your company</h5>
+                <p class="text-secondary">Departments, payroll policies and an admin account are configured for you during onboarding.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="steps-num">2</div>
+                <h5 class="fw-bold mb-2">Import your employees</h5>
+                <p class="text-secondary">Bulk-import from CSV or add employees one by one. Each gets secure login and optional face registration.</p>
+            </div>
+            <div class="col-md-4">
+                <div class="steps-num">3</div>
+                <h5 class="fw-bold mb-2">Run payroll &amp; stay secure</h5>
+                <p class="text-secondary">Attendance feeds payroll automatically, while the SOC watches every login and blocks threats in real time.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="security">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <h2 class="section-title">Security is built in, not bolted on</h2>
+                <p class="section-sub" style="margin-bottom:1.4rem;">
+                    CoreCloud ships with its own Security Operations Center — the same kind of
+                    tooling large companies use, running inside your portal.
+                </p>
+                <ul class="list-unstyled">
+                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Full audit trail</strong> — every login, change and export is logged.</li>
+                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Threat detection</strong> — brute force, credential stuffing, suspicious IPs and more.</li>
+                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Auto-response</strong> — suspicious accounts are locked and sessions revoked automatically.</li>
+                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Account controls</strong> — IT can blacklist/whitelist users and IPs instantly.</li>
+                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Hardened sign-in</strong> — lockout after failed attempts, HTTPS-only cookies, face login.</li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="feature-card p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="feature-icon mb-0 me-3" style="background:#c0392b;"><i class="fas fa-shield-alt"></i></div>
+                        <div>
+                            <h5 class="mb-0">Security Operations Center</h5>
+                            <small class="text-secondary">Live event feed · Detection rules · Incidents</small>
+                        </div>
+                    </div>
+                    <div class="rounded-3 bg-dark text-light p-3 font-monospace small" style="line-height:1.9;">
+                        <div><span class="text-success">ALLOW</span> &nbsp;login &nbsp;&nbsp;user=EMP004 &nbsp;ip=10.0.4.21</div>
+                        <div><span class="text-warning">WARN</span> &nbsp;3 failed logins in 4m &nbsp;user=EMP011</div>
+                        <div><span class="text-danger">BLOCK</span> &nbsp;brute_force detected → account locked</div>
+                        <div><span class="text-info">ACTION</span> &nbsp;sessions revoked · IT notified</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section pt-0">
+    <div class="container">
+        <div class="cta-band">
+            <h3>Ready to run your company on one portal?</h3>
+            <p>Sign in to your CoreCloud workspace or try passwordless face login.</p>
+            <div class="d-flex flex-wrap gap-3 justify-content-center">
+                <a href="{% url 'login' %}" class="btn btn-hero-primary"><i class="fas fa-sign-in-alt me-2"></i>Sign in</a>
+                <a href="{% url 'face_login' %}" class="btn btn-hero-ghost"><i class="fas fa-fingerprint me-2"></i>Face Login</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        <div class="footer-links">
+            <a href="#features">Features</a>
+            <a href="#security">Security</a>
+            <a href="{% url 'terms' %}">Terms of Service</a>
+            <a href="{% url 'privacy' %}">Privacy Policy</a>
+            <a href="{% url 'login' %}">Sign in</a>
+        </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center border-top pt-3" style="border-color:rgba(255,255,255,.12) !important;">
+            <span>© {% now "Y" %} CoreCloud. All rights reserved.</span>
+            <span class="mt-2 mt-md-0">HR · Payroll · Attendance · Security — one portal.</span>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.http import JsonResponse
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from employees.models import Employee
 
@@ -85,7 +86,7 @@ def face_login_check(request):
                     'status': 'ok',
                     'message': f'Welcome {best_match.full_name}',
                     'employee_id': best_match.employee_id,
-                    'redirect': '/'
+                    'redirect': reverse('dashboard')
                 })
 
             from employees.audit import log_audit

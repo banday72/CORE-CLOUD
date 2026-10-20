@@ -5,7 +5,7 @@ from . import views_face_login
 from . import views_reports
 
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
+    path('dashboard/', views.dashboard, name='dashboard'),
     path('reports/', views_reports.reports_dashboard, name='reports_dashboard'),
     path('exports/employees.csv', views_reports.export_employees_csv, name='export_employees_csv'),
     path('exports/attendance.csv', views_reports.export_attendance_csv, name='export_attendance_csv'),

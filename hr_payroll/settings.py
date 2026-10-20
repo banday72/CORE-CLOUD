@@ -6,6 +6,8 @@ import os
 import tempfile
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 try:
@@ -14,17 +16,35 @@ try:
 except ImportError:
     pass
 
-SECRET_KEY = os.environ.get(
-    'SECRET_KEY',
-    'django-insecure-pvtx-a7-_+*1kz%yr5(@2wxv(f^t0b_h4n-q87ye+9&j9qb+bm')
-
 DEBUG = os.environ.get('DEBUG', '') == 'True'
 
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-pvtx-a7-_+*1kz%yr5(@2wxv(f^t0b_h4n-q87ye+9&j9qb+bm'
+    else:
+        raise ImproperlyConfigured(
+            'The SECRET_KEY environment variable must be set in production. '
+            'Generate one with: python -c "from django.core.management.utils '
+            'import get_random_secret_key; print(get_random_secret_key())"')
+
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get(
+        'ALLOWED_HOSTS',
+        'corecloud.vercel.app,corecloud-banday.vercel.app,'
+        'hr-payroll-system-one.vercel.app,.vercel.app,localhost,127.0.0.1'
+    ).split(',') if h.strip()
+]
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://corecloud.vercel.app',
     'https://corecloud-banday.vercel.app',
     'https://hr-payroll-system-one.vercel.app',
+    'https://corecloud-git-main-banday.vercel.app',
+]
+CSRF_TRUSTED_ORIGINS += [
+    o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if o.strip()
 ]
 
 INSTALLED_APPS = [
@@ -80,18 +100,22 @@ if os.environ.get('DATABASE_URL'):
     import dj_database_url
     DATABASES['default'] = dj_database_url.parse(
         os.environ['DATABASE_URL'], conn_max_age=600)
-else:
+elif os.environ.get('DB_HOST'):
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.environ.get('DB_NAME', 'neondb'),
-        'USER': os.environ.get('DB_USER', 'neondb_owner'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'npg_adAkM6ys7IbP'),
-        'HOST': os.environ.get('DB_HOST', 'ep-patient-paper-a5ytpg93-pooler.us-east-2.aws.neon.tech'),
+        'USER': os.environ.get('DB_USER', ''),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ['DB_HOST'],
         'PORT': os.environ.get('DB_PORT', '5432'),
         'OPTIONS': {
             'sslmode': 'require',
         },
     }
+else:
+    raise ImproperlyConfigured(
+        'Database not configured: set DATABASE_URL (preferred) or the '
+        'DB_HOST/DB_NAME/DB_USER/DB_PASSWORD/DB_PORT environment variables.')
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -117,6 +141,18 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600
+SESSION_COOKIE_HTTPONLY = True
+
+# Security headers. On Vercel TLS terminates at the edge, so Django must
+# trust X-Forwarded-Proto to know the original request was HTTPS.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+if os.environ.get('VERCEL') and not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+X_FRAME_OPTIONS = 'DENY'
 
 AUTHENTICATION_BACKENDS = [
     'hr_payroll.backends.AuthorizedUserBackend',

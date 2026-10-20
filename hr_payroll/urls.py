@@ -7,6 +7,7 @@ from django.contrib.auth import logout
 from django.shortcuts import redirect
 
 from employees.views import LockoutLoginView
+from hr_payroll import views as core_views
 from soc import views as soc_views
 
 
@@ -24,6 +25,9 @@ def log_audit_logout(request):
 
 
 urlpatterns = [
+    path('', core_views.landing, name='landing'),
+    path('terms/', core_views.terms, name='terms'),
+    path('privacy/', core_views.privacy, name='privacy'),
     path('admin/', admin.site.urls),
     path('login/', LockoutLoginView.as_view(), name='login'),
     path('logout/', custom_logout, name='logout'),

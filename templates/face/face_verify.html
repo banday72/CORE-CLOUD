@@ -269,7 +269,7 @@ async function sendVerify() {
         const target = currentMode === 'webcam' ? 'statusBox' : 'statusBoxUpload';
         if (result.status === 'ok') {
             setStatus('Verified! Redirecting...', 'success', target);
-            setTimeout(() => { window.location.href = '/'; }, 1500);
+            setTimeout(() => { window.location.href = '{% url 'dashboard' %}'; }, 1500);
         } else {
             setStatus('Not matched. ' + result.message, 'error', target);
         }

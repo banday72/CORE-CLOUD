@@ -35,3 +35,6 @@ Thumbs.db
 
 # Logs
 activity.log
+
+.vercel
+.env*
