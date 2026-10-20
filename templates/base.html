@@ -233,8 +233,8 @@
             <a class="nav-link {% if 'soc_rule' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'soc_rule_list' %}">
                 <i class="fas fa-cogs nav-icon" style="color:#858796;"></i> Detection Rules
             </a>
-            <a class="nav-link {% if 'soc_ip' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'soc_ip_list' %}">
-                <i class="fas fa-network-wired nav-icon" style="color:#e74a3b;"></i> IP Whitelist / Blacklist
+            <a class="nav-link {% if 'soc_ip' in request.resolver_match.url_name or 'user_entry' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'soc_ip_list' %}">
+                <i class="fas fa-network-wired nav-icon" style="color:#e74a3b;"></i> Whitelist / Blacklist
             </a>
             {% endif %}
         </nav>

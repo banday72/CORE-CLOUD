@@ -47,6 +47,21 @@ def face_login_check(request):
                                 best_match = emp
 
             if best_match and best_match.user:
+                from soc.models import user_is_blacklisted
+                if user_is_blacklisted(best_match.user.username):
+                    from employees.audit import log_audit
+                    log_audit(
+                        user=best_match.user, action='login_failed',
+                        model_name='Employee', object_id=best_match.employee_id,
+                        description='Face login attempt on SOC-blacklisted account',
+                        request=request, category='auth', outcome='failure',
+                        severity='high',
+                    )
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Your account has been disabled by IT & Networks. '
+                                   'Please contact the IT Help Desk.',
+                    })
                 if best_match.is_login_locked:
                     from employees.lockout import locked_message
                     from employees.audit import log_audit

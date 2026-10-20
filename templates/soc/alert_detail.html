@@ -19,9 +19,18 @@
         {% endif %}
         <button name="action" value="lock" class="btn btn-danger btn-sm" onclick="return confirm('Lock this account and revoke its sessions?');"><i class="fas fa-lock me-1"></i>Lock Account</button>
         <button name="action" value="unlock" class="btn btn-success btn-sm" onclick="return confirm('Unlock this account?');"><i class="fas fa-lock-open me-1"></i>Unlock Account</button>
-        {% if alert.event and alert.event.ip_address and can.manage_soc %}
+        {% if can.manage_soc %}
+        {% if alert.event and alert.event.ip_address %}
         <input type="hidden" name="ip" value="{{ alert.event.ip_address }}">
         <button name="action" value="blacklist_ip" class="btn btn-dark btn-sm" onclick="return confirm('Blacklist IP {{ alert.event.ip_address }}?');"><i class="fas fa-ban me-1"></i>Blacklist IP {{ alert.event.ip_address }}</button>
+        {% endif %}
+        {% if alert.subject_username %}
+            {% if subject_blacklisted %}
+            <button name="action" value="whitelist_user" class="btn btn-success btn-sm" onclick="return confirm('Whitelist {{ alert.subject_username }}? Their login will be restored.');"><i class="fas fa-user-check me-1"></i>Whitelist {{ alert.subject_username }}</button>
+            {% else %}
+            <button name="action" value="blacklist_user" class="btn btn-dark btn-sm" onclick="return confirm('Blacklist {{ alert.subject_username }}? Their login will be disabled and sessions revoked.');"><i class="fas fa-user-slash me-1"></i>Blacklist {{ alert.subject_username }}</button>
+            {% endif %}
+        {% endif %}
         {% endif %}
         {% if not alert.incident %}
         <button name="action" value="escalate" class="btn btn-primary btn-sm"><i class="fas fa-rocket me-1"></i>Escalate to Incident</button>

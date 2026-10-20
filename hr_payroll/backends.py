@@ -12,6 +12,11 @@ class AuthorizedUserBackend(ModelBackend):
 
         if not user.check_password(password):
             return None
+
+        from soc.models import user_is_blacklisted
+        if user_is_blacklisted(username):
+            raise PermissionDenied('Account has been disabled by SOC')
+
         if user.is_superuser:
             return user
 

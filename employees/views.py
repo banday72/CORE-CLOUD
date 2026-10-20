@@ -941,6 +941,21 @@ class LockoutLoginView(LoginView):
         from .audit import log_audit
         username = (self.request.POST.get('username') or '').strip()
         employee = find_employee_by_id(username)
+        from soc.models import user_is_blacklisted
+        if user_is_blacklisted(username):
+            log_audit(
+                user=employee.user if employee else None, action='login_failed',
+                model_name='Employee',
+                object_id=employee.employee_id if employee else username[:100],
+                description=f'Login attempt on SOC-blacklisted account ({username})',
+                request=self.request, category='auth', outcome='failure',
+                severity='high',
+            )
+            messages.error(
+                self.request,
+                'Your account has been disabled by IT & Networks. '
+                'Please contact the IT Help Desk.')
+            return super().form_invalid(form)
         if employee is not None:
             if employee.is_login_locked:
                 log_audit(

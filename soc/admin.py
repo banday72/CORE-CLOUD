@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from .models import Alert, DetectionRule, Incident, IncidentNote, ResponseAction, SOCIPEntry
+from .models import (Alert, DetectionRule, Incident, IncidentNote, ResponseAction,
+                     SOCIPEntry, SOCUserEntry)
 
 
 @admin.register(DetectionRule)
@@ -15,6 +16,14 @@ class SOCIPEntryAdmin(admin.ModelAdmin):
     list_display = ('ip_address', 'list_type', 'reason', 'added_by', 'created_at')
     list_filter = ('list_type',)
     search_fields = ('ip_address', 'reason')
+
+
+@admin.register(SOCUserEntry)
+class SOCUserEntryAdmin(admin.ModelAdmin):
+    list_display = ('user', 'list_type', 'reason', 'added_by', 'created_at')
+    list_filter = ('list_type',)
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'reason')
+    raw_id_fields = ('user',)
 
 
 @admin.register(Alert)

@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import json
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -10,7 +11,8 @@ from employees.models import AuditLog, Employee
 from soc.management.commands.run_soc_rules import seed_rules
 
 from .engine import evaluate_event, is_blacklisted, is_whitelisted, open_alert, run_scan
-from .models import Alert, DetectionRule, Incident, IncidentNote, SOCIPEntry
+from .models import (Alert, DetectionRule, Incident, IncidentNote, SOCIPEntry,
+                     SOCUserEntry, user_is_blacklisted)
 
 
 def make_employee(username='EMP901', **kwargs):
@@ -438,3 +440,122 @@ class UnlockActionTests(TestCase):
                          {'action': 'blacklist_ip', 'ip': '10.9.9.9'})
         self.assertTrue(SOCIPEntry.objects.filter(
             ip_address='10.9.9.9', list_type='blacklist').exists())
+
+
+class UserBlacklistTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        seed_rules()
+
+    def _make_admin(self):
+        from django.contrib.auth.models import User as AuthUser
+        return AuthUser.objects.create_superuser('admsocb', 'b1@b.com', 'x12345')
+
+    def _blacklist(self, user, list_type='blacklist', reason='test'):
+        SOCUserEntry.objects.update_or_create(
+            user=user, defaults={'list_type': list_type, 'reason': reason})
+
+    def test_blacklisted_user_cannot_login(self):
+        emp = make_employee('EMPBLK')
+        emp.user.set_password('goodpass123')
+        emp.user.save()
+        self._blacklist(emp.user)
+        resp = self.client.post(reverse('login'), {
+            'username': 'EMPBLK', 'password': 'goodpass123'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.assertTrue(AuditLog.objects.filter(
+            action='login_failed', description__icontains='blacklisted').exists())
+
+    def test_whitelisted_user_can_login(self):
+        emp = make_employee('EMPWL')
+        emp.user.set_password('goodpass123')
+        emp.user.save()
+        self._blacklist(emp.user, 'whitelist')
+        resp = self.client.post(reverse('login'), {
+            'username': 'EMPWL', 'password': 'goodpass123'}, follow=True)
+        self.assertIn('_auth_user_id', self.client.session)
+
+    def test_blacklist_revokes_active_sessions(self):
+        emp = make_employee('EMPSES')
+        self.client.force_login(emp.user)
+        self.assertIn('_auth_user_id', self.client.session)
+        admin = self._make_admin()
+        DetectionRule.objects.get(key='account_lockout')
+        rule = DetectionRule.objects.get(key='brute_force')
+        alert = open_alert(rule, 'fp-ses', 'Brute', 'detail',
+                           subject_username='EMPSES')
+        self.client.force_login(admin)
+        self.client.post(reverse('soc_alert_action', args=[alert.pk]),
+                         {'action': 'blacklist_user'})
+        self.assertTrue(user_is_blacklisted('EMPSES'))
+        self.assertTrue(AuditLog.objects.filter(
+            action='response', description__icontains='blacklisted').exists())
+
+    def test_whitelist_user_action_restores_login(self):
+        emp = make_employee('EMPRST')
+        emp.user.set_password('goodpass123')
+        emp.user.save()
+        self._blacklist(emp.user)
+        admin = self._make_admin()
+        rule = DetectionRule.objects.get(key='account_lockout')
+        alert = open_alert(rule, 'fp-rst', 'Locked EMPRST', 'locked',
+                           subject_username='EMPRST')
+        self.client.force_login(admin)
+        self.client.post(reverse('soc_alert_action', args=[alert.pk]),
+                         {'action': 'whitelist_user'})
+        entry = SOCUserEntry.objects.get(user=emp.user)
+        self.assertEqual(entry.list_type, 'whitelist')
+        self.client.logout()
+        resp = self.client.post(reverse('login'), {
+            'username': 'EMPRST', 'password': 'goodpass123'})
+        self.assertIn('_auth_user_id', self.client.session)
+
+    def test_cannot_blacklist_self(self):
+        admin = self._make_admin()
+        self.client.force_login(admin)
+        resp = self.client.post(reverse('soc_user_entry_add'),
+                                {'username': 'admsocb', 'list_type': 'blacklist'},
+                                follow=True)
+        self.assertFalse(user_is_blacklisted('admsocb'))
+
+    def test_user_entry_add_by_employee_id(self):
+        from django.contrib.auth.models import User as AuthUser
+        admin = AuthUser.objects.create_superuser('admsocb2', 'b2@b.com', 'x12345')
+        emp = make_employee('EMPADD')
+        self.client.force_login(admin)
+        self.client.post(reverse('soc_user_entry_add'), {
+            'username': 'EMPADD', 'list_type': 'blacklist', 'reason': 'incident'})
+        self.assertTrue(SOCUserEntry.objects.filter(
+            user=emp.user, list_type='blacklist').exists())
+
+    def test_user_entry_remove_restores(self):
+        from django.contrib.auth.models import User as AuthUser
+        admin = AuthUser.objects.create_superuser('admsocb3', 'b3@b.com', 'x12345')
+        emp = make_employee('EMPRM')
+        self._blacklist(emp.user)
+        entry = SOCUserEntry.objects.get(user=emp.user)
+        self.client.force_login(admin)
+        self.client.post(reverse('soc_user_entry_remove', args=[entry.pk]))
+        self.assertFalse(SOCUserEntry.objects.filter(user=emp.user).exists())
+        self.assertFalse(user_is_blacklisted('EMPRM'))
+
+    def test_blacklisted_user_cannot_face_login(self):
+        emp = make_employee('EMPFACE')
+        descriptor = [0.1] * 128
+        emp.face_registered = True
+        emp.face_data = json.dumps([descriptor])
+        emp.save(update_fields=['face_registered', 'face_data'])
+        resp = self.client.post(reverse('face_login_check'),
+                                data=json.dumps({'descriptors': [descriptor]}),
+                                content_type='application/json')
+        self.assertEqual(resp.json().get('status'), 'ok')
+        self.client.logout()
+        self._blacklist(emp.user)
+        resp = self.client.post(reverse('face_login_check'),
+                                data=json.dumps({'descriptors': [descriptor]}),
+                                content_type='application/json')
+        data = resp.json()
+        self.assertEqual(data.get('status'), 'error')
+        self.assertIn('disabled', data.get('message', ''))
+        self.assertNotIn('_auth_user_id', self.client.session)

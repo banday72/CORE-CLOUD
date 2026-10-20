@@ -126,6 +126,31 @@ class SOCIPEntry(models.Model):
         return f'{self.ip_address} ({self.get_list_type_display()})'
 
 
+class SOCUserEntry(models.Model):
+    """Whitelist/blacklist for user accounts: blacklist blocks all logins."""
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='soc_list_entry')
+    list_type = models.CharField(max_length=10, choices=SOCIPEntry.LIST_CHOICES)
+    reason = models.CharField(max_length=200, blank=True)
+    added_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='soc_user_entries')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user.username} ({self.get_list_type_display()})'
+
+
+def user_is_blacklisted(username):
+    if not username:
+        return False
+    return SOCUserEntry.objects.filter(
+        user__username=username, list_type='blacklist').exists()
+
+
 class ResponseAction(models.Model):
     ACTION_CHOICES = [
         ('lock_account', 'Lock account'),

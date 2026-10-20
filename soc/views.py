@@ -13,7 +13,8 @@ from employees.audit import log_audit
 from employees.decorators import permission_required
 from employees.models import AuditLog
 
-from .models import Alert, DetectionRule, Incident, IncidentNote, ResponseAction, SOCIPEntry
+from .models import (Alert, DetectionRule, Incident, IncidentNote, ResponseAction,
+                     SOCIPEntry, SOCUserEntry)
 
 SEVERITY_BADGE = {
     'critical': 'danger', 'high': 'warning', 'medium': 'primary',
@@ -201,9 +202,18 @@ def alert_list(request):
 def alert_detail(request, pk):
     alert = get_object_or_404(
         Alert.objects.select_related('rule', 'incident', 'event', 'assignee'), pk=pk)
+    subject_blacklisted = False
+    subject_whitelisted = False
+    subject_user = _alert_user(alert)
+    if subject_user:
+        entry = SOCUserEntry.objects.filter(user=subject_user).first()
+        subject_blacklisted = bool(entry and entry.list_type == 'blacklist')
+        subject_whitelisted = bool(entry and entry.list_type == 'whitelist')
     return render(request, 'soc/alert_detail.html', {
         'alert': alert,
         'actions': alert.actions.all(),
+        'subject_blacklisted': subject_blacklisted,
+        'subject_whitelisted': subject_whitelisted,
         'STATUS_BADGE': STATUS_BADGE, 'SEVERITY_BADGE': SEVERITY_BADGE,
     })
 
@@ -295,6 +305,64 @@ def alert_action(request, pk):
                 request=request, category='config', severity='high',
             )
             messages.success(request, f'IP {ip} blacklisted. Future activity from it will raise alerts instantly.')
+    elif action == 'blacklist_user':
+        from .playbooks import revoke_sessions
+        target = _alert_user(alert)
+        if target is None:
+            messages.error(request, 'No user matches this alert subject.')
+        else:
+            SOCUserEntry.objects.update_or_create(
+                user=target,
+                defaults={'list_type': 'blacklist',
+                          'reason': f'Blacklisted from alert #{alert.pk}',
+                          'added_by': request.user})
+            revoked = revoke_sessions(alert, target)
+            ResponseAction.objects.create(
+                alert=alert, action='lock_account', actor=request.user.username,
+                result=f'Blacklisted {target.username} ({revoked} session(s) revoked)',
+                params={'user': target.username})
+            log_audit(
+                user=request.user, action='response', model_name='User',
+                object_id=target.username,
+                description=f'User {target.username} blacklisted from alert #{alert.pk} — login disabled',
+                request=request, category='auth', severity='high',
+            )
+            from hr_modules.views import notify_team
+            notify_team(
+                'networks',
+                f'SOC: {target.username} blacklisted',
+                f'{request.user.username} blacklisted {target.username} '
+                f'(alert #{alert.pk}). Their login is now disabled. '
+                f'Remove from the whitelist/blacklist page to restore access.',
+                'warning',
+                f'/soc/alerts/?id={alert.pk}',
+            )
+            messages.success(
+                request,
+                f'{target.username} blacklisted — login disabled and sessions revoked.')
+    elif action == 'whitelist_user':
+        target = _alert_user(alert)
+        if target is None:
+            messages.error(request, 'No user matches this alert subject.')
+        else:
+            entry, _ = SOCUserEntry.objects.update_or_create(
+                user=target,
+                defaults={'list_type': 'whitelist',
+                          'reason': f'Whitelisted from alert #{alert.pk}',
+                          'added_by': request.user})
+            ResponseAction.objects.create(
+                alert=alert, action='unlock_account', actor=request.user.username,
+                result=f'Whitelisted {target.username} — login restored',
+                params={'user': target.username})
+            log_audit(
+                user=request.user, action='unlock', model_name='User',
+                object_id=target.username,
+                description=f'User {target.username} whitelisted from alert #{alert.pk} — login restored',
+                request=request, category='auth', severity='medium', outcome='success',
+            )
+            messages.success(
+                request,
+                f'{target.username} whitelisted — login restored.')
     return redirect('soc_alert_detail', pk=pk)
 
 
@@ -306,6 +374,16 @@ def _alert_employee(alert):
             .select_related('user').first()
             or Employee.objects.filter(user__username=alert.subject_username)
             .select_related('user').first())
+
+
+def _alert_user(alert):
+    if not alert.subject_username:
+        return None
+    from django.contrib.auth.models import User as AuthUser
+    emp = _alert_employee(alert)
+    if emp and emp.user:
+        return emp.user
+    return AuthUser.objects.filter(username=alert.subject_username).first()
 
 
 @login_required
@@ -425,9 +503,97 @@ def ip_list(request):
         entries = entries.filter(ip_address__icontains=q)
     from django.core.paginator import Paginator
     page_obj = Paginator(entries, 50).get_page(request.GET.get('page'))
+
+    user_entries = SOCUserEntry.objects.select_related('user', 'added_by')
+    uq = request.GET.get('usearch', '').strip()
+    if uq:
+        user_entries = user_entries.filter(
+            Q(user__username__icontains=uq) | Q(user__first_name__icontains=uq)
+            | Q(user__last_name__icontains=uq))
+    from_uq = request.GET.get('list', '')
+    if from_uq in ('whitelist', 'blacklist'):
+        user_entries = user_entries.filter(list_type=from_uq)
+
     return render(request, 'soc/ip_list.html', {
         'page_obj': page_obj, 'entries': page_obj, 'search': q,
+        'user_entries': user_entries, 'usearch': uq,
+        'list_filter': from_uq,
     })
+
+
+@login_required
+@permission_required('manage_soc')
+@require_POST
+def user_entry_add(request):
+    from django.core.exceptions import PermissionDenied
+    from django.contrib.auth.models import User as AuthUser
+    from .playbooks import revoke_sessions
+    username = (request.POST.get('username') or '').strip()
+    list_type = request.POST.get('list_type', 'blacklist')
+    reason = (request.POST.get('reason') or '').strip()
+    if list_type not in ('whitelist', 'blacklist'):
+        list_type = 'blacklist'
+    target = AuthUser.objects.filter(username=username).first()
+    if target is None:
+        from employees.models import Employee
+        emp = Employee.objects.filter(employee_id=username).first()
+        if emp:
+            target = emp.user
+    if target is None:
+        messages.error(request, f'No user found with username or employee ID "{username}".')
+        return redirect('soc_ip_list')
+    if target == request.user and list_type == 'blacklist':
+        raise PermissionDenied('You cannot blacklist your own account.')
+    entry, _ = SOCUserEntry.objects.update_or_create(
+        user=target,
+        defaults={'list_type': list_type, 'reason': reason, 'added_by': request.user})
+    revoked = 0
+    if list_type == 'blacklist':
+        now = timezone.now()
+        from django.contrib.sessions.models import Session
+        for session in Session.objects.filter(expire_date__gte=now):
+            if str(session.get_decoded().get('_auth_user_id')) == str(target.pk):
+                session.delete()
+                revoked += 1
+    log_audit(
+        user=request.user, action='response' if list_type == 'blacklist' else 'unlock',
+        model_name='User', object_id=target.username,
+        description=f'User {target.username} added to {entry.get_list_type_display()}'
+                    + (f' ({reason})' if reason else '')
+                    + (f' — {revoked} session(s) revoked' if revoked else ''),
+        request=request, category='auth',
+        severity='high' if list_type == 'blacklist' else 'medium',
+        outcome='failure' if list_type == 'blacklist' else 'success',
+    )
+    if list_type == 'blacklist':
+        messages.success(
+            request,
+            f'{target.username} blacklisted — login disabled, {revoked} session(s) revoked.')
+    else:
+        messages.success(
+            request,
+            f'{target.username} whitelisted — login restored.')
+    return redirect('soc_ip_list')
+
+
+@login_required
+@permission_required('manage_soc')
+@require_POST
+def user_entry_remove(request, pk):
+    from .models import SOCUserEntry as SU
+    entry = get_object_or_404(SU, pk=pk)
+    username, list_type = entry.user.username, entry.get_list_type_display()
+    entry.delete()
+    log_audit(
+        user=request.user, action='unlock', model_name='User',
+        object_id=username,
+        description=f'User {username} removed from {list_type} — access restored',
+        request=request, category='auth', severity='medium', outcome='success',
+    )
+    messages.success(
+        request,
+        f'{username} removed from {list_type} — they can log in again.')
+    return redirect('soc_ip_list')
 
 
 @login_required
