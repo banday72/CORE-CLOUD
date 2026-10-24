@@ -483,11 +483,12 @@
 {% endif %}
 
 <!-- Security Tips Popup -->
-<div class="modal fade" id="securityTipsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+<div class="modal fade" id="securityTipsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-left:5px solid #e74a3b;">
             <div class="modal-header" style="background:linear-gradient(135deg,#1a5276,#2980b9);color:#fff;">
                 <h5 class="modal-title"><i class="fas fa-shield-alt me-2"></i>Security Reminder</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body py-4">
                 <ul class="list-unstyled mb-0">
@@ -511,12 +512,22 @@
     var EXPIRY = 2 * 24 * 60 * 60 * 1000;
     var modalEl = document.getElementById('securityTipsModal');
     if (modalEl) {
-        var modal = new bootstrap.Modal(modalEl);
-        var shown = localStorage.getItem(KEY);
-        if (!shown || (Date.now() - parseInt(shown, 10)) >= EXPIRY) modal.show();
-        document.getElementById('closeSecurityPopup').addEventListener('click', function () {
-            localStorage.setItem(KEY, Date.now().toString());
-        });
+        var shown = null;
+        try { shown = localStorage.getItem(KEY); } catch (e) {}
+        var shouldShow = !shown || (Date.now() - parseInt(shown, 10)) >= EXPIRY;
+        var closePopup = function () {
+            try { localStorage.setItem(KEY, Date.now().toString()); } catch (e) {}
+            modalEl.classList.remove('show');
+            modalEl.setAttribute('aria-hidden', 'true');
+            modalEl.style.display = 'none';
+            document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) { backdrop.remove(); });
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('padding-right');
+        };
+        document.getElementById('closeSecurityPopup').addEventListener('click', closePopup);
+        if (shouldShow && window.bootstrap && bootstrap.Modal) {
+            new bootstrap.Modal(modalEl).show();
+        }
     }
 })();
 
