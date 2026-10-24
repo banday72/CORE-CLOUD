@@ -137,11 +137,11 @@
 </div>
 
 <!-- New direct chat -->
-<div class="modal fade" id="newChatModal" tabindex="-1">
+<div class="modal fade" id="newChatModal" tabindex="-1" aria-labelledby="newChatModalTitle" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog">
         <form class="modal-content" method="post" action="{% url 'collab_chat_start_direct' %}">
             {% csrf_token %}
-            <div class="modal-header"><h5 class="modal-title">Start a chat</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header"><h5 class="modal-title" id="newChatModalTitle">Start a chat</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <div class="modal-body">
                 <label class="form-label">Choose a person</label>
                 <select name="employee" class="form-select" required>
@@ -160,11 +160,11 @@
 </div>
 
 <!-- New group chat -->
-<div class="modal fade" id="newGroupModal" tabindex="-1">
+<div class="modal fade" id="newGroupModal" tabindex="-1" aria-labelledby="newGroupModalTitle" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog">
         <form class="modal-content" method="post" action="{% url 'collab_chat_start_group' %}">
             {% csrf_token %}
-            <div class="modal-header"><h5 class="modal-title">New group chat</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header"><h5 class="modal-title" id="newGroupModalTitle">New group chat</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label">Group name</label>
@@ -187,6 +187,33 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+(function () {
+    function cleanupChatModals() {
+        var openModal = document.querySelector('.modal.show');
+        if (openModal) return;
+        document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+            backdrop.remove();
+        });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('padding-right');
+    }
+
+    ['newChatModal', 'newGroupModal'].forEach(function (id) {
+        var modal = document.getElementById(id);
+        if (!modal) return;
+        modal.addEventListener('hidden.bs.modal', function () {
+            window.setTimeout(cleanupChatModals, 0);
+        });
+    });
+
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('#newChatModal [data-bs-dismiss="modal"], #newGroupModal [data-bs-dismiss="modal"]')) {
+            window.setTimeout(cleanupChatModals, 500);
+        }
+    });
+})();
+</script>
 {% if active %}
 <script>
 (function () {
