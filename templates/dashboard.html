@@ -482,55 +482,10 @@
 </div>
 {% endif %}
 
-<!-- Security Tips Popup -->
-<div class="modal fade" id="securityTipsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-left:5px solid #e74a3b;">
-            <div class="modal-header" style="background:linear-gradient(135deg,#1a5276,#2980b9);color:#fff;">
-                <h5 class="modal-title"><i class="fas fa-shield-alt me-2"></i>Security Reminder</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-4">
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-3 d-flex"><i class="fas fa-link me-3 mt-1" style="color:#e74a3b;"></i><span>Do not click on <strong>untrusted links</strong>.</span></li>
-                    <li class="mb-3 d-flex"><i class="fas fa-lock me-3 mt-1" style="color:#e74a3b;"></i><span>Always use a <strong>strong password</strong>.</span></li>
-                    <li class="d-flex"><i class="fas fa-sign-out-alt me-3 mt-1" style="color:#e74a3b;"></i><span>Always <strong>log out</strong> when leaving.</span></li>
-                </ul>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal" id="closeSecurityPopup"><i class="fas fa-check me-1"></i> Got it!</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-(function() {
-    var KEY = 'security_popup_first_shown';
-    var EXPIRY = 2 * 24 * 60 * 60 * 1000;
-    var modalEl = document.getElementById('securityTipsModal');
-    if (modalEl) {
-        var shown = null;
-        try { shown = localStorage.getItem(KEY); } catch (e) {}
-        var shouldShow = !shown || (Date.now() - parseInt(shown, 10)) >= EXPIRY;
-        var closePopup = function () {
-            try { localStorage.setItem(KEY, Date.now().toString()); } catch (e) {}
-            modalEl.classList.remove('show');
-            modalEl.setAttribute('aria-hidden', 'true');
-            modalEl.style.display = 'none';
-            document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) { backdrop.remove(); });
-            document.body.classList.remove('modal-open');
-            document.body.style.removeProperty('padding-right');
-        };
-        document.getElementById('closeSecurityPopup').addEventListener('click', closePopup);
-        if (shouldShow && window.bootstrap && bootstrap.Modal) {
-            new bootstrap.Modal(modalEl).show();
-        }
-    }
-})();
-
 /* Live clock status after an AJAX clock in/out */
 document.addEventListener('cc:success', function (e) {
     var d = (e.detail && e.detail.data) || {};
