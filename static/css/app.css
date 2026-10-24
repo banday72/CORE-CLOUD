@@ -173,3 +173,35 @@
 .table-hover tbody tr {
     transition: background-color var(--cc-transition);
 }
+
+/* Shared page rhythm: pages that use the reusable header get the same
+   title/action spacing without requiring every template to duplicate CSS. */
+.page-header,
+.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2 {
+    row-gap: .75rem;
+}
+
+.page-header .btn,
+.d-flex.justify-content-between.align-items-center.flex-wrap.gap-2 > .d-flex .btn {
+    white-space: nowrap;
+}
+
+.content-wrapper .btn i,
+.content-wrapper .nav-link i {
+    width: 1.1rem;
+    text-align: center;
+}
+
+.content-wrapper .alert {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 575.98px) {
+    .topbar-title { gap: .4rem; }
+    .topbar-kicker { display: none; }
+    .topbar h5 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .page-header .btn,
+    .d-flex.justify-content-between.align-items-center.flex-wrap.gap-2 > .d-flex .btn {
+        flex: 1 1 auto;
+    }
+}
