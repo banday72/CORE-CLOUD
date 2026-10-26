@@ -19,6 +19,7 @@ ALL_PERMISSIONS = {
     'bulk_import',
     'manage_departments',
     'manage_access',
+    'manage_employee_status',
     'approve_access',
     'view_audit',
     'manage_slides',

@@ -396,11 +396,31 @@ def next_employee_id(request):
 def employee_update(request, pk):
     employee = get_object_or_404(Employee, pk=pk)
     if request.method == 'POST':
+        previous_status = employee.status
         form = EmployeeForm(request.POST, request.FILES, instance=employee, user=request.user)
         if form.is_valid():
             emp = form.save(commit=False)
             store_picture_as_b64(form, emp)
             emp.save()
+            if previous_status == 'active' and emp.status != 'active':
+                emp.is_authorized = False
+                emp.approved_by_manager = False
+                emp.approved_by = None
+                emp.approved_at = None
+                emp.login_locked_until = None
+                emp.failed_login_attempts = 0
+                emp.save(update_fields=[
+                    'is_authorized', 'approved_by_manager', 'approved_by',
+                    'approved_at', 'login_locked_until', 'failed_login_attempts',
+                ])
+                log_audit(
+                    user=request.user,
+                    action='deauthorize',
+                    model_name='Employee',
+                    object_id=emp.employee_id,
+                    description=f'Account access revoked because {emp.full_name} is {emp.status}.',
+                    request=request,
+                )
             log_audit(user=request.user, action='update', model_name='Employee',
                       object_id=employee.employee_id, description=f'Updated employee {employee.full_name}', request=request)
             messages.success(request, 'Employee updated successfully.')
@@ -996,4 +1016,3 @@ class LockoutLoginView(LoginView):
                 severity='low',
             )
         return super().form_invalid(form)
-
