@@ -576,23 +576,18 @@ def toggle_authorize(request, pk):
         ajax_type = 'info'
         if employee.is_authorized:
             action = 'authorize'
-            if employee.role in ('hr', 'manager'):
-                employee.approved_by_manager = True
-                employee.approved_by = request.user
-                from django.utils import timezone
-                employee.approved_at = timezone.now()
-                employee.save()
-                if new_password and employee.user:
-                    employee.user.set_password(new_password)
-                    employee.user.save()
-                    ajax_message = f'{employee.full_name} (HR/Manager) authorized directly. Username: {employee.employee_id} | Password: {new_password}'
-                else:
-                    ajax_message = f'{employee.full_name} (HR/Manager) authorized directly. Username: {employee.employee_id} | Default password: {default_password_for(employee.employee_id)}'
-                messages.success(request, ajax_message)
+            employee.approved_by_manager = True
+            employee.approved_by = request.user
+            from django.utils import timezone
+            employee.approved_at = timezone.now()
+            employee.save(update_fields=['approved_by_manager', 'approved_by', 'approved_at'])
+            if new_password and employee.user:
+                employee.user.set_password(new_password)
+                employee.user.save()
+                ajax_message = f'{employee.full_name} authorized. Username: {employee.employee_id} | Password: {new_password}'
             else:
-                ajax_message = f'{employee.full_name} authorized by you. Waiting for Manager approval before they can login.'
-                ajax_type = 'info'
-                messages.info(request, ajax_message)
+                ajax_message = f'{employee.full_name} authorized and can login now. Username: {employee.employee_id} | Default password: {default_password_for(employee.employee_id)}'
+            messages.success(request, ajax_message)
         else:
             action = 'deauthorize'
             ajax_message = f'{employee.full_name} has been deauthorized. They can no longer login.'
@@ -601,9 +596,7 @@ def toggle_authorize(request, pk):
         log_audit(user=request.user, action=action, model_name='Employee',
                   object_id=employee.employee_id, description=f'{action.title()}d {employee.full_name}', request=request)
         if is_ajax(request):
-            state = 'approved' if (employee.is_authorized and employee.approved_by_manager) else (
-                'active_role' if (employee.is_authorized and employee.role in ('hr', 'manager')) else (
-                    'pending' if employee.is_authorized else 'unauthorized'))
+            state = 'approved' if employee.is_authorized else 'unauthorized'
             return json_ok(ajax_message, type=ajax_type, is_authorized=employee.is_authorized,
                            approved_by_manager=employee.approved_by_manager, state=state)
     return redirect('authorized_users')

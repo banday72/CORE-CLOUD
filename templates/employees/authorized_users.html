@@ -20,14 +20,6 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card border-warning mb-2">
-                            <div class="card-body text-center py-2">
-                                <span class="badge bg-warning text-dark fs-6 mb-2"><i class="fas fa-clipboard-check me-1"></i> Step 2: Manager Approves</span>
-                                <p class="small mb-0">Manager reviews and approves. Employee status becomes <strong>Approved</strong>.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
                         <div class="card border-success mb-2">
                             <div class="card-body text-center py-2">
                                 <span class="badge bg-success fs-6 mb-2"><i class="fas fa-check-circle me-1"></i> Step 3: Can Login</span>
@@ -113,12 +105,8 @@
                             {% endif %}
                         </td>
                         <td class="js-auth-status">
-                            {% if emp.is_authorized and emp.approved_by_manager %}
-                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>Approved - Can Login</span>
-                            {% elif emp.is_authorized and not emp.approved_by_manager and emp.role in 'hr,manager' %}
-                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>Active (HR/Manager)</span>
-                            {% elif emp.is_authorized and not emp.approved_by_manager %}
-                            <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pending Manager Approval</span>
+                            {% if emp.is_authorized %}
+                            <span class="badge bg-success"><i class="fas fa-check me-1"></i>Authorized - Can Login</span>
                             {% else %}
                             <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Not Authorized</span>
                             {% endif %}
@@ -163,17 +151,10 @@
                                       data-ajax="{% url 'toggle_authorize' emp.pk %}" data-emp-id="{{ emp.pk }}">
                                     {% csrf_token %}
                                     <div class="modal-body">
-                                        {% if emp.role in 'hr,manager' %}
-                                        <div class="alert alert-success">
-                                            <strong>Role-based login access</strong><br>
-                                            Networks/IT grants account access; C-level executives retain full administrative access.
-                                        </div>
-                                        {% else %}
                                         <div class="alert alert-info">
-                                            <strong>Employee Authorization Request</strong><br>
-                                            After you authorize, a <strong>Manager must approve</strong> before this employee can login.
+                                            <strong>Direct account access</strong><br>
+                                            Networks/IT can authorize or revoke this account for any department. No manager approval is required.
                                         </div>
-                                        {% endif %}
                                         <div class="alert alert-light">
                                             <strong>Login Credentials:</strong><br>
                                             <strong>Username:</strong> <code>{{ emp.employee_id }}</code><br>

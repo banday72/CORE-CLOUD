@@ -27,6 +27,6 @@ class AuthorizedUserBackend(ModelBackend):
             return None
         if employee.is_login_locked:
             raise PermissionDenied('Account locked after too many failed login attempts')
-        if employee.status == 'active':
+        if employee.status == 'active' and employee.is_authorized:
             return user
         return None

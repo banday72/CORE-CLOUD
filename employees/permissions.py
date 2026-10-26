@@ -20,7 +20,6 @@ ALL_PERMISSIONS = {
     'manage_departments',
     'manage_access',
     'manage_employee_status',
-    'approve_access',
     'view_audit',
     'manage_slides',
     'manage_faces',
@@ -61,7 +60,6 @@ EXECUTIVE_PERMISSIONS = set(ALL_PERMISSIONS)
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
     'view_employees',
-    'approve_access',
     'manage_faces',
     'manage_reviews',
     'manage_training',
