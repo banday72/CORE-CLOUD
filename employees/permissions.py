@@ -53,9 +53,9 @@ SOC_PERMISSIONS = {'view_soc', 'respond_soc', 'manage_soc'}
 
 HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - {'manage_it_teams'} - SOC_PERMISSIONS
 
-# Executives retain broad HR visibility, but user authorization is reserved
-# for the HR function itself.
-EXECUTIVE_PERMISSIONS = HR_PERMISSIONS - {'manage_access'}
+# C-level executives are company-wide administrators. Their designation is
+# matched by is_chief_designation(), so they retain access across departments.
+EXECUTIVE_PERMISSIONS = set(ALL_PERMISSIONS)
 
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
