@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Management Dashboard - CoreCloud{% endblock %}
+{% block page_title %}<i class="fas fa-chart-pie me-2"></i>Management Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0">Live organization, attendance, payroll and reimbursement metrics.</p>
+    <span class="badge bg-light text-dark">Updated from database: {{ today|date:"d M Y" }}</span>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6"><div class="card stat-card border-primary shadow h-100"><div class="card-body"><small class="text-primary fw-bold">ACTIVE EMPLOYEES</small><h3 class="mb-0 mt-2">{{ active_employees }}</h3></div></div></div>
+    <div class="col-xl-3 col-md-6"><div class="card stat-card border-success shadow h-100"><div class="card-body"><small class="text-success fw-bold">TODAY ATTENDANCE</small><h3 class="mb-0 mt-2">{{ attendance_rate }}%</h3></div></div></div>
+    <div class="col-xl-3 col-md-6"><div class="card stat-card border-warning shadow h-100"><div class="card-body"><small class="text-warning fw-bold">PENDING LEAVES</small><h3 class="mb-0 mt-2">{{ pending_leaves }}</h3></div></div></div>
+    <div class="col-xl-3 col-md-6"><div class="card stat-card border-danger shadow h-100"><div class="card-body"><small class="text-danger fw-bold">PENDING EXPENSES</small><h3 class="mb-0 mt-2">Rs. {{ pending_expense_amount|floatformat:0 }}</h3><small>{{ pending_expenses }} claim(s)</small></div></div></div>
+</div>
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card shadow h-100"><div class="card-header py-3"><h6 class="m-0 fw-bold text-primary">Department headcount</h6></div><div class="card-body">
+            {% for row in department_rows %}<div class="mb-3"><div class="d-flex justify-content-between small"><strong>{{ row.name }}</strong><span>{{ row.headcount }}</span></div><div class="progress" style="height:8px;"><div class="progress-bar" style="width:{% widthratio row.headcount active_employees 100 %}%"></div></div></div>{% empty %}<p class="text-muted">No department data available.</p>{% endfor %}
+        </div></div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card shadow h-100"><div class="card-header py-3"><h6 class="m-0 fw-bold text-success">Attendance — last 7 days</h6></div><div class="card-body">
+            {% for day in recent_attendance %}<div class="d-flex align-items-center gap-2 mb-2"><small style="width:48px;">{{ day.label }}</small><div class="progress flex-grow-1" style="height:12px;"><div class="progress-bar bg-success" style="width:{% widthratio day.present|add:day.absent day.present|add:day.absent 100 %}%"></div></div><small>{{ day.present }} present</small></div>{% empty %}<p class="text-muted">No attendance data available.</p>{% endfor %}
+        </div></div>
+    </div>
+</div>
+<div class="row g-3 mt-1">
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><small class="text-muted">Departments</small><h4>{{ department_count }}</h4></div></div></div>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><small class="text-muted">Inactive/terminated</small><h4>{{ inactive_employees }}</h4></div></div></div>
+    <div class="col-md-4"><div class="card shadow"><div class="card-body"><small class="text-muted">Current month payroll</small><h4>Rs. {{ payroll_total|floatformat:0 }}</h4></div></div></div>
+</div>
+{% endblock %}

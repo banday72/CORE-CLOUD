@@ -256,6 +256,42 @@ class SecurityProfile(models.Model):
         return f'Security profile for {self.user.username}'
 
 
+class ExpenseClaim(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('paid', 'Paid'),
+    ]
+
+    employee = models.ForeignKey(
+        'Employee', on_delete=models.CASCADE, related_name='expense_claims')
+    category = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    expense_date = models.DateField()
+    description = models.TextField()
+    receipt_b64 = models.TextField(blank=True)
+    receipt_name = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='reviewed_expense_claims')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['employee', 'status']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.employee.employee_id} - {self.category} - {self.amount}'
+
+
 class AuditLog(models.Model):
     ACTION_CHOICES = [
         ('login', 'Login'),

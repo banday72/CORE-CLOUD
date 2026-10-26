@@ -37,10 +37,12 @@
                         {% endif %}
                     </div>
                     {% endfor %}
+                    {% if user.is_superuser %}
                     <div class="mb-3 text-start">
                         <label class="form-label fw-bold">Designation</label>
                         <input type="text" name="designation" class="form-control" value="{{ employee.designation|default:'' }}" placeholder="e.g. CEO, Manager, HR">
                     </div>
+                    {% endif %}
                     <div class="mb-3 text-start">
                         <label class="form-label fw-bold">Profile Picture / Document</label>
                         <input type="file" name="profile_picture" class="form-control" accept="image/*,.pdf">

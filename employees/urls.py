@@ -46,5 +46,9 @@ urlpatterns = [
     path('face-login/', views_face_login.face_login_page, name='face_login'),
     path('face-login/check/', views_face_login.face_login_check, name='face_login_check'),
     path('profile/', views.profile_update, name='profile_update'),
+    path('expenses/', views.expense_claim_list, name='expense_claim_list'),
+    path('expenses/create/', views.expense_claim_create, name='expense_claim_create'),
+    path('expenses/review/', views.expense_claim_review, name='expense_claim_review'),
+    path('management-dashboard/', views.management_dashboard, name='management_dashboard'),
     path('api/dashboard-stats/', views.dashboard_stats, name='dashboard_stats'),
 ]

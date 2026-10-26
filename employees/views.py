@@ -13,13 +13,14 @@ from django.contrib.auth.views import LoginView
 from django.contrib.auth.models import User
 from django.contrib.auth import login, logout
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum, Avg
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.utils import timezone
 from .models import (
     AccessGrant, Department, Employee, AuditLog, LoginSlide, managers_queryset,
     chief_id_prefix, MANAGEMENT_DEPARTMENT_NAMES, default_password_for, SecurityProfile,
+    ExpenseClaim,
 )
 from .forms import DepartmentForm, EmployeeForm, ProfileForm, LoginSlideForm
 from .decorators import permission_required, hr_required, privilege_required
@@ -1037,11 +1038,11 @@ def audit_log_list(request):
 
 @login_required
 def profile_update(request):
-    if not request.user.is_superuser:
-        messages.error(request, 'Only administrators can access profile settings.')
+    employee = get_employee(request.user)
+    if not request.user.is_superuser and employee is None:
+        messages.error(request, 'No employee profile is linked to this account.')
         return redirect('dashboard')
     user = request.user
-    employee = get_employee(user)
     if request.method == 'POST':
         form = ProfileForm(request.POST, instance=user)
         if form.is_valid():
@@ -1055,7 +1056,7 @@ def profile_update(request):
                         mime = mime_map.get(ext, 'application/octet-stream')
                         b64 = base64.b64encode(f.read()).decode('utf-8')
                         employee.profile_picture_b64 = f'data:{mime};base64,{b64}'
-                    if request.POST.get('designation'):
+                    if request.user.is_superuser and request.POST.get('designation'):
                         employee.designation = request.POST['designation']
                     employee.save()
                 except Exception as e:
@@ -1068,6 +1069,157 @@ def profile_update(request):
     return render(request, 'employees/profile_update.html', {
         'form': form,
         'employee': employee,
+    })
+
+
+@login_required
+def expense_claim_list(request):
+    employee = get_employee(request.user)
+    if not employee:
+        messages.error(request, 'No employee profile is linked to this account.')
+        return redirect('dashboard')
+    claims = ExpenseClaim.objects.filter(employee=employee)
+    status = request.GET.get('status', '').strip()
+    if status in dict(ExpenseClaim.STATUS_CHOICES):
+        claims = claims.filter(status=status)
+    return render(request, 'employees/expense_claim_list.html', {
+        'claims': claims,
+        'status_filter': status,
+        'status_choices': ExpenseClaim.STATUS_CHOICES,
+    })
+
+
+@login_required
+def expense_claim_create(request):
+    employee = get_employee(request.user)
+    if not employee:
+        messages.error(request, 'No employee profile is linked to this account.')
+        return redirect('dashboard')
+    if request.method == 'POST':
+        category = request.POST.get('category', '').strip()[:100]
+        description = request.POST.get('description', '').strip()
+        expense_date = request.POST.get('expense_date', '').strip()
+        amount_raw = request.POST.get('amount', '').strip()
+        errors = []
+        if not category:
+            errors.append('Category is required.')
+        if not description:
+            errors.append('Description is required.')
+        try:
+            from decimal import Decimal, InvalidOperation
+            amount = Decimal(amount_raw)
+            if amount <= 0:
+                errors.append('Amount must be greater than zero.')
+        except (InvalidOperation, TypeError):
+            amount = None
+            errors.append('Enter a valid amount.')
+        try:
+            from datetime import date
+            parsed_date = date.fromisoformat(expense_date)
+        except (TypeError, ValueError):
+            parsed_date = None
+            errors.append('Enter a valid expense date.')
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+        else:
+            claim = ExpenseClaim.objects.create(
+                employee=employee, category=category, amount=amount,
+                expense_date=parsed_date, description=description)
+            log_audit(
+                user=request.user, action='create', model_name='ExpenseClaim',
+                object_id=claim.pk,
+                description=f'Expense claim submitted: {category} ({amount})',
+                request=request, category='data', severity='info', outcome='success')
+            messages.success(request, 'Expense claim submitted for review.')
+            return redirect('expense_claim_list')
+    return render(request, 'employees/expense_claim_form.html', {
+        'today': date.today().isoformat(),
+    })
+
+
+@login_required
+@permission_required('view_reports')
+def expense_claim_review(request):
+    claims = ExpenseClaim.objects.select_related('employee', 'reviewed_by').all()
+    status = request.GET.get('status', '').strip()
+    if status in dict(ExpenseClaim.STATUS_CHOICES):
+        claims = claims.filter(status=status)
+    if request.method == 'POST':
+        claim = get_object_or_404(ExpenseClaim, pk=request.POST.get('claim_id'))
+        new_status = request.POST.get('status', '')
+        if new_status not in ('approved', 'rejected', 'paid'):
+            messages.error(request, 'Invalid expense claim status.')
+        else:
+            claim.status = new_status
+            claim.reviewed_by = request.user
+            claim.reviewed_at = timezone.now()
+            claim.review_note = request.POST.get('review_note', '').strip()[:2000]
+            claim.save(update_fields=[
+                'status', 'reviewed_by', 'reviewed_at', 'review_note', 'updated_at'])
+            log_audit(
+                user=request.user, action='update', model_name='ExpenseClaim',
+                object_id=claim.pk,
+                description=f'Expense claim {new_status}: {claim.employee.employee_id}',
+                request=request, category='data', severity='medium', outcome='success')
+            messages.success(request, f'Expense claim marked {claim.get_status_display().lower()}.')
+        return redirect('expense_claim_review')
+    return render(request, 'employees/expense_claim_review.html', {
+        'claims': claims,
+        'status_filter': status,
+        'status_choices': ExpenseClaim.STATUS_CHOICES,
+    })
+
+
+@login_required
+@permission_required('view_reports')
+def management_dashboard(request):
+    from attendance.models import Attendance
+    from leaves.models import Leave
+    from payroll.models import Payroll
+    from datetime import date, timedelta
+
+    today = date.today()
+    active = Employee.objects.filter(status='active')
+    attendance_today = Attendance.objects.filter(date=today)
+    present_today = attendance_today.filter(status__in=('present', 'late', 'half_day')).count()
+    attendance_total = attendance_today.count()
+    department_rows = list(
+        Department.objects.annotate(
+            headcount=Count('employee', filter=Q(employee__status='active')),
+            avg_salary=Avg('employee__salary', filter=Q(employee__status='active')),
+        ).filter(headcount__gt=0).order_by('-headcount')[:12]
+    )
+    month = today.month
+    year = today.year
+    payroll_total = Payroll.objects.filter(
+        month=month, year=year, status__in=('processed', 'paid')).aggregate(
+            total=Sum('net_salary'))['total'] or 0
+    recent_attendance = []
+    for offset in range(6, -1, -1):
+        day = today - timedelta(days=offset)
+        rows = Attendance.objects.filter(date=day)
+        total = rows.count()
+        present = rows.filter(status__in=('present', 'late', 'half_day')).count()
+        recent_attendance.append({
+            'label': day.strftime('%d %b'),
+            'present': present,
+            'absent': max(total - present, 0),
+        })
+    return render(request, 'employees/management_dashboard.html', {
+        'active_employees': active.count(),
+        'inactive_employees': Employee.objects.exclude(status='active').count(),
+        'department_count': Department.objects.count(),
+        'pending_leaves': Leave.objects.filter(status='pending').count(),
+        'pending_expenses': ExpenseClaim.objects.filter(status='pending').count(),
+        'pending_expense_amount': ExpenseClaim.objects.filter(status='pending').aggregate(
+            total=Sum('amount'))['total'] or 0,
+        'attendance_rate': round((present_today / attendance_total) * 100, 1)
+            if attendance_total else 0,
+        'payroll_total': payroll_total,
+        'department_rows': department_rows,
+        'recent_attendance': recent_attendance,
+        'today': today,
     })
 
 

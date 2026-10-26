@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Expense Claims - CoreCloud{% endblock %}
+{% block page_title %}<i class="fas fa-receipt me-2"></i>My Expense Claims{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0">Submit and track reimbursement requests.</p>
+    <a href="{% url 'expense_claim_create' %}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>New Claim</a>
+</div>
+<div class="card shadow">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary">Claim history</h6>
+        <form method="get" class="d-flex gap-2">
+            <select name="status" class="form-select form-select-sm">
+                <option value="">All statuses</option>
+                {% for value,label in status_choices %}
+                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-sm btn-outline-primary">Filter</button>
+        </form>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Status</th><th>Review note</th></tr></thead>
+                <tbody>
+                    {% for claim in claims %}
+                    <tr>
+                        <td>{{ claim.expense_date|date:"d M Y" }}</td>
+                        <td>{{ claim.category }}</td>
+                        <td>{{ claim.description|truncatewords:12 }}</td>
+                        <td><strong>Rs. {{ claim.amount|floatformat:2 }}</strong></td>
+                        <td><span class="badge bg-{% if claim.status == 'approved' or claim.status == 'paid' %}success{% elif claim.status == 'rejected' %}danger{% else %}warning text-dark{% endif %}">{{ claim.get_status_display }}</span></td>
+                        <td><small>{{ claim.review_note|default:"—" }}</small></td>
+                    </tr>
+                    {% empty %}
+                    {% include "includes/empty_state.html" with colspan=6 icon="fa-receipt" title="No expense claims" hint="Submit your first reimbursement request." %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

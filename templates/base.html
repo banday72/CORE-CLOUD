@@ -339,6 +339,9 @@
             <a class="nav-link" href="{% url 'dashboard' %}#my-payrolls">
                 <i class="fas fa-money-bill-wave nav-icon" style="color:#1cc88a;"></i> Salary Slips
             </a>
+            <a class="nav-link {% if 'expense_claim' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'expense_claim_list' %}">
+                <i class="fas fa-receipt nav-icon" style="color:#1cc88a;"></i> Expense Claims
+            </a>
             <a class="nav-link {% if request.resolver_match.url_name == 'my_manager' %}active{% endif %}" href="{% url 'my_manager' %}">
                 <i class="fas fa-user-tie nav-icon" style="color:#f39c12;"></i> My Manager
             </a>
@@ -352,6 +355,18 @@
             </a>
             <a class="nav-link {% if request.resolver_match.url_name == 'auto_generate_payroll' %}active{% endif %}" href="{% url 'auto_generate_payroll' %}">
                 <i class="fas fa-magic nav-icon" style="color:#f6c23e;"></i> Auto Generate
+            </a>
+        </nav>
+        {% endif %}
+
+        {% if can.view_reports %}
+        <div class="sidebar-heading bright"><i class="fas fa-chart-line me-1"></i> MANAGEMENT</div>
+        <nav class="nav flex-column">
+            <a class="nav-link {% if request.resolver_match.url_name == 'management_dashboard' %}active{% endif %}" href="{% url 'management_dashboard' %}">
+                <i class="fas fa-chart-pie nav-icon" style="color:#9b59b6;"></i> Management Dashboard
+            </a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'expense_claim_review' %}active{% endif %}" href="{% url 'expense_claim_review' %}">
+                <i class="fas fa-file-invoice-dollar nav-icon" style="color:#1cc88a;"></i> Expense Review
             </a>
         </nav>
         {% endif %}
