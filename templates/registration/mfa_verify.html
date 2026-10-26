@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}MFA Verification - CoreCloud{% endblock %}
+{% block page_title %}<i class="fas fa-lock me-2"></i>MFA Verification{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <h5 class="mb-2">Verify your sign in</h5>
+                <p class="text-muted small">Enter the 6-digit code from your authenticator app for <strong>{{ username }}</strong>.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <label class="form-label" for="mfa-code">Authentication code</label>
+                    <input id="mfa-code" name="code" class="form-control form-control-lg text-center mb-3" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" autofocus required>
+                    <button class="btn btn-primary w-100"><i class="fas fa-unlock me-1"></i>Verify and continue</button>
+                </form>
+                <a href="{% url 'login' %}" class="btn btn-link btn-sm w-100 mt-2">Cancel</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -11,13 +11,19 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.models import User
+from django.contrib.auth import login, logout
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
-from .models import Department, Employee, AuditLog, LoginSlide, managers_queryset, chief_id_prefix, MANAGEMENT_DEPARTMENT_NAMES, default_password_for
+from django.utils import timezone
+from .models import (
+    AccessGrant, Department, Employee, AuditLog, LoginSlide, managers_queryset,
+    chief_id_prefix, MANAGEMENT_DEPARTMENT_NAMES, default_password_for, SecurityProfile,
+)
 from .forms import DepartmentForm, EmployeeForm, ProfileForm, LoginSlideForm
 from .decorators import permission_required, hr_required, privilege_required
-from .permissions import permissions_for_user
+from .permissions import ALL_PERMISSIONS, permissions_for_user
 from .audit import log_audit
 from .ajax import is_ajax, json_ok, json_err
 
@@ -526,6 +532,95 @@ def change_password(request):
 
 
 @login_required
+def active_sessions(request):
+    from django.contrib.sessions.models import Session
+
+    sessions = []
+    now = timezone.now()
+    for session in Session.objects.filter(expire_date__gte=now):
+        data = session.get_decoded()
+        if str(data.get('_auth_user_id')) != str(request.user.pk):
+            continue
+        sessions.append({
+            'key': session.session_key,
+            'current': session.session_key == request.session.session_key,
+            'expires_at': session.expire_date,
+            'ip': data.get('_cc_ip', 'Unknown'),
+            'user_agent': data.get('_cc_user_agent', 'Unknown'),
+        })
+    return render(request, 'employees/active_sessions.html', {'sessions': sessions})
+
+
+@login_required
+@require_POST
+def revoke_session(request, session_key):
+    from django.contrib.sessions.models import Session
+
+    if session_key == request.session.session_key:
+        messages.error(request, 'Your current session cannot be revoked from this page.')
+        return redirect('active_sessions')
+    session = Session.objects.filter(session_key=session_key).first()
+    if session:
+        data = session.get_decoded()
+        if str(data.get('_auth_user_id')) == str(request.user.pk):
+            session.delete()
+            log_audit(
+                user=request.user, action='logout', model_name='Session',
+                object_id=session_key, description='Remote session revoked',
+                request=request, category='auth', severity='medium', outcome='success')
+            messages.success(request, 'The selected session was revoked.')
+    return redirect('active_sessions')
+
+
+@login_required
+def mfa_setup(request):
+    from .mfa import new_secret, provisioning_uri, verify_code
+
+    profile, _ = SecurityProfile.objects.get_or_create(user=request.user)
+    if not profile.totp_secret:
+        profile.totp_secret = new_secret()
+        profile.save(update_fields=['totp_secret', 'updated_at'])
+    if request.method == 'POST':
+        if verify_code(profile.totp_secret, request.POST.get('code')):
+            profile.mfa_enabled = True
+            profile.save(update_fields=['mfa_enabled', 'updated_at'])
+            log_audit(
+                user=request.user, action='authorize', model_name='SecurityProfile',
+                object_id=request.user.username, description='MFA enabled',
+                request=request, category='auth', severity='medium', outcome='success')
+            messages.success(request, 'MFA is enabled. A verification code is now required at login.')
+            return redirect('dashboard')
+        messages.error(request, 'That verification code is invalid or expired.')
+    return render(request, 'registration/mfa_setup.html', {
+        'profile': profile,
+        'provisioning_uri': provisioning_uri(profile.totp_secret, request.user.username),
+    })
+
+
+def mfa_verify(request):
+    pending_user_id = request.session.get('mfa_pending_user_id')
+    if not pending_user_id:
+        return redirect('login')
+    user = User.objects.filter(pk=pending_user_id, is_active=True).first()
+    if user is None:
+        request.session.pop('mfa_pending_user_id', None)
+        return redirect('login')
+    if request.method == 'POST':
+        from .mfa import verify_code
+        profile = SecurityProfile.objects.filter(user=user, mfa_enabled=True).first()
+        if profile and verify_code(profile.totp_secret, request.POST.get('code')):
+            request.session.pop('mfa_pending_user_id', None)
+            login(request, user, backend='hr_payroll.backends.AuthorizedUserBackend')
+            log_audit(
+                user=user, action='login', model_name='User',
+                object_id=user.username, description='User logged in with MFA',
+                request=request, category='auth', outcome='success')
+            return redirect('dashboard')
+        messages.error(request, 'That verification code is invalid or expired.')
+    return render(request, 'registration/mfa_verify.html', {'username': user.username})
+
+
+@login_required
 @permission_required('manage_access')
 def authorized_users(request):
     employees = Employee.objects.select_related('user', 'department').all()
@@ -600,6 +695,92 @@ def toggle_authorize(request, pk):
             return json_ok(ajax_message, type=ajax_type, is_authorized=employee.is_authorized,
                            approved_by_manager=employee.approved_by_manager, state=state)
     return redirect('authorized_users')
+
+
+GRANTABLE_PERMISSIONS = sorted(
+    ALL_PERMISSIONS - {'manage_access', 'manage_employee_status', 'manage_it_teams', 'manage_soc'}
+)
+
+
+@login_required
+@permission_required('manage_access')
+def access_grants(request):
+    grants = AccessGrant.objects.select_related(
+        'employee', 'department', 'granted_by').filter(expires_at__gt=timezone.now())
+    target = request.GET.get('target', '').strip()
+    if target:
+        grants = grants.filter(
+            Q(employee__employee_id__icontains=target)
+            | Q(employee__first_name__icontains=target)
+            | Q(employee__last_name__icontains=target)
+            | Q(department__name__icontains=target)
+        )
+    return render(request, 'employees/access_grants.html', {
+        'grants': grants,
+        'employees': Employee.objects.filter(status='active').order_by('employee_id'),
+        'departments': Department.objects.all(),
+        'permissions': GRANTABLE_PERMISSIONS,
+        'target': target,
+    })
+
+
+@login_required
+@permission_required('manage_access')
+@require_POST
+def access_grant_create(request):
+    from datetime import datetime
+
+    permission = request.POST.get('permission', '')
+    employee_id = request.POST.get('employee', '').strip()
+    department_id = request.POST.get('department', '').strip()
+    expires_raw = request.POST.get('expires_at', '').strip()
+    reason = request.POST.get('reason', '').strip()[:500]
+    if permission not in GRANTABLE_PERMISSIONS:
+        messages.error(request, 'That permission cannot be delegated through the access matrix.')
+        return redirect('access_grants')
+    if bool(employee_id) == bool(department_id):
+        messages.error(request, 'Select exactly one employee or department.')
+        return redirect('access_grants')
+    try:
+        expires_at = datetime.fromisoformat(expires_raw)
+        if timezone.is_naive(expires_at):
+            expires_at = timezone.make_aware(expires_at)
+    except (TypeError, ValueError):
+        messages.error(request, 'Enter a valid expiry date and time.')
+        return redirect('access_grants')
+    if expires_at <= timezone.now():
+        messages.error(request, 'Access expiry must be in the future.')
+        return redirect('access_grants')
+
+    employee = get_object_or_404(Employee, pk=employee_id) if employee_id else None
+    department = get_object_or_404(Department, pk=department_id) if department_id else None
+    grant = AccessGrant.objects.create(
+        employee=employee, department=department, permission=permission,
+        expires_at=expires_at, reason=reason, granted_by=request.user)
+    target = employee.full_name if employee else department.name
+    log_audit(
+        user=request.user, action='authorize', model_name='AccessGrant',
+        object_id=grant.pk,
+        description=f'Granted {permission} to {target} until {expires_at.isoformat()}',
+        request=request, category='access', severity='medium', outcome='success')
+    messages.success(request, f'{permission} granted to {target} until {expires_at:%d %b %Y %H:%M}.')
+    return redirect('access_grants')
+
+
+@login_required
+@permission_required('manage_access')
+@require_POST
+def access_grant_revoke(request, pk):
+    grant = get_object_or_404(AccessGrant, pk=pk)
+    target = grant.employee.full_name if grant.employee else grant.department.name
+    permission = grant.permission
+    grant.delete()
+    log_audit(
+        user=request.user, action='deauthorize', model_name='AccessGrant',
+        object_id=pk, description=f'Revoked {permission} from {target}',
+        request=request, category='access', severity='medium', outcome='success')
+    messages.success(request, f'{permission} access revoked from {target}.')
+    return redirect('access_grants')
 
 
 @login_required
@@ -932,6 +1113,22 @@ class LockoutLoginView(LoginView):
             unlocked = bool(employee.failed_login_attempts or employee.login_locked_until)
             clear_login_lock(employee)
         result = super().form_valid(form)
+        self.request.session['_cc_ip'] = (
+            self.request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+            or self.request.META.get('REMOTE_ADDR', '')
+        )
+        self.request.session['_cc_user_agent'] = (
+            self.request.META.get('HTTP_USER_AGENT', '')[:300]
+        )
+        self.request.session.save()
+        profile = SecurityProfile.objects.filter(user=form.get_user(), mfa_enabled=True).first()
+        if profile:
+            self.request.session['mfa_pending_user_id'] = form.get_user().pk
+            logout(self.request)
+            self.request.session['mfa_pending_user_id'] = form.get_user().pk
+            self.request.session.save()
+            messages.info(self.request, 'Enter your authenticator code to complete sign in.')
+            return redirect('mfa_verify')
         log_audit(
             user=form.get_user(),
             action='login', model_name='User',

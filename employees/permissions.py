@@ -9,6 +9,8 @@ templates (e.g. ``{% if can.manage_employees %}``).
 
 import re
 
+from django.db.models import Q
+
 HR_KEYWORDS = ('hr', 'humanresource', 'talent', 'recruit')
 MANAGER_KEYWORDS = ('manager', 'director', 'supervisor', 'coordinator', 'head', 'lead', 'generalmanager')
 
@@ -122,6 +124,16 @@ def permissions_for(employee):
     if getattr(employee, 'is_it_manager', False) or getattr(employee, 'it_role', ''):
         perms.add('manage_it_teams')
         perms.update({'view_soc', 'respond_soc', 'manage_soc'})
+    if employee is not None:
+        from django.utils import timezone
+        from .models import AccessGrant
+        now = timezone.now()
+        grants = AccessGrant.objects.filter(
+            expires_at__gt=now,
+        ).filter(
+            Q(employee=employee) | Q(department=employee.department)
+        ).values_list('permission', flat=True)
+        perms.update(grants)
     return perms
 
 

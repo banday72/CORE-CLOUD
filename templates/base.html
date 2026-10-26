@@ -125,6 +125,12 @@
             <a href="{% url 'change_password' %}" class="btn btn-sm d-none-mobile" aria-label="Change password" style="background:rgba(255,255,255,.15);color:white;border:none;">
                 <i class="fas fa-key" aria-hidden="true"></i>
             </a>
+            <a href="{% url 'active_sessions' %}" class="btn btn-sm d-none-mobile" aria-label="Active sessions" title="Active sessions" style="background:rgba(255,255,255,.15);color:white;border:none;">
+                <i class="fas fa-laptop" aria-hidden="true"></i>
+            </a>
+            <a href="{% url 'mfa_setup' %}" class="btn btn-sm d-none-mobile" aria-label="MFA security" title="MFA security" style="background:rgba(255,255,255,.15);color:white;border:none;">
+                <i class="fas fa-shield-halved" aria-hidden="true"></i>
+            </a>
             <button type="button" class="btn btn-sm theme-toggle" id="themeToggle" aria-label="Switch to dark mode" title="Toggle dark mode" style="background:rgba(255,255,255,.15);color:white;border:none;">
                 <i class="fas fa-moon" aria-hidden="true"></i>
             </button>
@@ -173,6 +179,9 @@
             {% if can.manage_access %}
             <a class="nav-link {% if request.resolver_match.url_name == 'authorized_users' %}active{% endif %}" href="{% url 'authorized_users' %}">
                 <i class="fas fa-user-shield nav-icon" style="color:#5dade2;"></i> Account Access
+            </a>
+            <a class="nav-link {% if request.resolver_match.url_name == 'access_grants' %}active{% endif %}" href="{% url 'access_grants' %}">
+                <i class="fas fa-key nav-icon" style="color:#f6c23e;"></i> Access Matrix
             </a>
             {% endif %}
         </nav>

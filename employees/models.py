@@ -217,6 +217,45 @@ class LoginSlide(models.Model):
         return self.name or self.picture_name or 'Slide %d' % self.id
 
 
+class AccessGrant(models.Model):
+    """A time-bounded permission granted by Networks/IT."""
+
+    employee = models.ForeignKey(
+        'Employee', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='access_grants')
+    department = models.ForeignKey(
+        Department, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='access_grants')
+    permission = models.CharField(max_length=60)
+    expires_at = models.DateTimeField()
+    reason = models.CharField(max_length=500, blank=True)
+    granted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name='granted_access')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['permission', 'expires_at']),
+            models.Index(fields=['employee', 'expires_at']),
+            models.Index(fields=['department', 'expires_at']),
+        ]
+
+    def __str__(self):
+        target = self.employee or self.department or 'unknown'
+        return f'{target}: {self.permission} until {self.expires_at:%Y-%m-%d}'
+
+
+class SecurityProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='security_profile')
+    totp_secret = models.CharField(max_length=64, blank=True)
+    mfa_enabled = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Security profile for {self.user.username}'
+
+
 class AuditLog(models.Model):
     ACTION_CHOICES = [
         ('login', 'Login'),

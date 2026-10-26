@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Active Sessions - CoreCloud{% endblock %}
+{% block page_title %}<i class="fas fa-laptop me-2"></i>Active Sessions{% endblock %}
+
+{% block content %}
+<div class="alert alert-info">
+    <i class="fas fa-shield-halved me-1"></i>
+    Review where your CoreCloud account is signed in. Revoke any session you do not recognize.
+</div>
+<div class="card shadow">
+    <div class="card-header py-3"><h6 class="m-0 fw-bold text-primary">Signed-in devices</h6></div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Device / browser</th><th>IP address</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for session in sessions %}
+                    <tr>
+                        <td><small>{{ session.user_agent }}</small></td>
+                        <td><code>{{ session.ip }}</code></td>
+                        <td>{{ session.expires_at|date:"d M Y H:i" }}</td>
+                        <td>{% if session.current %}<span class="badge bg-success">Current session</span>{% else %}<span class="badge bg-secondary">Active</span>{% endif %}</td>
+                        <td>
+                            {% if not session.current %}
+                            <form method="post" action="{% url 'revoke_session' session.key %}">
+                                {% csrf_token %}
+                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Revoke this session?');"><i class="fas fa-sign-out-alt me-1"></i>Revoke</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    {% include "includes/empty_state.html" with colspan=5 icon="fa-laptop" title="No active sessions found" hint="Sign in again to create a session." %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
