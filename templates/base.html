@@ -170,6 +170,11 @@
                 <i class="fas fa-user-lock nav-icon" style="color:#5dade2;"></i> Collab Access
             </a>
             {% endif %}
+            {% if can.manage_access %}
+            <a class="nav-link {% if request.resolver_match.url_name == 'authorized_users' %}active{% endif %}" href="{% url 'authorized_users' %}">
+                <i class="fas fa-user-shield nav-icon" style="color:#5dade2;"></i> Account Access
+            </a>
+            {% endif %}
         </nav>
 
         {% if 'mail' not in collab_blocked or 'chat' not in collab_blocked or 'meetings' not in collab_blocked %}
@@ -250,11 +255,6 @@
             {% if can.manage_departments %}
             <a class="nav-link {% if 'department' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'department_list' %}">
                 <i class="fas fa-building nav-icon" style="color:#1cc88a;"></i> Departments
-            </a>
-            {% endif %}
-            {% if can.manage_access %}
-            <a class="nav-link {% if request.resolver_match.url_name == 'authorized_users' %}active{% endif %}" href="{% url 'authorized_users' %}">
-                <i class="fas fa-user-shield nav-icon" style="color:#1cc88a;"></i> Authorized Users
             </a>
             {% endif %}
             {% if can.approve_access %}

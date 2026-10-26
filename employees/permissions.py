@@ -51,7 +51,7 @@ IT_RESOLVE_PERMISSIONS = {'resolve_networks', 'resolve_software', 'resolve_hardw
 
 SOC_PERMISSIONS = {'view_soc', 'respond_soc', 'manage_soc'}
 
-HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - {'manage_it_teams'} - SOC_PERMISSIONS
+HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - SOC_PERMISSIONS - {'manage_it_teams', 'manage_access'}
 
 # C-level executives are company-wide administrators. Their designation is
 # matched by is_chief_designation(), so they retain access across departments.
@@ -115,6 +115,9 @@ def permissions_for(employee):
         perms.add('resolve_' + team)
         # IT support staff run the SOC: view alerts, respond (ack/escalate/lock).
         perms.update({'view_soc', 'respond_soc'})
+    if team == 'networks':
+        # Account authorization is an IT access-control responsibility.
+        perms.add('manage_access')
     if getattr(employee, 'is_it_manager', False) or getattr(employee, 'it_role', ''):
         perms.add('manage_it_teams')
         perms.update({'view_soc', 'respond_soc', 'manage_soc'})
