@@ -99,7 +99,8 @@ def permission_group(employee):
         return 'hr'
     if employee.role == 'manager':
         return 'manager'
-    if getattr(employee, 'support_team', '') in ('networks', 'software', 'hardware'):
+    if (getattr(employee, 'support_team', '') or '').strip().lower() in (
+            'networks', 'software', 'hardware'):
         return 'employee'
     words = _words(employee.designation)
     if words & set(HR_KEYWORDS):
@@ -111,7 +112,7 @@ def permission_group(employee):
 
 def permissions_for(employee):
     perms = set(PERMISSION_GROUPS[permission_group(employee)])
-    team = getattr(employee, 'support_team', '')
+    team = (getattr(employee, 'support_team', '') or '').strip().lower()
     if team in ('networks', 'software', 'hardware'):
         perms.add('resolve_' + team)
         # IT support staff run the SOC: view alerts, respond (ack/escalate/lock).
