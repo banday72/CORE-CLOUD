@@ -612,6 +612,16 @@ def mfa_verify(request):
         if profile and verify_code(profile.totp_secret, request.POST.get('code')):
             request.session.pop('mfa_pending_user_id', None)
             login(request, user, backend='hr_payroll.backends.AuthorizedUserBackend')
+            request.session['_cc_ip'] = (
+                request.session.get('_cc_ip')
+                or request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
+                or request.META.get('REMOTE_ADDR', '')
+            )
+            request.session['_cc_user_agent'] = (
+                request.session.get('_cc_user_agent')
+                or request.META.get('HTTP_USER_AGENT', '')[:300]
+            )
+            request.session.save()
             log_audit(
                 user=user, action='login', model_name='User',
                 object_id=user.username, description='User logged in with MFA',
@@ -699,7 +709,10 @@ def toggle_authorize(request, pk):
 
 
 GRANTABLE_PERMISSIONS = sorted(
-    ALL_PERMISSIONS - {'manage_access', 'manage_employee_status', 'manage_it_teams', 'manage_soc'}
+    ALL_PERMISSIONS - {
+        'manage_access', 'manage_employee_status', 'manage_it_teams',
+        'view_soc', 'respond_soc', 'manage_soc',
+    }
 )
 
 
@@ -1148,7 +1161,11 @@ def expense_claim_review(request):
     if request.method == 'POST':
         claim = get_object_or_404(ExpenseClaim, pk=request.POST.get('claim_id'))
         new_status = request.POST.get('status', '')
-        if new_status not in ('approved', 'rejected', 'paid'):
+        allowed_transitions = {
+            'pending': {'approved', 'rejected'},
+            'approved': {'paid'},
+        }
+        if new_status not in allowed_transitions.get(claim.status, set()):
             messages.error(request, 'Invalid expense claim status.')
         else:
             claim.status = new_status
@@ -1181,7 +1198,8 @@ def management_dashboard(request):
 
     today = date.today()
     active = Employee.objects.filter(status='active')
-    attendance_today = Attendance.objects.filter(date=today)
+    attendance_today = Attendance.objects.filter(
+        date=today, employee__status='active').exclude(status='holiday')
     present_today = attendance_today.filter(status__in=('present', 'late', 'half_day')).count()
     attendance_total = attendance_today.count()
     department_rows = list(
@@ -1198,7 +1216,8 @@ def management_dashboard(request):
     recent_attendance = []
     for offset in range(6, -1, -1):
         day = today - timedelta(days=offset)
-        rows = Attendance.objects.filter(date=day)
+        rows = Attendance.objects.filter(
+            date=day, employee__status='active').exclude(status='holiday')
         total = rows.count()
         present = rows.filter(status__in=('present', 'late', 'half_day')).count()
         recent_attendance.append({
@@ -1265,19 +1284,25 @@ class LockoutLoginView(LoginView):
             unlocked = bool(employee.failed_login_attempts or employee.login_locked_until)
             clear_login_lock(employee)
         result = super().form_valid(form)
-        self.request.session['_cc_ip'] = (
+        login_ip = (
             self.request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
             or self.request.META.get('REMOTE_ADDR', '')
         )
-        self.request.session['_cc_user_agent'] = (
+        login_user_agent = (
             self.request.META.get('HTTP_USER_AGENT', '')[:300]
         )
+        self.request.session['_cc_ip'] = login_ip
+        self.request.session['_cc_user_agent'] = login_user_agent
         self.request.session.save()
         profile = SecurityProfile.objects.filter(user=form.get_user(), mfa_enabled=True).first()
         if profile:
+            pending_ip = login_ip
+            pending_user_agent = login_user_agent
             self.request.session['mfa_pending_user_id'] = form.get_user().pk
             logout(self.request)
             self.request.session['mfa_pending_user_id'] = form.get_user().pk
+            self.request.session['_cc_ip'] = pending_ip
+            self.request.session['_cc_user_agent'] = pending_user_agent
             self.request.session.save()
             messages.info(self.request, 'Enter your authenticator code to complete sign in.')
             return redirect('mfa_verify')
