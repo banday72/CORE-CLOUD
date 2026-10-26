@@ -116,7 +116,9 @@ def permissions_for(employee):
         perms.update({'view_soc', 'respond_soc'})
     if team == 'networks':
         # Account authorization is an IT access-control responsibility.
-        perms.add('manage_access')
+        # Networks also owns SOC response controls, including IP and user
+        # whitelist/blacklist management.
+        perms.update({'manage_access', 'manage_soc'})
     if getattr(employee, 'is_it_manager', False) or getattr(employee, 'it_role', ''):
         perms.add('manage_it_teams')
         perms.update({'view_soc', 'respond_soc', 'manage_soc'})
