@@ -15,7 +15,7 @@
                         <div class="card border-primary mb-2">
                             <div class="card-body text-center py-2">
                                 <span class="badge bg-primary fs-6 mb-2"><i class="fas fa-user-shield me-1"></i> Step 1: HR Authorizes</span>
-                                <p class="small mb-0">HR clicks "Authorize" to grant login request. Employee status becomes <strong>Pending Approval</strong>.</p>
+                                <p class="small mb-0">Only HR clicks "Authorize" to grant a login request. Employee status becomes <strong>Pending Approval</strong>.</p>
                             </div>
                         </div>
                     </div>
@@ -31,7 +31,7 @@
                         <div class="card border-success mb-2">
                             <div class="card-body text-center py-2">
                                 <span class="badge bg-success fs-6 mb-2"><i class="fas fa-check-circle me-1"></i> Step 3: Can Login</span>
-                                <p class="small mb-0">Employee can now login with their credentials. HR/Manager login directly without approval.</p>
+                                <p class="small mb-0">Employee can now login with their credentials. HR and Managers use their own approved accounts.</p>
                             </div>
                         </div>
                     </div>
@@ -165,8 +165,8 @@
                                     <div class="modal-body">
                                         {% if emp.role in 'hr,manager' %}
                                         <div class="alert alert-success">
-                                            <strong>HR/Manager Direct Authorization</strong><br>
-                                            HR and Manager roles can login directly without manager approval.
+                                            <strong>Role-based login access</strong><br>
+                                            HR and Manager accounts are approved through their role workflow; this page is managed by HR only.
                                         </div>
                                         {% else %}
                                         <div class="alert alert-info">

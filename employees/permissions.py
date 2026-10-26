@@ -53,10 +53,13 @@ SOC_PERMISSIONS = {'view_soc', 'respond_soc', 'manage_soc'}
 
 HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - {'manage_it_teams'} - SOC_PERMISSIONS
 
+# Executives retain broad HR visibility, but user authorization is reserved
+# for the HR function itself.
+EXECUTIVE_PERMISSIONS = HR_PERMISSIONS - {'manage_access'}
+
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
     'view_employees',
-    'manage_access',
     'approve_access',
     'manage_faces',
     'manage_reviews',
@@ -74,7 +77,7 @@ MANAGER_PERMISSIONS = {
 EMPLOYEE_PERMISSIONS = set()
 
 PERMISSION_GROUPS = {
-    'executive': HR_PERMISSIONS,
+    'executive': EXECUTIVE_PERMISSIONS,
     'hr': HR_PERMISSIONS,
     'manager': MANAGER_PERMISSIONS,
     'employee': EMPLOYEE_PERMISSIONS,
