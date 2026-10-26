@@ -53,9 +53,9 @@ SOC_PERMISSIONS = {'view_soc', 'respond_soc', 'manage_soc'}
 
 HR_PERMISSIONS = set(ALL_PERMISSIONS) - IT_RESOLVE_PERMISSIONS - SOC_PERMISSIONS - {'manage_it_teams', 'manage_access'}
 
-# C-level executives are company-wide administrators. Their designation is
-# matched by is_chief_designation(), so they retain access across departments.
-EXECUTIVE_PERMISSIONS = set(ALL_PERMISSIONS)
+# C-level executives are company-wide administrators. Employee lifecycle
+# status remains an HR responsibility even for executives.
+EXECUTIVE_PERMISSIONS = set(ALL_PERMISSIONS) - {'manage_employee_status'}
 
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
