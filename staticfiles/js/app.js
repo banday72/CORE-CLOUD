@@ -6,6 +6,20 @@
 
     var App = {};
 
+    function clearStaleModalState() {
+        var visibleModal = document.querySelector(".modal.show, .modal[style*='display: block']");
+        if (visibleModal) return;
+        document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+            backdrop.remove();
+        });
+        document.body.classList.remove("modal-open");
+        document.body.style.removeProperty("overflow");
+        document.body.style.removeProperty("padding-right");
+    }
+
+    document.addEventListener("DOMContentLoaded", clearStaleModalState);
+    window.addEventListener("pageshow", clearStaleModalState);
+
     /* ------------------------------ helpers ------------------------------ */
 
     function csrfToken() {

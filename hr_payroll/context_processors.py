@@ -90,7 +90,11 @@ def login_slides(request):
     slides = []
     try:
         from employees.models import LoginSlide
-        slides = [slide.picture_b64 for slide in LoginSlide.objects.filter(is_active=True)[:6]]
+        # Keep the unauthenticated page small enough for slower browsers.
+        # Login backgrounds are stored as data URIs, so rendering several
+        # full-size images can make the page appear frozen before login.
+        slides = [slide.picture_b64 for slide in LoginSlide.objects.filter(
+            is_active=True).order_by('sort_order', 'id')[:1]]
     except Exception:
         pass
     return {'login_slides': slides}
