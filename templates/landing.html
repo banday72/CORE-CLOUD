@@ -4,258 +4,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoreCloud — Complete Company Portal | HR, Payroll &amp; Security</title>
-    <meta name="description" content="CoreCloud is a complete company portal: HR &amp; payroll automation, attendance, leaves, employee self-service, collaboration, reports and a built-in Security Operations Center.">
+    <title>CoreCloud — One secure workspace for your whole company</title>
+    <meta name="description" content="CoreCloud brings people operations, payroll, collaboration and security together in one calm, connected company portal.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231c3d5a'/%3E%3Cpath d='M46 39a13 13 0 1 1-3-18 10 10 0 0 1 3 18Z' fill='none' stroke='%237dd3fc' stroke-width='5'/%3E%3C/svg%3E">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a5276'/%3E%3Ctext x='32' y='44' font-family='Arial' font-size='36' font-weight='900' fill='white' text-anchor='middle'%3EC%3C/text%3E%3C/svg%3E">
     <style>
-        :root { --brand-deep:#16455f; --brand:#1a5276; --brand-light:#2980b9; }
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; color:#243447; background:#fff; }
-        .hero {
-            background: linear-gradient(135deg, #0d2137 0%, #1a5276 55%, #2980b9 100%);
-            color:#fff; padding:1.1rem 0 0; position:relative; overflow:hidden;
-        }
-        .hero::after { content:""; position:absolute; right:-120px; top:-80px; width:420px; height:420px; border-radius:50%; background:rgba(255,255,255,.05); }
-        .navbar-brand { font-weight:800; font-size:1.35rem; letter-spacing:.02em; }
-        .navbar-brand i { color:#7fc0ee; }
-        .nav-link { color:rgba(255,255,255,.85) !important; font-weight:500; margin-left:.4rem; }
-        .nav-link:hover { color:#fff !important; }
-        .hero-inner { padding:5.5rem 0 6rem; position:relative; z-index:1; }
-        .hero h1 { font-weight:800; font-size:2.7rem; line-height:1.15; margin-bottom:1.1rem; }
-        .hero h1 span { color:#7fc0ee; }
-        .hero p.lead { color:rgba(255,255,255,.82); font-size:1.12rem; max-width:640px; margin-bottom:1.9rem; }
-        .btn-hero-primary { background:#fff; color:var(--brand); font-weight:700; border-radius:12px; padding:.75rem 1.7rem; }
-        .btn-hero-primary:hover { background:#eaf4fb; color:var(--brand-deep); transform:translateY(-1px); }
-        .btn-hero-ghost { border:1.5px solid rgba(255,255,255,.55); color:#fff; font-weight:600; border-radius:12px; padding:.75rem 1.7rem; }
-        .btn-hero-ghost:hover { border-color:#fff; background:rgba(255,255,255,.08); color:#fff; }
-        .hero-pills { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:2.4rem; }
-        .hero-pill { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:.4rem .95rem; font-size:.82rem; font-weight:600; color:#e8f3fb; }
-        .section { padding:4.5rem 0; }
-        .section-alt { background:#f4f8fb; }
-        .section-title { font-weight:800; font-size:1.9rem; margin-bottom:.6rem; color:var(--brand-deep); }
-        .section-sub { color:#5b6b7c; max-width:680px; margin-bottom:2.6rem; }
-        .feature-card { background:#fff; border:1px solid #e3ebf2; border-radius:16px; padding:1.6rem 1.4rem; height:100%; transition:.2s; }
-        .feature-card:hover { box-shadow:0 14px 34px rgba(16,42,67,.12); transform:translateY(-3px); }
-        .feature-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.35rem; color:#fff; margin-bottom:1rem; }
-        .feature-card h5 { font-weight:700; font-size:1.05rem; margin-bottom:.5rem; }
-        .feature-card p { color:#5b6b7c; font-size:.92rem; margin:0; }
-        .steps-num { width:44px; height:44px; border-radius:50%; background:var(--brand); color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; margin-bottom:1rem; font-size:1.05rem; }
-        .cta-band { background:linear-gradient(135deg, var(--brand-deep), var(--brand-light)); color:#fff; border-radius:20px; padding:3rem 2.4rem; text-align:center; }
-        .cta-band h3 { font-weight:800; margin-bottom:.7rem; }
-        .cta-band p { color:rgba(255,255,255,.85); margin-bottom:1.6rem; }
-        footer { background:#0d2137; color:rgba(255,255,255,.72); padding:2.6rem 0 1.6rem; font-size:.9rem; }
-        footer a { color:#9fd0f0; text-decoration:none; }
-        footer a:hover { text-decoration:underline; }
-        .footer-links { display:flex; gap:1.4rem; flex-wrap:wrap; margin-bottom:1.1rem; }
+        :root { --ink:#12263a; --muted:#64748b; --navy:#183b56; --blue:#2477a8; --line:#dce8ee; --wash:#f4f9fb; --shadow:0 24px 70px rgba(18,38,58,.12); }
+        * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { margin:0; color:var(--ink); background:#fff; font-family:"Inter","Segoe UI",sans-serif; } a { text-decoration:none; }
+        .hero { position:relative; overflow:hidden; background:linear-gradient(125deg,#102d45 0%,#1b4e6d 56%,#2477a8 100%); color:#fff; }
+        .hero:before { content:""; position:absolute; width:720px; height:720px; right:-250px; top:-360px; border:1px solid rgba(255,255,255,.12); border-radius:50%; box-shadow:0 0 0 70px rgba(255,255,255,.025),0 0 0 140px rgba(255,255,255,.02); }
+        .site-nav { position:relative; z-index:2; padding:1.15rem 0; } .brand { display:inline-flex; align-items:center; gap:.65rem; color:#fff; font-weight:800; font-size:1.2rem; } .brand-mark { width:2.15rem; height:2.15rem; display:grid; place-items:center; border:1px solid rgba(255,255,255,.26); border-radius:.7rem; background:rgba(255,255,255,.12); color:#8de0ed; } .nav-link { color:rgba(255,255,255,.72)!important; font-size:.9rem; font-weight:600; } .nav-link:hover { color:#fff!important; } .nav-cta { color:var(--navy); background:#fff; border-radius:.65rem; font-weight:700; padding:.62rem 1rem; } .nav-cta:hover { color:var(--navy); background:#e8f7fb; }
+        .hero-content { position:relative; z-index:1; padding:5.2rem 0 6rem; } .eyebrow { display:inline-flex; align-items:center; gap:.5rem; color:#a7e8ef; font-size:.76rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase; } .eyebrow-dot { width:.45rem; height:.45rem; border-radius:50%; background:#74e0bd; box-shadow:0 0 0 5px rgba(116,224,189,.13); } .hero h1 { max-width:700px; margin:1.1rem 0 1.25rem; font-size:clamp(2.7rem,5vw,4.7rem); line-height:1.02; letter-spacing:-.055em; font-weight:800; } .hero h1 em { color:#8de0ed; font-style:normal; } .hero-copy { max-width:610px; color:rgba(255,255,255,.76); font-size:1.08rem; line-height:1.7; } .hero-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-top:2rem; } .btn-primary-soft,.btn-outline-soft { border-radius:.7rem; padding:.8rem 1.15rem; font-weight:750; } .btn-primary-soft { color:var(--navy); background:#fff; } .btn-primary-soft:hover { color:var(--navy); background:#dff5f8; } .btn-outline-soft { color:#fff; border:1px solid rgba(255,255,255,.35); } .btn-outline-soft:hover { color:#fff; border-color:#fff; background:rgba(255,255,255,.1); } .hero-note { display:flex; flex-wrap:wrap; gap:1rem; margin-top:1.8rem; color:rgba(255,255,255,.6); font-size:.78rem; } .hero-note i { color:#8ee1c2; margin-right:.3rem; }
+        .product-window { position:relative; margin:1.5rem 0 0 1.5rem; padding:.65rem; border:1px solid rgba(255,255,255,.22); border-radius:1.1rem; background:rgba(8,28,44,.38); box-shadow:0 30px 80px rgba(3,18,31,.32); transform:rotate(1.3deg); } .window-bar { display:flex; align-items:center; gap:.35rem; padding:.15rem .4rem .65rem; } .window-bar span { width:.42rem; height:.42rem; border-radius:50%; background:rgba(255,255,255,.3); } .window-title { margin-left:.35rem; color:rgba(255,255,255,.48); font-size:.65rem; } .dashboard { display:grid; grid-template-columns:90px 1fr; min-height:340px; overflow:hidden; border-radius:.7rem; background:#f7fbfc; color:var(--ink); } .dashboard-side { padding:.9rem .65rem; background:#12344c; } .side-logo { width:1.45rem; height:1.45rem; margin:0 auto 1.25rem; border-radius:.45rem; background:#6ed0de; } .side-line { height:.4rem; margin:.65rem .15rem; border-radius:1rem; background:rgba(255,255,255,.18); } .side-line.active { background:#73d4c0; } .dashboard-main { padding:1.05rem; } .dash-top { display:flex; justify-content:space-between; align-items:center; } .dash-top h6 { margin:0; font-size:.8rem; font-weight:800; } .dash-user { width:1.3rem; height:1.3rem; border-radius:50%; background:#b7d8e1; } .dash-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.55rem; margin-top:1rem; } .dash-stat,.dash-panel { padding:.7rem; border:1px solid #e1edf0; border-radius:.55rem; background:#fff; } .dash-stat small,.dash-panel small { display:block; color:#7d929d; font-size:.57rem; } .dash-stat strong { display:block; margin-top:.2rem; font-size:1.05rem; } .dash-stat strong.green { color:#20a477; } .dash-panels { display:grid; grid-template-columns:1.25fr 1fr; gap:.55rem; margin-top:.55rem; } .chart { display:flex; align-items:end; gap:.25rem; height:74px; padding-top:.8rem; } .chart i { flex:1; min-height:20%; border-radius:.2rem .2rem 0 0; background:#91d6db; } .chart i:nth-child(2n) { background:#2a83a8; } .activity { display:flex; gap:.4rem; align-items:center; margin-top:.72rem; color:#5d7580; font-size:.58rem; } .activity b { width:.38rem; height:.38rem; border-radius:50%; background:#6ed0b4; }
+        .trust { padding:1.25rem 0; border-bottom:1px solid #e7eff2; } .trust-row { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:1rem; color:#7a8b96; font-size:.78rem; font-weight:700; } .trust-row strong { color:var(--ink); font-size:.85rem; } .trust-item i { margin-right:.35rem; color:var(--blue); } .section { padding:6rem 0; } .section-wash { background:var(--wash); } .section-heading { max-width:650px; margin-bottom:2.7rem; } .section-heading h2 { margin:.75rem 0 .8rem; font-size:clamp(2rem,3.2vw,3rem); line-height:1.08; letter-spacing:-.045em; font-weight:800; } .section-heading p { color:var(--muted); line-height:1.7; } .eyebrow-dark { color:var(--blue); } .eyebrow-dark .eyebrow-dot { background:#2cb595; box-shadow:0 0 0 5px rgba(44,181,149,.12); }
+        .group-card { height:100%; padding:1.65rem; border:1px solid var(--line); border-radius:1rem; background:#fff; transition:transform .2s,box-shadow .2s; } .group-card:hover { transform:translateY(-4px); box-shadow:var(--shadow); } .group-icon { width:2.8rem; height:2.8rem; display:grid; place-items:center; margin-bottom:1.2rem; border-radius:.8rem; color:#156080; background:#e0f3f5; } .group-card:nth-child(2) .group-icon { color:#168263; background:#e1f6ed; } .group-card:nth-child(3) .group-icon { color:#7754a5; background:#f0e9fb; } .group-card:nth-child(4) .group-icon { color:#b56a20; background:#fff0dc; } .group-card h3 { margin-bottom:.45rem; font-size:1.1rem; font-weight:800; } .group-card p { min-height:48px; margin-bottom:1.1rem; color:var(--muted); font-size:.9rem; line-height:1.55; } .group-list { display:flex; flex-wrap:wrap; gap:.45rem; } .group-list span { padding:.35rem .55rem; border-radius:.4rem; background:#f3f7f8; color:#466170; font-size:.73rem; font-weight:700; }
+        .workflow { position:relative; } .workflow:before { content:""; position:absolute; left:16%; right:16%; top:1.3rem; border-top:1px dashed #b7d3db; } .workflow-step { position:relative; z-index:1; } .step-number { width:2.65rem; height:2.65rem; display:grid; place-items:center; margin-bottom:1.1rem; border:5px solid #eef8f9; border-radius:50%; background:var(--blue); color:#fff; font-weight:800; } .workflow-step h3 { font-size:1rem; font-weight:800; } .workflow-step p { color:var(--muted); font-size:.9rem; line-height:1.6; }
+        .security-panel { overflow:hidden; border-radius:1.2rem; background:#102d45; color:#fff; box-shadow:var(--shadow); } .security-copy { padding:2.8rem; } .security-copy h2 { margin:.75rem 0 1rem; font-size:clamp(1.9rem,3vw,2.7rem); letter-spacing:-.04em; font-weight:800; } .security-copy p { color:rgba(255,255,255,.68); line-height:1.7; } .security-list { display:grid; gap:.85rem; margin:1.6rem 0 0; padding:0; list-style:none; color:rgba(255,255,255,.82); font-size:.9rem; } .security-list i { width:1.2rem; color:#78dfbe; } .security-feed { height:100%; padding:2.8rem 2rem; background:linear-gradient(145deg,#1a4964,#0d2539); } .feed-card { padding:1.2rem; border:1px solid rgba(255,255,255,.12); border-radius:.8rem; background:rgba(3,18,30,.4); font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.68rem; } .feed-head { display:flex; justify-content:space-between; padding-bottom:.85rem; border-bottom:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.58); font-family:"Inter",sans-serif; font-size:.75rem; } .feed-row { display:grid; grid-template-columns:3.3rem 1fr; gap:.5rem; margin-top:1rem; color:rgba(255,255,255,.7); } .feed-row b { color:#73dfbd; } .feed-row.warn b { color:#f4c66d; } .feed-row.block b { color:#ff8c8c; }
+        .cta { padding:5rem 0 6rem; } .cta-card { position:relative; overflow:hidden; padding:3.2rem 2rem; border-radius:1.2rem; background:linear-gradient(120deg,#e1f5f2,#e5f3fa); text-align:center; } .cta-card h2 { position:relative; z-index:1; margin-bottom:.75rem; font-size:clamp(1.9rem,3vw,2.7rem); letter-spacing:-.04em; font-weight:800; } .cta-card p { position:relative; z-index:1; margin-bottom:1.5rem; color:var(--muted); } .btn-ink { position:relative; z-index:1; color:#fff; background:var(--navy); border-radius:.65rem; padding:.8rem 1.2rem; font-weight:750; } .btn-ink:hover { color:#fff; background:#0e2b42; } footer { padding:2rem 0; background:#102d45; color:rgba(255,255,255,.58); font-size:.8rem; } footer a { color:rgba(255,255,255,.75); } footer a:hover { color:#fff; } .footer-brand { color:#fff; font-weight:800; }
+        @media (max-width:991.98px) { .hero-content { padding-top:3.8rem; } .product-window { margin:3.5rem 0 0; transform:none; } .navbar-collapse { margin-top:1rem; padding:.75rem; border-radius:.75rem; background:rgba(6,27,43,.35); } .nav-cta { display:inline-block; margin-top:.4rem; } .workflow:before { display:none; } }
+        @media (max-width:575.98px) { .hero-content { padding:3rem 0 4.2rem; } .hero h1 { font-size:2.7rem; } .dashboard { grid-template-columns:62px 1fr; } .dash-panels { grid-template-columns:1fr; } .dash-panels .dash-panel:last-child { display:none; } .security-copy,.security-feed { padding:2rem 1.35rem; } .section { padding:4.5rem 0; } .trust-row { justify-content:flex-start; } }
     </style>
 </head>
 <body>
-
-<div class="hero">
-    <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a class="navbar-brand text-white" href="{% url 'landing' %}"><i class="fas fa-cloud me-2"></i>CoreCloud</a>
-            <button class="navbar-toggler border-white" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-                <i class="fas fa-bars text-white"></i>
-            </button>
-            <div class="collapse navbar-collapse" id="nav">
-                <ul class="navbar-nav ms-auto align-items-lg-center">
-                    <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#how">How it works</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#security">Security</a></li>
-                    <li class="nav-item ms-lg-2"><a class="btn btn-sm btn-hero-ghost" href="{% url 'login' %}">Sign in</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container hero-inner">
-        <h1>The complete <span>company portal</span><br>for modern teams</h1>
-        <p class="lead">
-            CoreCloud brings HR, payroll, attendance, leaves, collaboration, analytics and a
-            built-in Security Operations Center into one portal — so your whole company
-            runs on a single, secure system.
-        </p>
-        <div class="d-flex flex-wrap gap-3">
-            <a href="{% url 'login' %}" class="btn btn-hero-primary"><i class="fas fa-sign-in-alt me-2"></i>Sign in to your portal</a>
-            <a href="{% url 'face_login' %}" class="btn btn-hero-ghost"><i class="fas fa-fingerprint me-2"></i>Login with Face</a>
-        </div>
-        <div class="hero-pills">
-            <span class="hero-pill"><i class="fas fa-check me-1"></i> HR &amp; Payroll</span>
-            <span class="hero-pill"><i class="fas fa-check me-1"></i> Attendance &amp; Leaves</span>
-            <span class="hero-pill"><i class="fas fa-check me-1"></i> Face Login</span>
-            <span class="hero-pill"><i class="fas fa-check me-1"></i> SOC / SIEM Security</span>
-            <span class="hero-pill"><i class="fas fa-check me-1"></i> Reports &amp; Payroll PDFs</span>
-            <span class="hero-pill"><i class="fas fa-check me-1"></i> Chat, Mail &amp; Meetings</span>
-        </div>
-    </div>
-</div>
-
-<section class="section" id="features">
-    <div class="container">
-        <h2 class="section-title">Everything your company needs</h2>
-        <p class="section-sub">One portal instead of five different tools — from onboarding an employee to paying them, and keeping the whole system secure.</p>
-        <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#1a5276;"><i class="fas fa-users"></i></div>
-                    <h5>Employee Management</h5>
-                    <p>Full employee lifecycle: departments, designations, org chart, approvals, authorized users and bulk CSV import.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#2980b9;"><i class="fas fa-money-check-alt"></i></div>
-                    <h5>Automated Payroll</h5>
-                    <p>Payroll generated from attendance and leave data, configurable policies, tax/deductions and downloadable salary slips.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#16a085;"><i class="fas fa-calendar-check"></i></div>
-                    <h5>Attendance &amp; Leaves</h5>
-                    <p>Clock in/out tracking, leave requests with manager approval, and everything feeds straight into payroll.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#8e44ad;"><i class="fas fa-fingerprint"></i></div>
-                    <h5>AI Face Login</h5>
-                    <p>Passwordless sign-in with live camera face recognition — no shared passwords, no forgotten credentials.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#e67e22;"><i class="fas fa-shield-alt"></i></div>
-                    <h5>Security Operations Center</h5>
-                    <p>Built-in SOC/SIEM: event audit trail, threat detection rules, alerts, incidents and automated response (auto-lock, session revoke).</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#c0392b;"><i class="fas fa-chart-line"></i></div>
-                    <h5>Reports &amp; Analytics</h5>
-                    <p>Dashboards for HR, attendance and payroll with light/dark themes and CSV exports for management.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#2c3e50;"><i class="fas fa-comments"></i></div>
-                    <h5>Collaboration</h5>
-                    <p>Internal mail, team chat and meetings built in — your team never needs a separate messaging tool.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#16a085;"><i class="fas fa-book-open"></i></div>
-                    <h5>HR Modules</h5>
-                    <p>Training, travel, overtime, documents, announcements and an IT help desk — the full HR toolkit out of the box.</p>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:#2980b9;"><i class="fas fa-link"></i></div>
-                    <h5>Public Payslip Links</h5>
-                    <p>Secure, revocable links so employees can fetch their payslip without an account — great for contractors.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section section-alt" id="how">
-    <div class="container">
-        <h2 class="section-title">Live in three simple steps</h2>
-        <p class="section-sub">From signup to your whole team working on the portal — usually the same week.</p>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="steps-num">1</div>
-                <h5 class="fw-bold mb-2">Set up your company</h5>
-                <p class="text-secondary">Departments, payroll policies and an admin account are configured for you during onboarding.</p>
-            </div>
-            <div class="col-md-4">
-                <div class="steps-num">2</div>
-                <h5 class="fw-bold mb-2">Import your employees</h5>
-                <p class="text-secondary">Bulk-import from CSV or add employees one by one. Each gets secure login and optional face registration.</p>
-            </div>
-            <div class="col-md-4">
-                <div class="steps-num">3</div>
-                <h5 class="fw-bold mb-2">Run payroll &amp; stay secure</h5>
-                <p class="text-secondary">Attendance feeds payroll automatically, while the SOC watches every login and blocks threats in real time.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section" id="security">
-    <div class="container">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-6">
-                <h2 class="section-title">Security is built in, not bolted on</h2>
-                <p class="section-sub" style="margin-bottom:1.4rem;">
-                    CoreCloud ships with its own Security Operations Center — the same kind of
-                    tooling large companies use, running inside your portal.
-                </p>
-                <ul class="list-unstyled">
-                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Full audit trail</strong> — every login, change and export is logged.</li>
-                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Threat detection</strong> — brute force, credential stuffing, suspicious IPs and more.</li>
-                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Auto-response</strong> — suspicious accounts are locked and sessions revoked automatically.</li>
-                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Account controls</strong> — IT can blacklist/whitelist users and IPs instantly.</li>
-                    <li class="mb-3"><i class="fas fa-check-circle text-success me-2"></i><strong>Hardened sign-in</strong> — lockout after failed attempts, HTTPS-only cookies, face login.</li>
-                </ul>
-            </div>
-            <div class="col-lg-6">
-                <div class="feature-card p-4">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="feature-icon mb-0 me-3" style="background:#c0392b;"><i class="fas fa-shield-alt"></i></div>
-                        <div>
-                            <h5 class="mb-0">Security Operations Center</h5>
-                            <small class="text-secondary">Live event feed · Detection rules · Incidents</small>
-                        </div>
-                    </div>
-                    <div class="rounded-3 bg-dark text-light p-3 font-monospace small" style="line-height:1.9;">
-                        <div><span class="text-success">ALLOW</span> &nbsp;login &nbsp;&nbsp;user=EMP004 &nbsp;ip=10.0.4.21</div>
-                        <div><span class="text-warning">WARN</span> &nbsp;3 failed logins in 4m &nbsp;user=EMP011</div>
-                        <div><span class="text-danger">BLOCK</span> &nbsp;brute_force detected → account locked</div>
-                        <div><span class="text-info">ACTION</span> &nbsp;sessions revoked · IT notified</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section pt-0">
-    <div class="container">
-        <div class="cta-band">
-            <h3>Ready to run your company on one portal?</h3>
-            <p>Sign in to your CoreCloud workspace or try passwordless face login.</p>
-            <div class="d-flex flex-wrap gap-3 justify-content-center">
-                <a href="{% url 'login' %}" class="btn btn-hero-primary"><i class="fas fa-sign-in-alt me-2"></i>Sign in</a>
-                <a href="{% url 'face_login' %}" class="btn btn-hero-ghost"><i class="fas fa-fingerprint me-2"></i>Face Login</a>
-            </div>
-        </div>
-    </div>
-</section>
-
-<footer>
-    <div class="container">
-        <div class="footer-links">
-            <a href="#features">Features</a>
-            <a href="#security">Security</a>
-            <a href="{% url 'terms' %}">Terms of Service</a>
-            <a href="{% url 'privacy' %}">Privacy Policy</a>
-            <a href="{% url 'login' %}">Sign in</a>
-        </div>
-        <div class="d-flex flex-wrap justify-content-between align-items-center border-top pt-3" style="border-color:rgba(255,255,255,.12) !important;">
-            <span>© {% now "Y" %} CoreCloud. All rights reserved.</span>
-            <span class="mt-2 mt-md-0">HR · Payroll · Attendance · Security — one portal.</span>
-        </div>
-    </div>
-</footer>
-
+<header class="hero">
+    <nav class="site-nav navbar navbar-expand-lg"><div class="container"><a class="brand" href="{% url 'landing' %}"><span class="brand-mark"><i class="fas fa-cloud"></i></span>CoreCloud</a><button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav" aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation"><i class="fas fa-bars text-white"></i></button><div class="collapse navbar-collapse" id="siteNav"><ul class="navbar-nav ms-auto align-items-lg-center gap-lg-3"><li class="nav-item"><a class="nav-link" href="#features">Platform</a></li><li class="nav-item"><a class="nav-link" href="#how">How it works</a></li><li class="nav-item"><a class="nav-link" href="#security">Security</a></li><li class="nav-item ms-lg-2"><a class="nav-cta" href="{% url 'login' %}">Sign in <i class="fas fa-arrow-right ms-1 small"></i></a></li></ul></div></div></nav>
+    <div class="container hero-content"><div class="row align-items-center g-4"><div class="col-lg-6"><div class="eyebrow"><span class="eyebrow-dot"></span>The operating system for your team</div><h1>One calm place to <em>run your company.</em></h1><p class="hero-copy">CoreCloud connects people operations, payroll, collaboration and security in one workspace — so your team can spend less time chasing systems and more time moving forward.</p><div class="hero-actions"><a href="{% url 'login' %}" class="btn btn-primary-soft"><i class="fas fa-arrow-right me-2"></i>Enter your workspace</a><a href="#features" class="btn btn-outline-soft">Explore the platform</a></div><div class="hero-note"><span><i class="fas fa-check-circle"></i>Built for growing teams</span><span><i class="fas fa-shield-halved"></i>Security included</span></div></div><div class="col-lg-6"><div class="product-window" aria-label="CoreCloud dashboard preview"><div class="window-bar"><span></span><span></span><span></span><small class="window-title">app.corecloud / overview</small></div><div class="dashboard"><aside class="dashboard-side"><div class="side-logo"></div><div class="side-line active"></div><div class="side-line"></div><div class="side-line"></div><div class="side-line"></div><div class="side-line"></div></aside><div class="dashboard-main"><div class="dash-top"><h6>Good morning, Admin</h6><div class="dash-user"></div></div><div class="dash-grid"><div class="dash-stat"><small>Team members</small><strong>248</strong></div><div class="dash-stat"><small>Payroll status</small><strong class="green">Ready</strong></div><div class="dash-stat"><small>Open requests</small><strong>12</strong></div></div><div class="dash-panels"><div class="dash-panel"><small>Attendance overview</small><div class="chart"><i style="height:46%"></i><i style="height:72%"></i><i style="height:58%"></i><i style="height:84%"></i><i style="height:66%"></i><i style="height:92%"></i><i style="height:78%"></i></div></div><div class="dash-panel"><small>Recent activity</small><div class="activity"><b></b>Leave approved</div><div class="activity"><b></b>Payroll exported</div><div class="activity"><b></b>New team member</div></div></div></div></div></div></div></div></div>
+</header>
+<div class="trust"><div class="container"><div class="trust-row"><strong>One workspace. Every essential workflow.</strong><span class="trust-item"><i class="fas fa-users"></i>People-first</span><span class="trust-item"><i class="fas fa-lock"></i>Private by design</span><span class="trust-item"><i class="fas fa-chart-line"></i>Clearer decisions</span></div></div></div>
+<main>
+    <section class="section" id="features"><div class="container"><div class="section-heading"><div class="eyebrow eyebrow-dark"><span class="eyebrow-dot"></span>Everything connected</div><h2>Less tool sprawl. More momentum.</h2><p>Give every team the right tools without making them learn five different systems. CoreCloud keeps the work connected from the first day an employee joins through every stage of their journey.</p></div><div class="row g-4"><div class="col-md-6 col-lg-3"><article class="group-card"><div class="group-icon"><i class="fas fa-users"></i></div><h3>People</h3><p>Make every employee moment simpler, from onboarding to time off and performance.</p><div class="group-list"><span>Employee records</span><span>Attendance</span><span>Leave approvals</span><span>Org chart</span></div></article></div><div class="col-md-6 col-lg-3"><article class="group-card"><div class="group-icon"><i class="fas fa-sliders"></i></div><h3>Operations</h3><p>Turn recurring admin into reliable workflows that are easy to review and run.</p><div class="group-list"><span>Payroll</span><span>Salary slips</span><span>Expenses</span><span>Reports</span></div></article></div><div class="col-md-6 col-lg-3"><article class="group-card"><div class="group-icon"><i class="fas fa-comments"></i></div><h3>Collaboration</h3><p>Keep conversations, announcements and the everyday work of your teams in one place.</p><div class="group-list"><span>Team chat</span><span>Internal mail</span><span>Meetings</span><span>Documents</span></div></article></div><div class="col-md-6 col-lg-3"><article class="group-card"><div class="group-icon"><i class="fas fa-shield-halved"></i></div><h3>Security</h3><p>Protect sensitive company data with visibility, strong access controls and fast response.</p><div class="group-list"><span>Audit trail</span><span>Face login</span><span>Threat alerts</span><span>Auto-response</span></div></article></div></div></div></section>
+    <section class="section section-wash" id="how"><div class="container"><div class="section-heading"><div class="eyebrow eyebrow-dark"><span class="eyebrow-dot"></span>A better operating rhythm</div><h2>From setup to insight, without the handoffs.</h2><p>CoreCloud gives your people a clear path through the work that keeps the business running.</p></div><div class="row g-4 workflow"><div class="col-md-4 workflow-step"><div class="step-number">1</div><h3>Set up your foundation</h3><p>Configure teams, policies and access once. Import employee data in bulk or add people as you grow.</p></div><div class="col-md-4 workflow-step"><div class="step-number">2</div><h3>Bring everyone into the flow</h3><p>Employees manage their own requests while managers approve, collaborate and stay up to date.</p></div><div class="col-md-4 workflow-step"><div class="step-number">3</div><h3>Run with confidence</h3><p>Use connected reports and a live security view to make decisions before small issues become blockers.</p></div></div></div></section>
+    <section class="section" id="security"><div class="container"><div class="security-panel row g-0 align-items-stretch"><div class="col-lg-6 security-copy"><div class="eyebrow"><span class="eyebrow-dot"></span>Trust built in</div><h2>Your company deserves a safer default.</h2><p>CoreCloud makes security visible and actionable, not a checkbox hidden in settings. Keep a clear record of what happened and respond quickly when something looks wrong.</p><ul class="security-list"><li><i class="fas fa-check-circle"></i>Full audit trail for logins, changes and exports</li><li><i class="fas fa-check-circle"></i>Lockouts, session controls and optional face login</li><li><i class="fas fa-check-circle"></i>Threat rules, alerts and incident workflows in one view</li></ul></div><div class="col-lg-6 security-feed"><div class="feed-card"><div class="feed-head"><span>Security operations center</span><span><i class="fas fa-circle text-success me-1"></i>Live</span></div><div class="feed-row"><b>ALLOW</b><span>login · employee=EMP004</span></div><div class="feed-row warn"><b>WARN</b><span>3 failed attempts · EMP011</span></div><div class="feed-row block"><b>BLOCK</b><span>brute_force detected</span></div><div class="feed-row"><b>ACTION</b><span>session revoked · IT notified</span></div></div></div></div></div></section>
+    <section class="cta"><div class="container"><div class="cta-card"><h2>Make the work behind the work feel easy.</h2><p>Your CoreCloud workspace is ready when your team is.</p><a href="{% url 'login' %}" class="btn btn-ink">Go to your workspace <i class="fas fa-arrow-right ms-2"></i></a></div></div></section>
+</main>
+<footer><div class="container d-flex flex-wrap justify-content-between align-items-center gap-3"><a class="footer-brand" href="{% url 'landing' %}"><i class="fas fa-cloud me-2"></i>CoreCloud</a><div class="d-flex flex-wrap gap-3"><a href="#features">Platform</a><a href="#security">Security</a><a href="{% url 'terms' %}">Terms</a><a href="{% url 'privacy' %}">Privacy</a><a href="{% url 'face_login' %}">Face login</a></div><span>© {% now "Y" %} CoreCloud</span></div></footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
