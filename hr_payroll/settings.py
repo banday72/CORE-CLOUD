@@ -71,6 +71,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'hr_payroll.middleware.ActiveEmployeeMiddleware',
+    'hr_payroll.middleware.IdleSessionTimeoutMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -143,6 +144,9 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_IDLE_TIMEOUT = int(os.environ.get('SESSION_IDLE_TIMEOUT', '120'))
 
 # Security headers. On Vercel TLS terminates at the edge, so Django must
 # trust X-Forwarded-Proto to know the original request was HTTPS.
