@@ -30,7 +30,9 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get(
-        'ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]'
+        'ALLOWED_HOSTS',
+        'corecloud.vercel.app,corecloud-banday.vercel.app,'
+        'hr-payroll-system-one.vercel.app,.vercel.app,localhost,127.0.0.1'
     ).split(',') if h.strip()
 ]
 
@@ -159,6 +161,7 @@ X_FRAME_OPTIONS = 'DENY'
 
 AUTHENTICATION_BACKENDS = [
     'hr_payroll.backends.AuthorizedUserBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 MEDIA_URL = '/media/'

@@ -25,7 +25,6 @@ def face_login_check(request):
                 face_registered=True,
                 face_data__isnull=False,
                 status='active',
-                is_authorized=True,
                 user__isnull=False,
             ).exclude(face_data='').select_related('user')
 

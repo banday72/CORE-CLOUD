@@ -3,11 +3,6 @@ import io
 import base64
 import json
 from datetime import date, timedelta
-from decimal import Decimal, InvalidOperation
-
-from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
-from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.files.uploadedfile import UploadedFile
@@ -50,25 +45,6 @@ def generate_employee_id(designation=None, department=None):
     return '%s%03d' % (prefix, highest + 1)
 
 
-def save_employee_with_unique_id(employee, designation=None, department=None, preferred_id=None):
-    """Save an employee, retrying when a concurrent create took the same ID."""
-    last_error = None
-    for _ in range(5):
-        employee.employee_id = preferred_id or generate_employee_id(designation, department)
-        try:
-            with transaction.atomic():
-                employee.save()
-            return employee
-        except IntegrityError as exc:
-            last_error = exc
-            if not Employee.objects.filter(employee_id=employee.employee_id).exists():
-                raise
-            employee.pk = None
-            if preferred_id:
-                raise
-    raise last_error
-
-
 def get_employee(user):
     try:
         return Employee.objects.get(user=user)
@@ -78,12 +54,9 @@ def get_employee(user):
 
 PROFILE_MIME = {
     'png': 'image/png', 'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
-    'gif': 'image/gif', 'webp': 'image/webp',
+    'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml',
     'pdf': 'application/pdf',
 }
-
-MAX_PROFILE_PICTURE_BYTES = 5 * 1024 * 1024
-MAX_BULK_IMPORT_BYTES = 5 * 1024 * 1024
 
 
 def _compress_image(payload, ext):
@@ -122,10 +95,8 @@ def store_picture_as_b64(form, instance):
     mime = PROFILE_MIME.get(ext, 'application/octet-stream')
     try:
         upload.seek(0)
-        payload = upload.read(MAX_PROFILE_PICTURE_BYTES + 1)
+        payload = upload.read()
     except (ValueError, OSError):
-        return
-    if len(payload) > MAX_PROFILE_PICTURE_BYTES:
         return
     compressed = _compress_image(payload, ext)
     if compressed:
@@ -142,10 +113,8 @@ def file_to_data_uri(upload):
     mime = PROFILE_MIME.get(ext, 'application/octet-stream')
     try:
         upload.seek(0)
-        payload = upload.read(MAX_PROFILE_PICTURE_BYTES + 1)
+        payload = upload.read()
     except (ValueError, OSError):
-        return None
-    if len(payload) > MAX_PROFILE_PICTURE_BYTES:
         return None
     compressed = _compress_image(payload, ext)
     if compressed:
@@ -396,7 +365,8 @@ def employee_create(request):
         if form.is_valid():
             emp = form.save(commit=False)
             store_picture_as_b64(form, emp)
-            save_employee_with_unique_id(emp, emp.designation, emp.department)
+            emp.employee_id = generate_employee_id(emp.designation, emp.department)
+            emp.save()
             user = User.objects.create_user(
                 username=emp.employee_id,
                 email=emp.email,
@@ -740,7 +710,7 @@ def toggle_authorize(request, pk):
 
 GRANTABLE_PERMISSIONS = sorted(
     ALL_PERMISSIONS - {
-        'manage_access', 'approve_access', 'manage_employee_status', 'manage_it_teams',
+        'manage_access', 'manage_employee_status', 'manage_it_teams',
         'view_soc', 'respond_soc', 'manage_soc',
     }
 )
@@ -837,7 +807,7 @@ def pending_approvals(request):
         return redirect('dashboard')
 
     pending = Employee.objects.select_related('department', 'approved_by').filter(
-        is_authorized=False, status='active', role='employee'
+        is_authorized=True, approved_by_manager=False, status='active', role='employee'
     )
     search = request.GET.get('search', '')
     if search:
@@ -871,7 +841,6 @@ def manager_approve(request, pk):
         ajax_message = None
         ajax_type = 'success'
         if action == 'approve':
-            emp.is_authorized = True
             emp.approved_by_manager = True
             emp.approved_by = request.user
             from django.utils import timezone
@@ -967,11 +936,8 @@ def login_slide_toggle(request, pk):
 def bulk_import_employees(request):
     if request.method == 'POST' and request.FILES.get('csv_file'):
         csv_file = request.FILES['csv_file']
-        if csv_file.size > MAX_BULK_IMPORT_BYTES:
-            messages.error(request, 'CSV file is too large (maximum 5 MB).')
-            return redirect('bulk_import')
         try:
-            decoded_file = csv_file.read().decode('utf-8-sig')
+            decoded_file = csv_file.read().decode('utf-8')
             io_string = io.StringIO(decoded_file)
             reader = csv.DictReader(io_string)
 
@@ -994,29 +960,13 @@ def bulk_import_employees(request):
                         skipped_count += 1
                         continue
 
-                    try:
-                        validate_email(email)
-                    except ValidationError:
-                        skipped_count += 1
-                        errors.append(f'Row {emp_id or "?"}: invalid email "{email}"')
-                        continue
-
-                    try:
-                        salary_value = Decimal(salary)
-                    except (InvalidOperation, ValueError):
-                        skipped_count += 1
-                        errors.append(f'Row {emp_id or "?"}: invalid salary "{salary}"')
-                        continue
-                    if salary_value < 0:
-                        skipped_count += 1
-                        errors.append(f'Row {emp_id or "?"}: salary cannot be negative')
-                        continue
-
                     department = None
                     if department_name:
                         department, _ = Department.objects.get_or_create(name=department_name)
 
-                    if emp_id and Employee.objects.filter(employee_id=emp_id).exists():
+                    if not emp_id:
+                        emp_id = generate_employee_id(designation, department)
+                    elif Employee.objects.filter(employee_id=emp_id).exists():
                         skipped_count += 1
                         continue
 
@@ -1024,20 +974,18 @@ def bulk_import_employees(request):
                         skipped_count += 1
                         continue
 
-                    emp = Employee(
+                    emp = Employee.objects.create(
+                        employee_id=emp_id,
                         first_name=first_name,
                         last_name=last_name,
                         email=email,
                         department=department,
                         designation=designation,
-                        salary=salary_value,
+                        salary=float(salary),
                         role=role if role in ('employee', 'hr', 'manager') else 'employee',
                         date_of_joining=date.today(),
                         status='active',
                     )
-                    save_employee_with_unique_id(
-                        emp, designation, department, preferred_id=emp_id or None)
-                    emp_id = emp.employee_id
 
                     user = User.objects.create_user(
                         username=emp_id,

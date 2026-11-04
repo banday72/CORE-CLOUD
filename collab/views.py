@@ -152,7 +152,7 @@ def _body_html(msg):
 def _reply_quote_html(parent):
     """Outlook-style quoted block shown under a reply box."""
     stamp = parent.created_at.strftime('%b %d, %Y %H:%M')
-    sender_name = html_escape(parent.sender.full_name if parent.sender else 'System')
+    sender_name = parent.sender.full_name if parent.sender else 'System'
     header = f'<div class="quote-header">On {stamp}, {sender_name} wrote:</div>'
     return header + _body_html(parent)
 
@@ -244,11 +244,6 @@ def mail_compose(request):
                 Employee.objects.filter(status='active').values_list('pk', flat=True)
             )
 
-        allowed_ids = set(
-            accessible_employees(FEATURE_MAIL).values_list('pk', flat=True)
-        )
-        to_ids &= allowed_ids
-        cc_ids &= allowed_ids
         to_ids.discard(me.pk)
         cc_ids.discard(me.pk)
         cc_ids -= to_ids

@@ -9,17 +9,16 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hr_payroll.settings')
 import django
 django.setup()
 
-if os.environ.get('RUN_MIGRATIONS_ON_BOOT') == 'True':
-    from django.core.management import call_command
-    try:
-        call_command('migrate', '--noinput', verbosity=0)
-    except Exception:
-        pass
+from django.core.management import call_command
+try:
+    call_command('migrate', '--run-syncdb', '--noinput', verbosity=0)
+except Exception:
+    pass
 
 
 def seed_demo():
     from django.contrib.auth.models import User
-    from employees.models import Employee, Department, generate_temp_password
+    from employees.models import Employee, Department
     from datetime import date
     from django.db import transaction
 
@@ -40,7 +39,7 @@ def seed_demo():
         depts[name] = d
 
     def get_or_create_emp(emp_id, first, last, email, dept_name, designation, salary,
-                          role='employee', reports_to=None, password=None, emp_type='EMP'):
+                          role='employee', reports_to=None, password='employee123', emp_type='EMP'):
         existing = Employee.objects.filter(employee_id=emp_id).select_related('user').first()
         if existing:
             return existing
@@ -48,8 +47,7 @@ def seed_demo():
             username=emp_id,
             defaults={'email': email, 'first_name': first, 'last_name': last})
         if created:
-            user.set_password(
-                password or os.environ.get('SEED_DEMO_PASSWORD') or generate_temp_password())
+            user.set_password(password)
             user.save()
         emp = Employee.objects.create(
             employee_id=emp_id, first_name=first, last_name=last,
@@ -57,7 +55,7 @@ def seed_demo():
             designation=designation, date_of_joining=date(2021, 1, 1),
             salary=salary, status='active', role=role,
             is_authorized=True, approved_by_manager=True,
-            reports_to=reports_to, must_change_password=True)
+            reports_to=reports_to)
         emp.user = user
         emp.save()
         return emp
@@ -65,15 +63,15 @@ def seed_demo():
     # Demo org chart (idempotent: never resets passwords of existing users).
     with transaction.atomic():
         ceo = get_or_create_emp('CEO001', 'Ahmed', 'Banday', 'ahmed.banday@company.com',
-            'Operations', 'CEO', 500000, role='manager')
+            'Operations', 'CEO', 500000, role='manager', password='ceo123')
         coo = get_or_create_emp('COO001', 'Ali', 'Raza', 'ali.raza@company.com',
-            'Operations', 'Chief Operating Officer', 300000, role='manager', reports_to=ceo)
+            'Operations', 'Chief Operating Officer', 300000, role='manager', reports_to=ceo, password='coo123')
         cio = get_or_create_emp('CIO001', 'Zainab', 'Ahmed', 'zainab.ahmed@company.com',
-            'Engineering', 'Chief Information Officer', 300000, role='manager', reports_to=ceo)
+            'Engineering', 'Chief Information Officer', 300000, role='manager', reports_to=ceo, password='cio123')
         cso = get_or_create_emp('CSO001', 'Bilal', 'Sheikh', 'bilal.sheikh@company.com',
-            'Marketing', 'Chief Strategic Officer', 300000, role='manager', reports_to=ceo)
+            'Marketing', 'Chief Strategic Officer', 300000, role='manager', reports_to=ceo, password='cso123')
         cfo = get_or_create_emp('CFO001', 'Usman', 'Tariq', 'usman.tariq@company.com',
-            'Finance', 'Chief Financial Officer', 300000, role='manager', reports_to=ceo)
+            'Finance', 'Chief Financial Officer', 300000, role='manager', reports_to=ceo, password='cfo123')
         get_or_create_emp('EMP001', 'Hamza', 'Tariq', 'hamza.tariq@company.com',
             'Operations', 'Operations Manager', 85000, reports_to=coo)
         get_or_create_emp('EMP002', 'Kamran', 'Shah', 'kamran.shah@company.com',
@@ -99,16 +97,34 @@ def seed_demo():
         get_or_create_emp('EMP012', 'Usman', 'Ali', 'usman.ali@company.com',
             'Human Resources', 'HR Manager', 80000, reports_to=cfo)
 
+        from payroll.models import PublicPayrollLink
+        emp001 = Employee.objects.filter(employee_id='EMP001').first()
+        if emp001 and not PublicPayrollLink.objects.filter(employee=emp001).exists():
+            PublicPayrollLink.objects.create(employee=emp001, is_active=True)
 
 
-
-if os.environ.get('SEED_DEMO') == 'True' and os.environ.get('SEED_DEMO_PASSWORD'):
+if os.environ.get('SEED_DEMO', 'False') == 'True':
     try:
         seed_demo()
     except Exception:
         pass
 
 from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
 
-app = get_wsgi_application()
-application = app
+def handler(request):
+    status_code = 200
+    headers_dict = {}
+
+    def start_response(status, headers, exc_info=None):
+        nonlocal status_code, headers_dict
+        status_code = int(status.split(' ', 1)[0])
+        headers_dict = dict(headers)
+
+    response_body = b''.join(application(request.environ, start_response))
+
+    return {
+        'statusCode': status_code,
+        'headers': headers_dict,
+        'body': response_body.decode('utf-8', errors='replace'),
+    }

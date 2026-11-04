@@ -338,7 +338,7 @@
             <a class="nav-link {% if 'announcement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'announcement_list' %}">
                 <i class="fas fa-bullhorn nav-icon" style="color:#f6c23e;"></i> Announcements
             </a>
-            <a class="nav-link {% if request.resolver_match.url_name == 'my_payslips' %}active{% endif %}" href="{% url 'my_payslips' %}">
+            <a class="nav-link" href="{% url 'dashboard' %}#my-payrolls">
                 <i class="fas fa-money-bill-wave nav-icon" style="color:#1cc88a;"></i> Salary Slips
             </a>
             <a class="nav-link {% if 'expense_claim' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'expense_claim_list' %}">

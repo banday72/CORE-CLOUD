@@ -1,10 +1,10 @@
 from django.urls import path
 from . import views
+from . import views_public
 
 urlpatterns = [
+    path('p/<str:employee_id>/<str:token>/', views_public.public_salary_slip, name='public_salary_slip'),
     path('', views.payroll_list, name='payroll_list'),
-    path('my/', views.my_payslips, name='my_payslips'),
-    path('my/<int:year>/<int:month>/pdf/', views.my_payslip_pdf, name='my_payslip_pdf'),
     path('create/', views.payroll_create, name='payroll_create'),
     path('<int:pk>/', views.payroll_detail, name='payroll_detail'),
     path('<int:pk>/edit/', views.payroll_update, name='payroll_update'),

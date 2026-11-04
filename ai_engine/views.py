@@ -1,7 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from employees.decorators import permission_required
-from employees.permissions import permissions_for_user
 from .analytics import (
     attendance_analytics, payroll_anomaly_detection,
     employee_risk_prediction, salary_recommendations,
@@ -12,12 +11,10 @@ from .analytics import (
 @login_required
 def ai_chatbot(request):
     response = None
-    can_view_all = (request.user.is_superuser
-                    or bool(permissions_for_user(request.user) & {'view_reports', 'manage_payroll'}))
     if request.method == 'POST':
         message = request.POST.get('message', '').strip()
         if message:
-            response = chatbot_response(message, request.user, can_view_all=can_view_all)
+            response = chatbot_response(message, request.user)
     return render(request, 'ai/chatbot.html', {'response': response})
 
 

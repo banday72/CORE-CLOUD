@@ -27,7 +27,7 @@ class InternalMailTests(TestCase):
             user=user, employee_id=emp_id, first_name=first, last_name=last,
             email=f'{emp_id.lower()}@example.com', department=self.dept,
             designation=designation, date_of_joining=date(2020, 1, 1),
-            salary=Decimal('1000.00'), status='active', is_authorized=True,
+            salary=Decimal('1000.00'), status='active',
         )
 
     def _mail_from_b_to_a(self):
@@ -294,7 +294,6 @@ class CollabAccessTests(TestCase):
             email=f'{emp_id.lower()}@example.com', department=self.dept,
             designation=designation, date_of_joining=date(2020, 1, 1),
             salary=Decimal('1000.00'), status='active', support_team=support_team,
-            is_authorized=True,
         )
 
     def _block(self, emp, feature):
@@ -442,7 +441,7 @@ class ChatCallTests(TestCase):
             user=user, employee_id=emp_id, first_name=first, last_name=last,
             email=f'{emp_id.lower()}@example.com', department=self.dept,
             designation=designation, date_of_joining=date(2020, 1, 1),
-            salary=Decimal('1000.00'), status='active', is_authorized=True,
+            salary=Decimal('1000.00'), status='active',
         )
 
     def test_chat_page_shows_audio_and_video_buttons(self):

@@ -1,5 +1,4 @@
 import os
-import secrets
 import sys
 import django
 from decimal import Decimal
@@ -12,32 +11,16 @@ from django.contrib.auth.models import User
 from employees.models import Department, Employee
 from attendance.models import Attendance
 from leaves.models import LeaveType, Leave
-from payroll.models import Payroll, PayrollPolicy, BoutiqueProduct, BoutiqueIssue, BudgetLoan
+from payroll.models import Payroll, PayrollPolicy, BoutiqueProduct, BoutiqueIssue, BudgetLoan, PublicPayrollLink
 from datetime import date, time, timedelta
 import calendar
-
-_GENERATED_PASSWORDS = {}
-
-
-def seed_password(env_name, label):
-    """Use an env-provided password, otherwise generate one and report it once."""
-    value = os.environ.get(env_name)
-    if value:
-        return value
-    value = secrets.token_urlsafe(12)
-    _GENERATED_PASSWORDS[label] = value
-    return value
-
 
 print("Seeding database...")
 
 # Create superuser
-admin_username = os.environ.get('DJANGO_SUPERUSER_USERNAME', 'admin')
-admin_email = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@hrpayroll.com')
-if not User.objects.filter(username=admin_username).exists():
-    admin_password = seed_password('DJANGO_SUPERUSER_PASSWORD', admin_username)
-    User.objects.create_superuser(admin_username, admin_email, admin_password)
-    print(f"Created superuser: {admin_username}")
+if not User.objects.filter(username='admin').exists():
+    User.objects.create_superuser('admin', 'admin@hrpayroll.com', 'admin123')
+    print("Created superuser: admin / admin123")
 
 # Create departments
 departments_data = [
@@ -57,25 +40,24 @@ print(f"Created {len(departments)} departments")
 # Create CEO
 ceo_emp = None
 if not Employee.objects.filter(employee_id='CEO001').exists():
-    ceo_password = seed_password('SEED_CEO001_PASSWORD', 'CEO001')
     ceo_user, _ = User.objects.get_or_create(username='CEO001',
         defaults={'email': 'ahmed.banday@company.com', 'first_name': 'Ahmed', 'last_name': 'Banday'})
-    ceo_user.set_password(ceo_password)
+    ceo_user.set_password('ceo123')
     ceo_user.save()
     ceo_emp = Employee.objects.create(
         employee_id='CEO001', first_name='Ahmed', last_name='Banday',
         email='ahmed.banday@company.com', phone='0300-0000000',
         designation='CEO', date_of_joining=date(2020, 1, 1),
         salary=500000, status='active', role='manager',
-        is_authorized=True, approved_by_manager=True, must_change_password=True)
+        is_authorized=True, approved_by_manager=True)
     ceo_emp.user = ceo_user
     ceo_emp.save()
-    print("Created CEO: CEO001")
+    print("Created CEO: CEO001 / ceo123")
 else:
     ceo_emp = Employee.objects.get(employee_id='CEO001')
 
 # C-Level Officers (report to CEO)
-def create_officer(emp_id, first, last, email, dept, designation, salary):
+def create_officer(emp_id, first, last, email, dept, designation, salary, password):
     emp, created = Employee.objects.get_or_create(
         employee_id=emp_id,
         defaults={
@@ -84,31 +66,29 @@ def create_officer(emp_id, first, last, email, dept, designation, salary):
             'date_of_joining': date(2020, 6, 1), 'salary': salary,
             'status': 'active', 'role': 'manager', 'is_authorized': True,
             'approved_by_manager': True, 'reports_to': ceo_emp,
-            'must_change_password': True,
         }
     )
     if created:
-        password = seed_password(f'SEED_{emp_id}_PASSWORD', emp_id)
         user, _ = User.objects.get_or_create(username=emp_id,
             defaults={'email': email, 'first_name': first, 'last_name': last})
         user.set_password(password)
         user.save()
         emp.user = user
         emp.save()
-        print(f"Created {designation}: {emp_id}")
+        print(f"Created {designation}: {emp_id} / {password}")
     return emp
 
 coo = create_officer('COO001', 'Ali', 'Raza', 'ali.raza@company.com',
-    'Operations', 'Chief Operating Officer', 300000)
+    'Operations', 'Chief Operating Officer', 300000, 'coo123')
 
 cio = create_officer('CIO001', 'Zainab', 'Ahmed', 'zainab.ahmed@company.com',
-    'Engineering', 'Chief Information Officer', 300000)
+    'Engineering', 'Chief Information Officer', 300000, 'cio123')
 
 cso = create_officer('CSO001', 'Bilal', 'Sheikh', 'bilal.sheikh@company.com',
-    'Marketing', 'Chief Strategic Officer', 300000)
+    'Marketing', 'Chief Strategic Officer', 300000, 'cso123')
 
 cfo = create_officer('CFO001', 'Usman', 'Tariq', 'usman.tariq@company.com',
-    'Finance', 'Chief Financial Officer', 300000)
+    'Finance', 'Chief Financial Officer', 300000, 'cfo123')
 
 # Employees under COO
 employees_data = [
@@ -130,7 +110,6 @@ employees_data = [
 ]
 
 employees = {}
-employee_password = seed_password('SEED_EMPLOYEE_PASSWORD', 'employees')
 for emp_id, first, last, email, gender, dept_name, designation, salary, mgr in employees_data:
     emp, created = Employee.objects.get_or_create(
         employee_id=emp_id,
@@ -140,19 +119,24 @@ for emp_id, first, last, email, gender, dept_name, designation, salary, mgr in e
             'date_of_joining': date(2023, 1, 15), 'salary': salary,
             'status': 'active', 'is_authorized': True,
             'role': 'hr' if dept_name == 'Human Resources' else 'employee',
-            'reports_to': mgr, 'must_change_password': True,
+            'reports_to': mgr,
         }
     )
     if not emp.user:
         user, uc = User.objects.get_or_create(username=emp_id,
             defaults={'email': email, 'first_name': first, 'last_name': last})
         if uc:
-            user.set_password(employee_password)
+            user.set_password('employee123')
             user.save()
         emp.user = user
         emp.save()
     employees[emp_id] = emp
 print(f"Created {len(employees)} employees")
+
+# Create public payslip link for EMP001
+if not PublicPayrollLink.objects.filter(employee=employees['EMP001']).exists():
+    PublicPayrollLink.objects.create(employee=employees['EMP001'], is_active=True)
+    print("Created public payslip link for EMP001")
 
 # Create leave types
 leave_types_data = [
@@ -230,7 +214,7 @@ print("Created payroll policy")
 # Create payroll records
 all_emps = list(employees.values())
 for emp in all_emps:
-    basic = emp.salary
+    basic = emp.salary / 12
     allowances = basic * Decimal('0.15')
     deductions = basic * Decimal('0.05')
     tax = basic * Decimal('0.10')
@@ -267,11 +251,11 @@ for eid in ['EMP010', 'EMP011', 'EMP012']:
     print(f"    ├── {eid} - {e.first_name} {e.last_name} ({e.designation})")
 print("=" * 60)
 print(f"\nLogins:")
-print(f"Superadmin: {admin_username}")
-if _GENERATED_PASSWORDS:
-    print("Generated passwords (change these after first login):")
-    for label, password in sorted(_GENERATED_PASSWORDS.items()):
-        print(f"  {label}: {password}")
-else:
-    print("Passwords were supplied via environment variables.")
+print(f"Superadmin: admin / admin123")
+print(f"CEO: CEO001 / ceo123")
+print(f"COO: COO001 / coo123")
+print(f"CIO: CIO001 / cio123")
+print(f"CSO: CSO001 / cso123")
+print(f"CFO: CFO001 / cfo123")
+print(f"Employee: EMP001 / employee123")
 print(f"\nTotal: {Employee.objects.count()} employees, {Department.objects.count()} departments")

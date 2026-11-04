@@ -41,22 +41,10 @@ def chief_id_prefix(designation):
 
 
 def default_password_for(employee_id):
-    """Derive an unpredictable per-employee temporary password.
-
-    Keyed with ``SECRET_KEY`` so the value is stable for HR to hand out but
-    cannot be guessed from the employee ID alone.
-    """
-    import hashlib
-    import hmac
-    from django.conf import settings
-
-    label = (employee_id or '').strip().upper()
-    digest = hmac.new(
-        str(settings.SECRET_KEY).encode('utf-8'),
-        label.encode('utf-8'),
-        hashlib.sha256,
-    ).hexdigest()
-    return 'Cc' + digest[:10]
+    match = re.match(r'^[A-Za-z]+', employee_id or '')
+    if match and match.group(0).lower() in CHIEF_ABBREVS:
+        return match.group(0).lower() + '1234'
+    return 'employee123'
 
 
 TEMP_PASSWORD_CHARS = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'

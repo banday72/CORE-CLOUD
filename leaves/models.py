@@ -1,22 +1,5 @@
-from datetime import date, timedelta
-
 from django.db import models
-
 from employees.models import Employee
-
-
-def count_business_days(start, end):
-    """Number of weekdays (Mon-Fri) in the inclusive ``start``..``end`` range."""
-    if not start or not end or end < start:
-        return 0
-    total = 0
-    current = start
-    step = timedelta(days=1)
-    while current <= end:
-        if current.weekday() < 5:
-            total += 1
-        current += step
-    return total
 
 
 class LeaveType(models.Model):
@@ -51,24 +34,15 @@ class Leave(models.Model):
 
     @property
     def total_days(self):
-        return count_business_days(self.start_date, self.end_date)
+        return (self.end_date - self.start_date).days + 1
 
     def used_days(self, year=None):
-        """Business days consumed from the annual balance for this leave type."""
+        """Days consumed from the employee's annual balance for this leave type."""
         qs = Leave.objects.filter(
             employee=self.employee, leave_type=self.leave_type, status='approved')
         if year:
-            year_start = date(year, 1, 1)
-            year_end = date(year, 12, 31)
-            qs = qs.filter(start_date__lte=year_end, end_date__gte=year_start)
-        total = 0
-        for leave in qs:
-            start, end = leave.start_date, leave.end_date
-            if year:
-                start = max(start, date(year, 1, 1))
-                end = min(end, date(year, 12, 31))
-            total += count_business_days(start, end)
-        return total
+            qs = qs.filter(start_date__year=year)
+        return sum((l.end_date - l.start_date).days + 1 for l in qs)
 
     class Meta:
         ordering = ['-created_at']
@@ -87,18 +61,13 @@ class LeaveBalance(models.Model):
 
     @property
     def used(self):
-        year_start = date(self.year, 1, 1)
-        year_end = date(self.year, 12, 31)
-        leaves = Leave.objects.filter(
-            employee=self.employee, leave_type=self.leave_type,
-            status='approved', start_date__lte=year_end, end_date__gte=year_start,
+        return sum(
+            (l.end_date - l.start_date).days + 1
+            for l in Leave.objects.filter(
+                employee=self.employee, leave_type=self.leave_type,
+                status='approved', start_date__year=self.year,
+            )
         )
-        total = 0
-        for leave in leaves:
-            start = max(leave.start_date, year_start)
-            end = min(leave.end_date, year_end)
-            total += count_business_days(start, end)
-        return total
 
     @property
     def remaining(self):

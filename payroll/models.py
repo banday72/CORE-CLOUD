@@ -1,5 +1,6 @@
 from django.db import models
 from employees.models import Employee
+import uuid
 
 
 class PayrollPolicy(models.Model):
@@ -170,17 +171,16 @@ class BudgetLoan(models.Model):
         ordering = ['-created_at']
 
 
-class LoanDeduction(models.Model):
-    """Tracks how much of a budget loan was recovered in a given payroll run."""
-
-    loan = models.ForeignKey(BudgetLoan, on_delete=models.CASCADE, related_name='payroll_deductions')
-    payroll = models.ForeignKey(Payroll, on_delete=models.CASCADE, related_name='loan_deductions')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+class PublicPayrollLink(models.Model):
+    employee = models.OneToOneField(Employee, on_delete=models.CASCADE, related_name='public_link')
+    token = models.CharField(max_length=64, unique=True, default=uuid.uuid4)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.loan} - {self.amount} in {self.payroll}"
+        return f"Public link for {self.employee.employee_id}"
 
-    class Meta:
-        unique_together = ['loan', 'payroll']
-
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = str(uuid.uuid4())
+        super().save(*args, **kwargs)
