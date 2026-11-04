@@ -6,9 +6,17 @@
 
     var App = {};
 
-    function clearStaleModalState() {
-        var visibleModal = document.querySelector(".modal.show, .modal[style*='display: block']");
-        if (visibleModal) return;
+    function clearStaleModalState(force) {
+        if (force) {
+            document.querySelectorAll(".modal.show, .modal[style*='display: block']").forEach(function (modal) {
+                modal.classList.remove("show");
+                modal.style.removeProperty("display");
+                modal.setAttribute("aria-hidden", "true");
+            });
+        } else {
+            var visibleModal = document.querySelector(".modal.show, .modal[style*='display: block']");
+            if (visibleModal) return;
+        }
         document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
             backdrop.remove();
         });
@@ -18,7 +26,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", clearStaleModalState);
-    window.addEventListener("pageshow", clearStaleModalState);
+    window.addEventListener("pageshow", function () { clearStaleModalState(true); });
 
     /* ------------------------------ helpers ------------------------------ */
 
