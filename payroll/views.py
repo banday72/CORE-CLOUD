@@ -1,21 +1,41 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Sum, Count, Avg, Q
+from django.utils import timezone
 from decimal import Decimal
-from datetime import datetime, date
+from datetime import date
 from calendar import monthrange
 import csv
 from employees.decorators import permission_required
+from employees.permissions import permissions_for_user
 from employees.ajax import is_ajax, json_ok, json_err
-from .models import Payroll, PayrollPolicy, PayrollBreakdown, BoutiqueProduct, BoutiqueIssue, BudgetLoan
+from .models import (
+    Payroll, PayrollPolicy, PayrollBreakdown, BoutiqueProduct, BoutiqueIssue,
+    BudgetLoan, LoanDeduction,
+)
 from .forms import PayrollForm, PayrollFilterForm, PayrollPolicyForm, BoutiqueProductForm, BoutiqueIssueForm, BudgetLoanForm
 from employees.models import Employee, Department, managers_q
 from employees.views import get_employee
 from attendance.models import Attendance
 from leaves.models import Leave
+
+
+PAYROLL_ADMIN_PERMS = {'manage_payroll'}
+
+
+def can_view_payroll(user, payroll):
+    """Owner, payroll admins and report viewers may see a payroll record."""
+    if user.is_superuser:
+        return True
+    if permissions_for_user(user) & PAYROLL_ADMIN_PERMS:
+        return True
+    employee = get_employee(user)
+    return employee is not None and payroll.employee_id == employee.id
 
 
 def get_active_policy():
@@ -57,11 +77,17 @@ def calculate_auto_payroll(employee, month, year, policy):
         for l in approved_leaves
     )))
 
-    days_absent = working_days - days_present - days_half_day - days_holiday - days_approved_leave
+    days_absent = (working_days - days_present - days_late - days_half_day
+                   - days_holiday - days_approved_leave)
     if days_absent < 0:
         days_absent = D('0')
 
-    total_present_equiv = days_present + (days_half_day * D('0.5')) + days_holiday + days_approved_leave
+    total_present_equiv = (
+        days_present + days_late + (days_half_day * D('0.5'))
+        + days_holiday + days_approved_leave
+    )
+    if total_present_equiv > working_days:
+        total_present_equiv = working_days
 
     if working_days > 0:
         attendance_pct = (total_present_equiv / working_days) * D('100')
@@ -104,7 +130,7 @@ def calculate_auto_payroll(employee, month, year, policy):
     house = salary * (D(str(policy.house_allowance_percent)) / D('100'))
     total_allowances = medical + transport + house + performance_bonus
 
-    gross_salary = basic_earned + total_allowances
+    gross_salary = salary + total_allowances
 
     boutique_issues = BoutiqueIssue.objects.filter(employee=employee, is_deducted=False)
     boutique_deduction = D(str(sum(issue.total_price for issue in boutique_issues)))
@@ -117,7 +143,7 @@ def calculate_auto_payroll(employee, month, year, policy):
             loan_deduction += deduction
 
     total_deductions = attendance_deduction + late_deduction + boutique_deduction + loan_deduction
-    taxable = gross_salary - total_deductions
+    taxable = max(gross_salary - total_deductions, D('0'))
     tax = taxable * (D(str(policy.tax_rate_percent)) / D('100'))
 
     net_salary = gross_salary - total_deductions - tax
@@ -127,19 +153,22 @@ def calculate_auto_payroll(employee, month, year, policy):
         boutique_list.append({'item_name': issue.product.name, 'amount': issue.total_price})
 
     loan_list = []
+    loan_items = []
     for loan in active_loans:
         if loan.remaining_amount > 0:
             deduction = min(loan.monthly_deduction, loan.remaining_amount)
             loan_list.append({'reason': loan.reason, 'amount': deduction})
+            loan_items.append({'loan': loan, 'amount': deduction})
 
     return {
-        'basic_salary': salary,
+        'basic_salary': salary.quantize(D('0.01')),
         'allowances': total_allowances.quantize(D('0.01')),
-        'deductions': (total_deductions + tax).quantize(D('0.01')),
+        'deductions': total_deductions.quantize(D('0.01')),
         'tax': tax.quantize(D('0.01')),
         'net_salary': max(net_salary, D('0')).quantize(D('0.01')),
         'boutique_items': boutique_issues,
         'active_loans': active_loans,
+        'loan_items': loan_items,
         'boutique_deduction': boutique_deduction.quantize(D('0.01')),
         'loan_deduction': loan_deduction.quantize(D('0.01')),
         'breakdown': {
@@ -169,9 +198,10 @@ def calculate_auto_payroll(employee, month, year, policy):
 @login_required
 def payroll_list(request):
     employee = get_employee(request.user)
-    if employee:
-        payrolls = Payroll.objects.filter(employee=employee).select_related('employee')
-    else:
+    can_view_all = (request.user.is_superuser
+                    or bool(permissions_for_user(request.user) & PAYROLL_ADMIN_PERMS))
+
+    if can_view_all:
         form = PayrollFilterForm(request.GET)
         payrolls = Payroll.objects.select_related('employee').all()
         if form.is_valid():
@@ -181,6 +211,10 @@ def payroll_list(request):
                 payrolls = payrolls.filter(year=form.cleaned_data['year'])
             if form.cleaned_data.get('status'):
                 payrolls = payrolls.filter(status=form.cleaned_data['status'])
+    elif employee:
+        payrolls = Payroll.objects.filter(employee=employee).select_related('employee')
+    else:
+        payrolls = Payroll.objects.none()
     payrolls = payrolls.order_by('-year', '-month', '-id')
 
     paginator = Paginator(payrolls, 50)
@@ -190,14 +224,15 @@ def payroll_list(request):
     ctx = {
         'payrolls': page_obj,
         'page_obj': page_obj,
-        'is_employee': employee is not None,
+        'is_employee': not can_view_all,
     }
-    if not employee:
+    if can_view_all:
         ctx['filter_form'] = PayrollFilterForm(request.GET)
     return render(request, 'payroll/payroll_list.html', ctx)
 
 
 @login_required
+@permission_required('manage_payroll')
 def payroll_create(request):
     if request.method == 'POST':
         form = PayrollForm(request.POST)
@@ -215,6 +250,8 @@ def payroll_create(request):
 @login_required
 def payroll_detail(request, pk):
     payroll = get_object_or_404(Payroll, pk=pk)
+    if not can_view_payroll(request.user, payroll):
+        raise PermissionDenied
     breakdown = None
     try:
         breakdown = payroll.breakdown
@@ -224,6 +261,7 @@ def payroll_detail(request, pk):
 
 
 @login_required
+@permission_required('manage_payroll')
 def payroll_update(request, pk):
     payroll = get_object_or_404(Payroll, pk=pk)
     if request.method == 'POST':
@@ -253,11 +291,12 @@ def payroll_delete(request, pk):
 
 
 @login_required
+@permission_required('manage_payroll')
 def payroll_process(request, pk):
     payroll = get_object_or_404(Payroll, pk=pk)
     if request.method == 'POST':
         payroll.status = 'processed'
-        payroll.payment_date = datetime.now().date()
+        payroll.payment_date = timezone.localdate()
         payroll.save()
         from hr_modules.notify import notify
         notify(payroll.employee,
@@ -271,6 +310,7 @@ def payroll_process(request, pk):
 
 
 @login_required
+@permission_required('manage_payroll')
 def payroll_export(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="payroll_report.csv"'
@@ -300,7 +340,7 @@ def payroll_export(request):
 @login_required
 @permission_required('view_reports')
 def payroll_summary(request):
-    current_year = datetime.now().year
+    current_year = timezone.localdate().year
     monthly_summary = Payroll.objects.filter(year=current_year).values('month').annotate(
         total_salary=Sum('net_salary'),
         employee_count=Count('employee', distinct=True),
@@ -321,6 +361,8 @@ def payroll_summary(request):
 @login_required
 def salary_slip(request, pk):
     payroll = get_object_or_404(Payroll, pk=pk)
+    if not can_view_payroll(request.user, payroll):
+        raise PermissionDenied
     breakdown = None
     try:
         breakdown = payroll.breakdown
@@ -331,13 +373,41 @@ def salary_slip(request, pk):
 
 @login_required
 def salary_slip_pdf(request, pk):
+    payroll = get_object_or_404(Payroll, pk=pk)
+    if not can_view_payroll(request.user, payroll):
+        raise PermissionDenied
+    return _salary_slip_pdf(payroll)
+
+
+@login_required
+def my_payslips(request):
+    employee = get_employee(request.user)
+    if employee is None:
+        messages.error(request, 'No employee record is linked to your account.')
+        return redirect('dashboard')
+    payrolls = Payroll.objects.filter(employee=employee).order_by('-year', '-month')
+    return render(request, 'payroll/my_payslips.html', {
+        'employee': employee,
+        'payrolls': payrolls,
+    })
+
+
+@login_required
+def my_payslip_pdf(request, year, month):
+    employee = get_employee(request.user)
+    if employee is None:
+        raise PermissionDenied
+    payroll = get_object_or_404(Payroll, employee=employee, year=year, month=month)
+    return _salary_slip_pdf(payroll)
+
+
+def _salary_slip_pdf(payroll):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import inch
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
-    payroll = get_object_or_404(Payroll, pk=pk)
     employee = payroll.employee
     breakdown = None
     try:
@@ -441,18 +511,93 @@ def salary_slip_pdf(request, pk):
     elements.append(Spacer(1, 30))
 
     elements.append(Paragraph("This is a computer-generated salary slip.", styles['Normal']))
-    elements.append(Paragraph(f"Generated on: {datetime.now().strftime('%d %b %Y %H:%M')}", styles['Normal']))
+    elements.append(Paragraph(f"Generated on: {timezone.localtime().strftime('%d %b %Y %H:%M')}", styles['Normal']))
 
     doc.build(elements)
     return response
+
+
+def _reverse_payroll_deductions(payroll):
+    """Undo loan/boutique deductions previously taken by this payroll run."""
+    for entry in payroll.loan_deductions.select_related('loan'):
+        loan = entry.loan
+        loan.remaining_amount += entry.amount
+        loan.total_deducted = max(loan.total_deducted - entry.amount, Decimal('0'))
+        loan.is_active = loan.remaining_amount > 0
+        loan.save(update_fields=['remaining_amount', 'total_deducted', 'is_active'])
+    payroll.loan_deductions.all().delete()
+
+    for issue in payroll.boutique_deductions.all():
+        issue.is_deducted = False
+        issue.deducted_in_payroll = None
+        issue.save(update_fields=['is_deducted', 'deducted_in_payroll'])
+
+
+def _generate_one_payroll(employee, month, year, policy):
+    """Create or regenerate a single payroll, returning ``True`` when created."""
+    existing = Payroll.objects.filter(
+        employee=employee, month=month, year=year).first()
+    if existing is not None:
+        _reverse_payroll_deductions(existing)
+
+    result = calculate_auto_payroll(employee, month, year, policy)
+
+    payroll, created = Payroll.objects.update_or_create(
+        employee=employee,
+        month=month,
+        year=year,
+        defaults={
+            'basic_salary': result['basic_salary'],
+            'allowances': result['allowances'],
+            'deductions': result['deductions'],
+            'tax': result['tax'],
+            'net_salary': result['net_salary'],
+            'status': 'draft',
+            'payment_date': None,
+            'generated_type': 'auto',
+            'notes': f"Auto-generated | Attendance: {result['breakdown']['attendance_percentage']}%",
+        }
+    )
+
+    PayrollBreakdown.objects.update_or_create(
+        payroll=payroll,
+        defaults=result['breakdown']
+    )
+
+    for issue in result.get('boutique_items', []):
+        issue.is_deducted = True
+        issue.deducted_in_payroll = payroll
+        issue.save()
+
+    for item in result.get('loan_items', []):
+        loan = item['loan']
+        deduction = item['amount']
+        LoanDeduction.objects.update_or_create(
+            loan=loan, payroll=payroll,
+            defaults={'amount': deduction},
+        )
+        loan.total_deducted += deduction
+        loan.remaining_amount -= deduction
+        if loan.remaining_amount <= 0:
+            loan.is_active = False
+        loan.save()
+
+    return created
 
 
 @login_required
 @permission_required('manage_payroll')
 def auto_generate_payroll(request):
     if request.method == 'POST':
-        month = int(request.POST.get('month', datetime.now().month))
-        year = int(request.POST.get('year', datetime.now().year))
+        try:
+            month = int(request.POST.get('month', timezone.localdate().month))
+            year = int(request.POST.get('year', timezone.localdate().year))
+        except (TypeError, ValueError):
+            messages.error(request, 'Enter a valid month and year.')
+            return redirect('auto_generate_payroll')
+        if not 1 <= month <= 12 or not 2000 <= year <= 2100:
+            messages.error(request, 'Enter a valid month (1-12) and year (2000-2100).')
+            return redirect('auto_generate_payroll')
 
         policy = get_active_policy()
         employees = Employee.objects.filter(status='active')
@@ -461,8 +606,8 @@ def auto_generate_payroll(request):
         employee_id = request.POST.get('employee', '').strip()
         staff = request.POST.get('staff', 'all').strip()
 
-        if department_id:
-            employees = employees.filter(department_id=department_id)
+        if department_id.isdigit():
+            employees = employees.filter(department_id=int(department_id))
         if employee_id:
             employees = employees.filter(employee_id=employee_id)
         if staff == 'management':
@@ -474,48 +619,12 @@ def auto_generate_payroll(request):
 
         for employee in employees:
             try:
-                result = calculate_auto_payroll(employee, month, year, policy)
-
-                payroll, created = Payroll.objects.update_or_create(
-                    employee=employee,
-                    month=month,
-                    year=year,
-                    defaults={
-                        'basic_salary': result['basic_salary'],
-                        'allowances': result['allowances'],
-                        'deductions': result['deductions'],
-                        'tax': result['tax'],
-                        'net_salary': result['net_salary'],
-                        'status': 'draft',
-                        'generated_type': 'auto',
-                        'notes': f"Auto-generated | Attendance: {result['breakdown']['attendance_percentage']}%",
-                    }
-                )
-
-                PayrollBreakdown.objects.update_or_create(
-                    payroll=payroll,
-                    defaults=result['breakdown']
-                )
-
-                for issue in result.get('boutique_items', []):
-                    issue.is_deducted = True
-                    issue.deducted_in_payroll = payroll
-                    issue.save()
-
-                for loan in result.get('active_loans', []):
-                    if loan.remaining_amount > 0:
-                        deduction = min(loan.monthly_deduction, loan.remaining_amount)
-                        loan.total_deducted += deduction
-                        loan.remaining_amount -= deduction
-                        if loan.remaining_amount <= 0:
-                            loan.is_active = False
-                        loan.save()
-
+                with transaction.atomic():
+                    created = _generate_one_payroll(employee, month, year, policy)
                 if created:
                     created_count += 1
                 else:
                     updated_count += 1
-
             except Exception as e:
                 errors.append(f"{employee.employee_id}: {str(e)}")
 
@@ -531,8 +640,8 @@ def auto_generate_payroll(request):
 
         return redirect('payroll_list')
 
-    current_month = datetime.now().month
-    current_year = datetime.now().year
+    current_month = timezone.localdate().month
+    current_year = timezone.localdate().year
     departments = Department.objects.all().order_by('name')
     employees = Employee.objects.filter(status='active').order_by('employee_id')
     return render(request, 'payroll/auto_generate.html', {

@@ -21,6 +21,7 @@ ALL_PERMISSIONS = {
     'bulk_import',
     'manage_departments',
     'manage_access',
+    'approve_access',
     'manage_employee_status',
     'view_audit',
     'manage_slides',
@@ -62,6 +63,7 @@ EXECUTIVE_PERMISSIONS = set(ALL_PERMISSIONS) - {'manage_employee_status'}
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
     'view_employees',
+    'approve_access',
     'manage_faces',
     'manage_reviews',
     'manage_training',

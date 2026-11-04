@@ -7,15 +7,18 @@ from .models import Attendance
 from .forms import AttendanceForm, AttendanceFilterForm
 from employees.views import get_employee
 from employees.decorators import permission_required
+from employees.permissions import permissions_for_user
 from employees.ajax import is_ajax, json_ok, json_err
+
+ATTENDANCE_ADMIN_PERMS = {'manage_attendance', 'view_reports'}
 
 
 @login_required
 def attendance_list(request):
     employee = get_employee(request.user)
-    if employee:
-        attendance = Attendance.objects.filter(employee=employee).select_related('employee')
-    else:
+    can_view_all = (request.user.is_superuser
+                    or bool(permissions_for_user(request.user) & ATTENDANCE_ADMIN_PERMS))
+    if can_view_all:
         form = AttendanceFilterForm(request.GET)
         attendance = Attendance.objects.select_related('employee').all()
         if form.is_valid():
@@ -27,6 +30,10 @@ def attendance_list(request):
                 attendance = attendance.filter(employee__employee_id__icontains=form.cleaned_data['employee'])
             if form.cleaned_data.get('status'):
                 attendance = attendance.filter(status=form.cleaned_data['status'])
+    elif employee:
+        attendance = Attendance.objects.filter(employee=employee).select_related('employee')
+    else:
+        attendance = Attendance.objects.none()
     attendance = attendance.order_by('-date', '-id')
 
     paginator = Paginator(attendance, 50)
@@ -36,9 +43,9 @@ def attendance_list(request):
     ctx = {
         'attendance': page_obj,
         'page_obj': page_obj,
-        'is_employee': employee is not None,
+        'is_employee': not can_view_all,
     }
-    if not employee:
+    if can_view_all:
         ctx['filter_form'] = AttendanceFilterForm(request.GET)
     return render(request, 'attendance/attendance_list.html', ctx)
 

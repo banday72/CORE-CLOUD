@@ -2,7 +2,6 @@ import json
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from employees.models import Employee, Department
 from employees.decorators import permission_required
 
@@ -19,7 +18,7 @@ def face_register(request):
     return render(request, 'face/face_register.html', {'employee': employee, 'is_superuser': False})
 
 
-@csrf_exempt
+@login_required
 def face_save(request):
     if request.method == 'POST':
         try:
@@ -47,7 +46,7 @@ def face_verify_page(request):
     return render(request, 'face/face_verify.html', {'employee': employee})
 
 
-@csrf_exempt
+@login_required
 def face_verify(request):
     if request.method == 'POST':
         try:
@@ -104,7 +103,7 @@ def face_manage_list(request):
     })
 
 
-@csrf_exempt
+@login_required
 def face_save_for_employee(request):
     if request.method == 'POST':
         try:
@@ -127,7 +126,7 @@ def face_save_for_employee(request):
     return JsonResponse({'status': 'error', 'message': 'POST required'}, status=400)
 
 
-@csrf_exempt
+@login_required
 def face_remove_for_employee(request):
     if request.method == 'POST':
         try:
@@ -147,3 +146,4 @@ def face_remove_for_employee(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     return JsonResponse({'status': 'error', 'message': 'POST required'}, status=400)
+ 

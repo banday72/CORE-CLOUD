@@ -5,6 +5,9 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
 from datetime import date, timedelta
+import os
+
+MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 
 from employees.decorators import permission_required, collab_access_required
 from employees.permissions import permissions_for_user
@@ -116,6 +119,9 @@ def document_upload(request):
             messages.error(request, 'You can only upload documents for yourself.')
             return redirect('document_list')
         uploaded_file = request.FILES.get('file')
+        if uploaded_file and uploaded_file.size > MAX_DOCUMENT_BYTES:
+            messages.error(request, 'File is too large (maximum 10 MB).')
+            return redirect('document_list')
         if uploaded_file:
             import base64
             file_data = base64.b64encode(uploaded_file.read()).decode('utf-8')
@@ -139,18 +145,32 @@ def document_upload(request):
 def document_download(request, pk):
     import base64
     from django.http import HttpResponse
+    from employees.models import Employee
     from .models import EmployeeDocument
     doc = get_object_or_404(EmployeeDocument, pk=pk)
+    emp = Employee.objects.filter(user=request.user).first()
+    if not (request.user.is_superuser or has_any_permission(request.user, 'manage_documents')
+            or (emp and doc.employee_id == emp.pk)):
+        messages.error(request, 'You do not have access to that document.')
+        return redirect('document_list')
     file_bytes = base64.b64decode(doc.file_data)
+    safe_name = os.path.basename(doc.file_name or 'document')
+    safe_name = safe_name.replace('"', '').replace('\r', '').replace('\n', '')
     response = HttpResponse(file_bytes, content_type='application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{doc.file_name}"'
+    response['Content-Disposition'] = f'attachment; filename="{safe_name}"'
     return response
 
 
 @login_required
 def document_delete(request, pk):
+    from employees.models import Employee
     from .models import EmployeeDocument
     doc = get_object_or_404(EmployeeDocument, pk=pk)
+    emp = Employee.objects.filter(user=request.user).first()
+    if not (request.user.is_superuser or has_any_permission(request.user, 'manage_documents')
+            or (emp and doc.employee_id == emp.pk)):
+        messages.error(request, 'You do not have access to that document.')
+        return redirect('document_list')
     if request.method == 'POST':
         doc.delete()
         messages.success(request, 'Document deleted.')

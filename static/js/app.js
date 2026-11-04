@@ -28,6 +28,20 @@
     document.addEventListener("DOMContentLoaded", clearStaleModalState);
     window.addEventListener("pageshow", function () { clearStaleModalState(true); });
 
+    function clearStaleSidebarState() {
+        var sidebar = document.getElementById("sidebar");
+        var toggle = document.querySelector(".menu-toggle");
+        document.querySelectorAll(".sidebar-backdrop").forEach(function (backdrop) {
+            backdrop.remove();
+        });
+        if (sidebar) sidebar.classList.remove("show");
+        if (toggle) toggle.setAttribute("aria-expanded", "false");
+        document.body.style.removeProperty("overflow");
+    }
+
+    document.addEventListener("DOMContentLoaded", clearStaleSidebarState);
+    window.addEventListener("pageshow", clearStaleSidebarState);
+
     /* ------------------------------ helpers ------------------------------ */
 
     function csrfToken() {
@@ -361,6 +375,9 @@
         var toggle = document.querySelector(".menu-toggle");
         if (!sidebar || !toggle) return;
 
+        document.querySelectorAll(".sidebar-backdrop").forEach(function (oldBackdrop) {
+            oldBackdrop.remove();
+        });
         var backdrop = document.createElement("div");
         backdrop.className = "sidebar-backdrop";
         document.body.appendChild(backdrop);
