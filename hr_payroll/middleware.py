@@ -3,6 +3,10 @@ from django.shortcuts import redirect
 from django.conf import settings
 from django.utils import timezone
 from django.urls import NoReverseMatch, reverse
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class ActiveEmployeeMiddleware:
@@ -16,6 +20,15 @@ class ActiveEmployeeMiddleware:
         if user is not None and user.is_authenticated and not user.is_superuser:
             employee = getattr(user, 'employee', None)
             if employee is None or employee.status != 'active' or not employee.is_authorized:
+                logger.warning(
+                    'Blocking authenticated employee request: user=%s employee=%s '
+                    'status=%s authorized=%s path=%s',
+                    user.username,
+                    getattr(employee, 'employee_id', None),
+                    getattr(employee, 'status', None),
+                    getattr(employee, 'is_authorized', None),
+                    request.path,
+                )
                 logout(request)
                 return redirect('login')
             if employee.must_change_password and not self._password_change_allowed(request.path):
