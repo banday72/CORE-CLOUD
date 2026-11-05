@@ -122,7 +122,16 @@ def handler(request):
     def start_response(status, response_headers, exc_info=None):
         nonlocal status_code, headers
         status_code = int(status.split(' ', 1)[0])
-        headers = dict(response_headers)
+        headers = {}
+        for name, value in response_headers:
+            if name in headers:
+                previous = headers[name]
+                if isinstance(previous, list):
+                    previous.append(value)
+                else:
+                    headers[name] = [previous, value]
+            else:
+                headers[name] = value
 
     body = b''.join(application(request.environ, start_response))
     response = {
