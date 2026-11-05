@@ -30,9 +30,7 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get(
-        'ALLOWED_HOSTS',
-        'corecloud.vercel.app,corecloud-banday.vercel.app,'
-        'hr-payroll-system-one.vercel.app,.vercel.app,localhost,127.0.0.1'
+        'ALLOWED_HOSTS', 'localhost,127.0.0.1,[::1]'
     ).split(',') if h.strip()
 ]
 
@@ -41,6 +39,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://corecloud-banday.vercel.app',
     'https://hr-payroll-system-one.vercel.app',
     'https://corecloud-git-main-banday.vercel.app',
+    'https://*.vercel.app',
 ]
 CSRF_TRUSTED_ORIGINS += [
     o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
@@ -161,7 +160,6 @@ X_FRAME_OPTIONS = 'DENY'
 
 AUTHENTICATION_BACKENDS = [
     'hr_payroll.backends.AuthorizedUserBackend',
-    'django.contrib.auth.backends.ModelBackend',
 ]
 
 MEDIA_URL = '/media/'
