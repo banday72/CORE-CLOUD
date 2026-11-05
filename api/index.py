@@ -112,3 +112,22 @@ from django.core.wsgi import get_wsgi_application
 
 app = get_wsgi_application()
 application = app
+
+
+def handler(request):
+    """Adapt Django's WSGI application to Vercel's Python function format."""
+    status_code = 500
+    headers = {}
+
+    def start_response(status, response_headers, exc_info=None):
+        nonlocal status_code, headers
+        status_code = int(status.split(' ', 1)[0])
+        headers = dict(response_headers)
+
+    body = b''.join(application(request.environ, start_response))
+    response = {
+        'statusCode': status_code,
+        'headers': headers,
+        'body': body.decode('utf-8', errors='replace'),
+    }
+    return response
