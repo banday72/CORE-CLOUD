@@ -22,11 +22,12 @@ class ActiveEmployeeMiddleware:
             if employee is None or employee.status != 'active' or not employee.is_authorized:
                 logger.warning(
                     'Blocking authenticated employee request: user=%s employee=%s '
-                    'status=%s authorized=%s path=%s',
+                    'status=%s authorized=%s approved=%s path=%s',
                     user.username,
                     getattr(employee, 'employee_id', None),
                     getattr(employee, 'status', None),
                     getattr(employee, 'is_authorized', None),
+                    getattr(employee, 'approved_by_manager', None),
                     request.path,
                 )
                 logout(request)

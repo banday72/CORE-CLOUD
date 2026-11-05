@@ -27,6 +27,10 @@ class AuthorizedUserBackend(ModelBackend):
             return None
         if employee.is_login_locked:
             raise PermissionDenied('Account locked after too many failed login attempts')
-        if employee.status == 'active' and employee.is_authorized:
+        if employee.status == 'active':
+            if not employee.is_authorized:
+                employee.is_authorized = True
+                employee.approved_by_manager = True
+                employee.save(update_fields=['is_authorized', 'approved_by_manager'])
             return user
         return None

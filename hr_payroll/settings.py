@@ -162,7 +162,6 @@ X_FRAME_OPTIONS = 'DENY'
 
 AUTHENTICATION_BACKENDS = [
     'hr_payroll.backends.AuthorizedUserBackend',
-    'django.contrib.auth.backends.ModelBackend',
 ]
 
 MEDIA_URL = '/media/'
