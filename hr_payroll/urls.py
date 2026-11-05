@@ -5,12 +5,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import logout
 from django.shortcuts import redirect
+from django.views.decorators.http import require_POST
 
 from employees.views import LockoutLoginView
 from hr_payroll import views as core_views
 from soc import views as soc_views
 
 
+@require_POST
 def custom_logout(request):
     log_audit_logout(request)
     logout(request)

@@ -2,20 +2,25 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from datetime import date, datetime
+from datetime import datetime
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 from .models import Attendance
 from .forms import AttendanceForm, AttendanceFilterForm
 from employees.views import get_employee
 from employees.decorators import permission_required
+from employees.permissions import permissions_for_user
 from employees.ajax import is_ajax, json_ok, json_err
+
+ATTENDANCE_ADMIN_PERMS = {'manage_attendance', 'view_reports'}
 
 
 @login_required
 def attendance_list(request):
     employee = get_employee(request.user)
-    if employee:
-        attendance = Attendance.objects.filter(employee=employee).select_related('employee')
-    else:
+    can_view_all = (request.user.is_superuser
+                    or bool(permissions_for_user(request.user) & ATTENDANCE_ADMIN_PERMS))
+    if can_view_all:
         form = AttendanceFilterForm(request.GET)
         attendance = Attendance.objects.select_related('employee').all()
         if form.is_valid():
@@ -27,6 +32,10 @@ def attendance_list(request):
                 attendance = attendance.filter(employee__employee_id__icontains=form.cleaned_data['employee'])
             if form.cleaned_data.get('status'):
                 attendance = attendance.filter(status=form.cleaned_data['status'])
+    elif employee:
+        attendance = Attendance.objects.filter(employee=employee).select_related('employee')
+    else:
+        attendance = Attendance.objects.none()
     attendance = attendance.order_by('-date', '-id')
 
     paginator = Paginator(attendance, 50)
@@ -36,14 +45,15 @@ def attendance_list(request):
     ctx = {
         'attendance': page_obj,
         'page_obj': page_obj,
-        'is_employee': employee is not None,
+        'is_employee': not can_view_all,
     }
-    if not employee:
+    if can_view_all:
         ctx['filter_form'] = AttendanceFilterForm(request.GET)
     return render(request, 'attendance/attendance_list.html', ctx)
 
 
 @login_required
+@require_POST
 def attendance_clock_in(request):
     employee = get_employee(request.user)
     if not employee:
@@ -52,12 +62,13 @@ def attendance_clock_in(request):
         messages.error(request, 'No employee profile found.')
         return redirect('dashboard')
 
-    today = date.today()
+    now = timezone.localtime()
+    today = now.date()
     existing = Attendance.objects.filter(employee=employee, date=today).first()
     clock_in_time = None
     if existing:
         if existing.clock_in is None:
-            existing.clock_in = datetime.now().time()
+            existing.clock_in = now.time()
             existing.status = 'present'
             existing.save()
             clock_in_time = existing.clock_in
@@ -68,16 +79,16 @@ def attendance_clock_in(request):
             msg = 'Already clocked in today.'
             level = 'info'
     else:
-        now = datetime.now().time()
-        status = 'late' if now.hour > 9 or (now.hour == 9 and now.minute > 0) else 'present'
+        clock_time = now.time()
+        status = 'late' if clock_time.hour > 9 or (clock_time.hour == 9 and clock_time.minute > 0) else 'present'
         Attendance.objects.create(
             employee=employee,
             date=today,
-            clock_in=now,
+            clock_in=clock_time,
             status=status,
         )
-        clock_in_time = now
-        msg = f'Clocked in at {now.strftime("%H:%M")}'
+        clock_in_time = clock_time
+        msg = f'Clocked in at {clock_time.strftime("%H:%M")}'
         level = 'success'
         if status == 'late':
             msg += ' (Late arrival)'
@@ -95,6 +106,7 @@ def attendance_clock_in(request):
 
 
 @login_required
+@require_POST
 def attendance_clock_out(request):
     employee = get_employee(request.user)
     if not employee:
@@ -103,10 +115,11 @@ def attendance_clock_out(request):
         messages.error(request, 'No employee profile found.')
         return redirect('dashboard')
 
-    today = date.today()
+    now = timezone.localtime()
+    today = now.date()
     existing = Attendance.objects.filter(employee=employee, date=today).first()
     if existing and existing.clock_in and not existing.clock_out:
-        existing.clock_out = datetime.now().time()
+        existing.clock_out = now.time()
         existing.save()
         msg = f'Clocked out at {existing.clock_out.strftime("%H:%M")}'
         level = 'success'

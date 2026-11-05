@@ -4,7 +4,6 @@ from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
 from employees.models import Employee
 
 
@@ -14,17 +13,19 @@ def face_login_page(request):
     return render(request, 'face/face_login.html')
 
 
-@csrf_exempt
 def face_login_check(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             face_descriptors = data.get('descriptors', [])
+            if not isinstance(face_descriptors, list) or len(face_descriptors) > 5:
+                return JsonResponse({'status': 'error', 'message': 'Invalid face data.'}, status=400)
 
             employees = Employee.objects.filter(
                 face_registered=True,
                 face_data__isnull=False,
                 status='active',
+                is_authorized=True,
                 user__isnull=False,
             ).exclude(face_data='').select_related('user')
 
@@ -98,6 +99,8 @@ def face_login_check(request):
             )
             return JsonResponse({'status': 'error', 'message': 'No matching face found. Try again or use password login.'})
 
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid face data.'}, status=400)
+        except Exception:
+            return JsonResponse({'status': 'error', 'message': 'Face verification is temporarily unavailable.'}, status=500)
     return JsonResponse({'status': 'error', 'message': 'POST required'}, status=400)

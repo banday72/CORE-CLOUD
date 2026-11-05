@@ -134,7 +134,10 @@
             <button type="button" class="btn btn-sm theme-toggle" id="themeToggle" aria-label="Switch to dark mode" title="Toggle dark mode" style="background:rgba(255,255,255,.15);color:white;border:none;">
                 <i class="fas fa-moon" aria-hidden="true"></i>
             </button>
-            <a href="{% url 'logout' %}" class="btn-logout" aria-label="Log out"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></a>
+            <form method="post" action="{% url 'logout' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn-logout" aria-label="Log out"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></button>
+            </form>
             {% endif %}
         </div>
     </header>
@@ -338,7 +341,7 @@
             <a class="nav-link {% if 'announcement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'announcement_list' %}">
                 <i class="fas fa-bullhorn nav-icon" style="color:#f6c23e;"></i> Announcements
             </a>
-            <a class="nav-link" href="{% url 'dashboard' %}#my-payrolls">
+            <a class="nav-link {% if request.resolver_match.url_name == 'my_payslips' %}active{% endif %}" href="{% url 'my_payslips' %}">
                 <i class="fas fa-money-bill-wave nav-icon" style="color:#1cc88a;"></i> Salary Slips
             </a>
             <a class="nav-link {% if 'expense_claim' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'expense_claim_list' %}">
