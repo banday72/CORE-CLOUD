@@ -23,7 +23,7 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.utils import timezone
 from .models import (
-    AccessGrant, Department, Employee, AuditLog, LoginSlide, managers_queryset,
+    AccessGrant, Department, Employee, AuditLog, LoginSlide,
     chief_id_prefix, MANAGEMENT_DEPARTMENT_NAMES, default_password_for, SecurityProfile,
     ExpenseClaim,
 )
@@ -342,51 +342,14 @@ def my_manager(request):
         messages.error(request, 'No employee profile is linked to your account.')
         return redirect('dashboard')
 
-    managers = managers_queryset().exclude(pk=employee.pk)
-
     if request.method == 'POST':
-        selected = request.POST.get('reports_to', '').strip()
-        if selected in ('', 'none'):
-            previous = employee.reports_to.full_name if employee.reports_to else 'none'
-            employee.reports_to = None
-            employee.save(update_fields=['reports_to'])
-            log_audit(user=request.user, action='update', model_name='Employee',
-                      object_id=employee.employee_id,
-                      description=f'Removed own manager (was {previous})', request=request)
-            messages.success(request, 'Your manager has been removed.')
-            return redirect('my_manager')
-
-        try:
-            new_manager = Employee.objects.select_related('department').get(
-                pk=selected, status='active')
-        except (Employee.DoesNotExist, ValueError):
-            messages.error(request, 'That manager does not exist or is no longer active.')
-            return redirect('my_manager')
-
-        if new_manager.pk == employee.pk:
-            messages.error(request, 'You cannot be your own manager.')
-            return redirect('my_manager')
-        if not (new_manager.role in ('manager', 'hr') or new_manager.is_chief):
-            messages.error(request, 'You can only report to a Manager, HR or a Chief.')
-            return redirect('my_manager')
-        if _creates_report_cycle(employee, new_manager):
-            messages.error(request, 'That choice would create a circular reporting line.')
-            return redirect('my_manager')
-
-        employee.reports_to = new_manager
-        employee.save(update_fields=['reports_to'])
-        log_audit(user=request.user, action='update', model_name='Employee',
-                  object_id=employee.employee_id,
-                  description=f'Set own manager to {new_manager.full_name}', request=request)
-        messages.success(request, f'Manager updated to {new_manager.full_name}.')
+        messages.error(request, 'Only HR can assign or change managers.')
         return redirect('my_manager')
 
     return render(request, 'employees/my_manager.html', {
         'employee': employee,
-        'managers': managers,
         'subordinates': employee.subordinates.filter(status='active').select_related('department'),
     })
-
 
 @login_required
 @permission_required('manage_employees')
