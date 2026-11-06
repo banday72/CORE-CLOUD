@@ -29,7 +29,7 @@ from .models import (
 )
 from .forms import DepartmentForm, EmployeeForm, ProfileForm, LoginSlideForm
 from .decorators import permission_required, hr_required, privilege_required
-from .permissions import ALL_PERMISSIONS, permissions_for_user
+from .permissions import ALL_PERMISSIONS, permissions_for_user, can_manage_employee_records
 from .audit import log_audit
 from .ajax import is_ajax, json_ok, json_err
 
@@ -354,6 +354,9 @@ def my_manager(request):
 @login_required
 @permission_required('manage_employees')
 def employee_create(request):
+    if not can_manage_employee_records(request.user):
+        messages.error(request, 'Only HR can manage employee records.')
+        return redirect('dashboard')
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
@@ -394,6 +397,9 @@ def next_employee_id(request):
 @login_required
 @permission_required('manage_employees')
 def employee_update(request, pk):
+    if not can_manage_employee_records(request.user):
+        messages.error(request, 'Only HR can manage employee records.')
+        return redirect('dashboard')
     employee = get_object_or_404(Employee, pk=pk)
     if request.method == 'POST':
         previous_status = employee.status
@@ -433,6 +439,9 @@ def employee_update(request, pk):
 @login_required
 @permission_required('manage_employees')
 def employee_delete(request, pk):
+    if not can_manage_employee_records(request.user):
+        messages.error(request, 'Only HR can manage employee records.')
+        return redirect('dashboard')
     employee = get_object_or_404(Employee, pk=pk)
     if request.method == 'POST':
         name = employee.full_name

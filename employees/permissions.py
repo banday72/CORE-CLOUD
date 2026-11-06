@@ -151,6 +151,20 @@ def permissions_for_user(user):
     return permissions_for(employee)
 
 
+def can_manage_employee_records(user):
+    """Only HR, executives and superusers may administer employee records."""
+    if user is None:
+        return False
+    if user.is_superuser:
+        return True
+    from .models import Employee
+    try:
+        employee = Employee.objects.get(user=user)
+    except Employee.DoesNotExist:
+        return False
+    return permission_group(employee) in ('hr', 'executive')
+
+
 class Perms:
     def __init__(self, permissions):
         self._permissions = set(permissions)

@@ -4,10 +4,12 @@ from datetime import date, timedelta
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg, Count, Sum
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib import messages
 
 from employees.models import Employee
 from employees.decorators import permission_required
+from employees.permissions import can_manage_employee_records
 from leaves.models import Leave, LeaveType
 from attendance.models import Attendance
 from payroll.models import Payroll
@@ -152,6 +154,9 @@ def reports_dashboard(request):
 @login_required
 @permission_required('view_reports')
 def export_employees_csv(request):
+    if not can_manage_employee_records(request.user):
+        messages.error(request, 'Only HR can export employee records.')
+        return redirect('dashboard')
     rows = list(Employee.objects.select_related('department', 'reports_to')
                 .order_by('employee_id'))
     response = HttpResponse(content_type='text/csv')
