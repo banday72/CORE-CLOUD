@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from .models import Attendance
 from .forms import AttendanceForm, AttendanceFilterForm
-from employees.views import get_employee
+from employees.views import get_employee, team_employee_ids
 from employees.decorators import permission_required
 from employees.permissions import permissions_for_user
 from employees.ajax import is_ajax, json_ok, json_err
@@ -18,9 +18,11 @@ ATTENDANCE_ADMIN_PERMS = {'manage_attendance', 'view_reports'}
 @login_required
 def attendance_list(request):
     employee = get_employee(request.user)
-    can_view_all = (request.user.is_superuser
-                    or bool(permissions_for_user(request.user) & ATTENDANCE_ADMIN_PERMS))
-    if can_view_all:
+    perms = permissions_for_user(request.user)
+    company_wide = (request.user.is_superuser
+                    or bool(perms & {'manage_attendance', 'manage_employees'}))
+    can_view_all = company_wide or bool(perms & ATTENDANCE_ADMIN_PERMS)
+    if company_wide:
         form = AttendanceFilterForm(request.GET)
         attendance = Attendance.objects.select_related('employee').all()
         if form.is_valid():
@@ -32,6 +34,9 @@ def attendance_list(request):
                 attendance = attendance.filter(employee__employee_id__icontains=form.cleaned_data['employee'])
             if form.cleaned_data.get('status'):
                 attendance = attendance.filter(status=form.cleaned_data['status'])
+    elif employee and can_view_all:
+        attendance = Attendance.objects.filter(
+            employee_id__in=team_employee_ids(employee)).select_related('employee')
     elif employee:
         attendance = Attendance.objects.filter(employee=employee).select_related('employee')
     else:

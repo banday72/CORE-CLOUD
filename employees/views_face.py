@@ -2,9 +2,9 @@ import json
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from employees.models import Employee, Department
 from employees.decorators import permission_required
+from employees.views import employee_scope
 
 
 @login_required
@@ -19,7 +19,7 @@ def face_register(request):
     return render(request, 'face/face_register.html', {'employee': employee, 'is_superuser': False})
 
 
-@csrf_exempt
+@login_required
 def face_save(request):
     if request.method == 'POST':
         try:
@@ -47,7 +47,7 @@ def face_verify_page(request):
     return render(request, 'face/face_verify.html', {'employee': employee})
 
 
-@csrf_exempt
+@login_required
 def face_verify(request):
     if request.method == 'POST':
         try:
@@ -80,7 +80,8 @@ def face_verify(request):
 @login_required
 @permission_required('manage_faces')
 def face_manage_list(request):
-    employees = Employee.objects.filter(status='active').select_related('department', 'user').order_by('employee_id')
+    visible, _, _ = employee_scope(request.user)
+    employees = visible.filter(status='active').select_related('department', 'user').order_by('employee_id')
     search = request.GET.get('search', '')
     dept_id = request.GET.get('department', '')
     face_filter = request.GET.get('face_status', '')
@@ -104,7 +105,7 @@ def face_manage_list(request):
     })
 
 
-@csrf_exempt
+@login_required
 def face_save_for_employee(request):
     if request.method == 'POST':
         try:
@@ -114,7 +115,9 @@ def face_save_for_employee(request):
             employee = Employee.objects.get(employee_id=emp_id)
             if not request.user.is_superuser:
                 from .permissions import permissions_for_user
-                if 'manage_faces' not in permissions_for_user(request.user):
+                visible, _, _ = employee_scope(request.user)
+                if ('manage_faces' not in permissions_for_user(request.user)
+                        or not visible.filter(pk=employee.pk).exists()):
                     return JsonResponse({'status': 'error', 'message': 'Access denied.'}, status=403)
             employee.face_data = json.dumps(face_descriptors)
             employee.face_registered = True
@@ -127,7 +130,7 @@ def face_save_for_employee(request):
     return JsonResponse({'status': 'error', 'message': 'POST required'}, status=400)
 
 
-@csrf_exempt
+@login_required
 def face_remove_for_employee(request):
     if request.method == 'POST':
         try:
@@ -136,7 +139,9 @@ def face_remove_for_employee(request):
             employee = Employee.objects.get(employee_id=emp_id)
             if not request.user.is_superuser:
                 from .permissions import permissions_for_user
-                if 'manage_faces' not in permissions_for_user(request.user):
+                visible, _, _ = employee_scope(request.user)
+                if ('manage_faces' not in permissions_for_user(request.user)
+                        or not visible.filter(pk=employee.pk).exists()):
                     return JsonResponse({'status': 'error', 'message': 'Access denied.'}, status=403)
             employee.face_data = ''
             employee.face_registered = False
@@ -147,3 +152,4 @@ def face_remove_for_employee(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     return JsonResponse({'status': 'error', 'message': 'POST required'}, status=400)
+ 

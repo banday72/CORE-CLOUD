@@ -41,7 +41,7 @@
                 {% if can.manage_employees %}
                 <a href="{% url 'employee_create' %}" class="btn btn-success w-100 mb-2"><i class="fas fa-plus"></i> Add Employee</a>
                 {% endif %}
-                {% if can.view_reports %}
+                {% if can.manage_employees %}
                 <a href="{% url 'export_employees_csv' %}" class="btn btn-outline-secondary w-100"><i class="fas fa-download"></i> Export CSV</a>
                 {% endif %}
             </div>
@@ -66,7 +66,7 @@
                         <th scope="col">Department</th>
                         <th scope="col">Designation</th>
                         <th scope="col">Manager</th>
-                        <th scope="col">Salary</th>
+                        {% if can.manage_employees %}<th scope="col">Salary</th>{% endif %}
                         <th scope="col">Role</th>
                         <th scope="col">Status</th>
                         <th scope="col">Actions</th>
@@ -91,7 +91,7 @@
                             <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td>Rs. {{ emp.salary|floatformat:2 }}</td>
+                        {% if can.manage_employees %}<td>Rs. {{ emp.salary|floatformat:2 }}</td>{% endif %}
                         <td>
                             {% if emp.role == 'hr' %}
                             <span class="badge bg-success">HR</span>
@@ -112,11 +112,13 @@
                         </td>
                         <td>
                             <a href="{% url 'employee_detail' emp.pk %}" class="btn btn-sm btn-outline-info" title="View" aria-label="View {{ emp.full_name }}"><i class="fas fa-eye" aria-hidden="true"></i></a>
+                            {% if can.manage_employees %}
                             <a href="{% url 'employee_update' emp.pk %}" class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit {{ emp.full_name }}"><i class="fas fa-edit" aria-hidden="true"></i></a>
                             <a href="{% url 'employee_delete' emp.pk %}" class="btn btn-sm btn-outline-danger" title="Delete" aria-label="Delete {{ emp.full_name }}"
                                data-ajax="{% url 'employee_delete' emp.pk %}" data-ajax-method="POST" data-ajax-remove="closest"
                                data-ajax-confirm="Delete {{ emp.full_name }} ({{ emp.employee_id }})? This cannot be undone."
                                data-ajax-confirm-title="Delete employee" data-ajax-confirm-ok="Delete" data-ajax-confirm-danger="true"><i class="fas fa-trash" aria-hidden="true"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

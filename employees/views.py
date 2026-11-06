@@ -29,7 +29,10 @@ from .models import (
 )
 from .forms import DepartmentForm, EmployeeForm, ProfileForm, LoginSlideForm
 from .decorators import permission_required, hr_required, privilege_required
-from .permissions import ALL_PERMISSIONS, permissions_for_user, can_manage_employee_records
+from .permissions import (
+    ALL_PERMISSIONS, EMPLOYEE_RECORD_PERMISSIONS,
+    permissions_for_user, can_manage_employee_records,
+)
 from .audit import log_audit
 from .ajax import is_ajax, json_ok, json_err
 
@@ -67,6 +70,37 @@ def save_employee_with_unique_id(employee, designation=None, department=None, pr
             if preferred_id:
                 raise
     raise last_error
+
+
+def team_employee_ids(employee):
+    """Employee's own id plus every direct/indirect report."""
+    ids = {employee.pk}
+    frontier = {employee.pk}
+    while frontier:
+        children = set(
+            Employee.objects.filter(reports_to_id__in=frontier)
+            .values_list('pk', flat=True)
+        ) - ids
+        if not children:
+            break
+        ids.update(children)
+        frontier = children
+    return ids
+
+
+def employee_scope(user):
+    """Return (queryset, permissions, employee) the user is allowed to see.
+
+    Only HR and Management department members can see other employees. Every
+    other account, including department managers, is limited to its own record.
+    """
+    perms = permissions_for_user(user)
+    employee = get_employee(user)
+    if can_manage_employee_records(user):
+        return Employee.objects.all(), perms, employee
+    if employee is not None:
+        return Employee.objects.filter(pk=employee.pk), perms, employee
+    return Employee.objects.none(), perms, employee
 
 
 def get_employee(user):
@@ -168,6 +202,7 @@ def dashboard(request):
 
     perms = permissions_for_user(request.user)
     show_hr_dashboard = bool(perms & {'dashboard_hr', 'view_employees', 'manage_employees'})
+    visible, _, _ = employee_scope(request.user)
 
     if employee and not show_hr_dashboard:
         today = date.today()
@@ -234,16 +269,15 @@ def dashboard(request):
             'permissions': perms,
         }
     else:
-        total_employees = Employee.objects.filter(status='active').count()
-        total_departments = Department.objects.count()
-        recent_employees = Employee.objects.select_related('department', 'reports_to').all()[:5]
-        pending_leaves = Leave.objects.filter(status='pending').count()
-        draft_payrolls = Payroll.objects.filter(status='draft').count()
-        today_birthdays = Employee.objects.filter(
-            date_of_birth__month=date.today().month,
-            date_of_birth__day=date.today().day,
-            status='active'
-        )
+        team_ids = list(visible.values_list('pk', flat=True))
+        total_employees = visible.filter(status='active').count()
+        total_departments = Department.objects.filter(
+            employee__in=team_ids).distinct().count()
+        recent_employees = visible.select_related('department', 'reports_to')[:5]
+        pending_leaves = Leave.objects.filter(
+            employee_id__in=team_ids, status='pending').count()
+        draft_payrolls = Payroll.objects.filter(
+            employee_id__in=team_ids, status='draft').count()
         context = {
             'total_employees': total_employees,
             'total_departments': total_departments,
@@ -252,7 +286,6 @@ def dashboard(request):
             'draft_payrolls': draft_payrolls,
             'is_employee': False,
             'is_hr': bool(show_hr_dashboard),
-            'today_birthdays': today_birthdays,
             'permissions': perms,
         }
     from hr_modules.models import Announcement
@@ -262,9 +295,9 @@ def dashboard(request):
         Q(publish_from__isnull=True) | Q(publish_from__lte=today),
         Q(publish_until__isnull=True) | Q(publish_until__gte=today),
     )[:5]
-    context['today_birthdays'] = Employee.objects.filter(
+    context['today_birthdays'] = visible.filter(
         date_of_birth__month=today.month, date_of_birth__day=today.day, status='active')
-    context['work_anniversaries'] = Employee.objects.filter(
+    context['work_anniversaries'] = visible.filter(
         date_of_joining__month=today.month, date_of_joining__day=today.day, status='active')
     return render(request, 'dashboard.html', context)
 
@@ -272,7 +305,8 @@ def dashboard(request):
 @login_required
 @permission_required('view_employees')
 def employee_list(request):
-    employees = Employee.objects.select_related('department', 'reports_to').all()
+    employees, _, _ = employee_scope(request.user)
+    employees = employees.select_related('department', 'reports_to')
     search = request.GET.get('search', '')
     department_id = request.GET.get('department', '')
     status = request.GET.get('status', '')
@@ -310,29 +344,13 @@ def employee_list(request):
 
 @login_required
 def employee_detail(request, pk):
-    employee = get_object_or_404(Employee, pk=pk)
-    current_employee = get_employee(request.user)
-    perms = permissions_for_user(request.user)
-    is_self = current_employee is not None and current_employee.pk == employee.pk
-    if not is_self and not (perms & {'view_employees', 'manage_employees'}):
-        messages.error(request, 'Access denied. You can only view your own profile.')
-        return redirect('dashboard')
+    visible, perms, _ = employee_scope(request.user)
+    employee = get_object_or_404(visible, pk=pk)
     return render(request, 'employees/employee_detail.html', {
         'employee': employee,
         'is_hr': bool(perms & {'view_employees', 'manage_employees'}),
         'can_manage_employees': bool(perms & {'manage_employees'}),
     })
-
-
-def _creates_report_cycle(employee, new_manager):
-    seen = set()
-    node = new_manager
-    while node is not None and node.pk not in seen:
-        if node.pk == employee.pk:
-            return True
-        seen.add(node.pk)
-        node = node.reports_to
-    return False
 
 
 @login_required
@@ -350,6 +368,7 @@ def my_manager(request):
         'employee': employee,
         'subordinates': employee.subordinates.filter(status='active').select_related('department'),
     })
+
 
 @login_required
 @permission_required('manage_employees')
@@ -711,8 +730,8 @@ def toggle_authorize(request, pk):
 
 
 GRANTABLE_PERMISSIONS = sorted(
-    ALL_PERMISSIONS - {
-        'manage_access', 'approve_access', 'manage_employee_status', 'manage_it_teams',
+    ALL_PERMISSIONS - EMPLOYEE_RECORD_PERMISSIONS - {
+        'manage_access', 'manage_employee_status', 'manage_it_teams',
         'view_soc', 'respond_soc', 'manage_soc',
     }
 )
@@ -770,6 +789,15 @@ def access_grant_create(request):
 
     employee = get_object_or_404(Employee, pk=employee_id) if employee_id else None
     department = get_object_or_404(Department, pk=department_id) if department_id else None
+    if permission == 'manage_employees':
+        if not request.user.is_superuser:
+            messages.error(request, 'Only the super admin can grant employee-management access.')
+            return redirect('access_grants')
+        target_department = department or (employee.department if employee else None)
+        department_name = (target_department.name if target_department else '').strip().lower()
+        if department_name not in {'human resources', 'management', 'managment'}:
+            messages.error(request, 'Employee-management access can only be granted to HR or Management.')
+            return redirect('access_grants')
     grant = AccessGrant.objects.create(
         employee=employee, department=department, permission=permission,
         expires_at=expires_at, reason=reason, granted_by=request.user)
@@ -808,7 +836,8 @@ def pending_approvals(request):
         messages.error(request, 'Only Managers can access this page.')
         return redirect('dashboard')
 
-    pending = Employee.objects.select_related('department', 'approved_by').filter(
+    visible, _, _ = employee_scope(request.user)
+    pending = visible.select_related('department', 'approved_by').filter(
         is_authorized=False, status='active', role='employee'
     )
     search = request.GET.get('search', '')
@@ -837,7 +866,8 @@ def manager_approve(request, pk):
         messages.error(request, 'Only Managers can approve authorizations.')
         return redirect('dashboard')
 
-    emp = get_object_or_404(Employee, pk=pk)
+    visible, _, _ = employee_scope(request.user)
+    emp = get_object_or_404(visible, pk=pk)
     if request.method == 'POST':
         action = request.POST.get('action', '')
         ajax_message = None
@@ -1221,27 +1251,32 @@ def management_dashboard(request):
     from datetime import date, timedelta
 
     today = date.today()
-    active = Employee.objects.filter(status='active')
+    visible, _, _ = employee_scope(request.user)
+    team_ids = list(visible.values_list('pk', flat=True))
+    active = visible.filter(status='active')
     attendance_today = Attendance.objects.filter(
-        date=today, employee__status='active').exclude(status='holiday')
+        date=today, employee_id__in=team_ids, employee__status='active').exclude(status='holiday')
     present_today = attendance_today.filter(status__in=('present', 'late', 'half_day')).count()
     attendance_total = attendance_today.count()
     department_rows = list(
-        Department.objects.annotate(
-            headcount=Count('employee', filter=Q(employee__status='active')),
-            avg_salary=Avg('employee__salary', filter=Q(employee__status='active')),
+        Department.objects.filter(employee__in=team_ids).annotate(
+            headcount=Count('employee', filter=Q(
+                employee__in=team_ids, employee__status='active')),
+            avg_salary=Avg('employee__salary', filter=Q(
+                employee__in=team_ids, employee__status='active')),
         ).filter(headcount__gt=0).order_by('-headcount')[:12]
     )
     month = today.month
     year = today.year
     payroll_total = Payroll.objects.filter(
+        employee_id__in=team_ids,
         month=month, year=year, status__in=('processed', 'paid')).aggregate(
             total=Sum('net_salary'))['total'] or 0
     recent_attendance = []
     for offset in range(6, -1, -1):
         day = today - timedelta(days=offset)
         rows = Attendance.objects.filter(
-            date=day, employee__status='active').exclude(status='holiday')
+            date=day, employee_id__in=team_ids, employee__status='active').exclude(status='holiday')
         total = rows.count()
         present = rows.filter(status__in=('present', 'late', 'half_day')).count()
         recent_attendance.append({
@@ -1251,12 +1286,15 @@ def management_dashboard(request):
         })
     return render(request, 'employees/management_dashboard.html', {
         'active_employees': active.count(),
-        'inactive_employees': Employee.objects.exclude(status='active').count(),
-        'department_count': Department.objects.count(),
-        'pending_leaves': Leave.objects.filter(status='pending').count(),
-        'pending_expenses': ExpenseClaim.objects.filter(status='pending').count(),
-        'pending_expense_amount': ExpenseClaim.objects.filter(status='pending').aggregate(
-            total=Sum('amount'))['total'] or 0,
+        'inactive_employees': visible.exclude(status='active').count(),
+        'department_count': Department.objects.filter(employee__in=team_ids).distinct().count(),
+        'pending_leaves': Leave.objects.filter(
+            employee_id__in=team_ids, status='pending').count(),
+        'pending_expenses': ExpenseClaim.objects.filter(
+            employee_id__in=team_ids, status='pending').count(),
+        'pending_expense_amount': ExpenseClaim.objects.filter(
+            employee_id__in=team_ids, status='pending').aggregate(
+                total=Sum('amount'))['total'] or 0,
         'attendance_rate': round((present_today / attendance_total) * 100, 1)
             if attendance_total else 0,
         'payroll_total': payroll_total,

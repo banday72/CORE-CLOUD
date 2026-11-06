@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}My Payslips{% endblock %}
+{% block page_title %}My Payslips{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h6 class="text-muted mb-0">{{ employee.employee_id }} - {{ employee.full_name }}</h6>
+        <small class="text-muted">Download your salary slip for any month.</small>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Month/Year</th>
+                        <th>Basic Salary</th>
+                        <th>Allowances</th>
+                        <th>Deductions</th>
+                        <th>Tax</th>
+                        <th>Net Salary</th>
+                        <th>Status</th>
+                        <th>Payslip</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payroll in payrolls %}
+                    <tr>
+                        <td>{{ payroll.get_month_display }} {{ payroll.year }}</td>
+                        <td>Rs. {{ payroll.basic_salary|floatformat:2 }}</td>
+                        <td>Rs. {{ payroll.allowances|floatformat:2 }}</td>
+                        <td>Rs. {{ payroll.deductions|floatformat:2 }}</td>
+                        <td>Rs. {{ payroll.tax|floatformat:2 }}</td>
+                        <td><strong>Rs. {{ payroll.net_salary|floatformat:2 }}</strong></td>
+                        <td><span class="badge bg-{% if payroll.status == 'paid' %}success{% elif payroll.status == 'processed' %}info{% elif payroll.status == 'draft' %}warning{% else %}secondary{% endif %}">{{ payroll.get_status_display }}</span></td>
+                        <td>
+                            <a href="{% url 'my_payslip_pdf' payroll.year payroll.month %}" class="btn btn-sm btn-danger" title="Download PDF">
+                                <i class="fas fa-file-pdf"></i> Download
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">No payslips available yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

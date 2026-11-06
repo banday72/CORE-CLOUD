@@ -20,7 +20,7 @@ from .models import (
 )
 from .forms import PayrollForm, PayrollFilterForm, PayrollPolicyForm, BoutiqueProductForm, BoutiqueIssueForm, BudgetLoanForm
 from employees.models import Employee, Department, managers_q
-from employees.views import get_employee
+from employees.views import get_employee, team_employee_ids
 from attendance.models import Attendance
 from leaves.models import Leave, count_business_days
 
@@ -345,14 +345,23 @@ def payroll_export(request):
 @permission_required('view_reports')
 def payroll_summary(request):
     current_year = timezone.localdate().year
-    monthly_summary = Payroll.objects.filter(year=current_year).values('month').annotate(
+    payrolls = Payroll.objects.filter(year=current_year)
+    perms = permissions_for_user(request.user)
+    if not (request.user.is_superuser or 'manage_payroll' in perms):
+        employee = get_employee(request.user)
+        if employee is None:
+            payrolls = payrolls.none()
+        else:
+            payrolls = payrolls.filter(employee_id__in=team_employee_ids(employee))
+
+    monthly_summary = payrolls.values('month').annotate(
         total_salary=Sum('net_salary'),
         employee_count=Count('employee', distinct=True),
         avg_salary=Avg('net_salary'),
     ).order_by('month')
 
-    total_employees_on_payroll = Payroll.objects.filter(year=current_year).values('employee').distinct().count()
-    grand_total = Payroll.objects.filter(year=current_year).aggregate(total=Sum('net_salary'))['total'] or 0
+    total_employees_on_payroll = payrolls.values('employee').distinct().count()
+    grand_total = payrolls.aggregate(total=Sum('net_salary'))['total'] or 0
 
     return render(request, 'payroll/payroll_summary.html', {
         'monthly_summary': monthly_summary,

@@ -21,6 +21,7 @@ ALL_PERMISSIONS = {
     'bulk_import',
     'manage_departments',
     'manage_access',
+    'approve_access',
     'manage_employee_status',
     'view_audit',
     'manage_slides',
@@ -61,8 +62,6 @@ EXECUTIVE_PERMISSIONS = set(ALL_PERMISSIONS) - {'manage_employee_status'}
 
 MANAGER_PERMISSIONS = {
     'dashboard_hr',
-    'view_employees',
-    'manage_faces',
     'manage_reviews',
     'manage_training',
     'ai_analytics',
@@ -77,14 +76,30 @@ MANAGER_PERMISSIONS = {
 
 EMPLOYEE_PERMISSIONS = set()
 
-EMPLOYEE_MANAGEMENT_DEPARTMENTS = {'human resources', 'management', 'managment'}
-
 PERMISSION_GROUPS = {
     'executive': EXECUTIVE_PERMISSIONS,
     'hr': HR_PERMISSIONS,
     'manager': MANAGER_PERMISSIONS,
     'employee': EMPLOYEE_PERMISSIONS,
 }
+
+HR_DEPARTMENT_NAMES = {'human resources', 'human resource', 'hr'}
+EMPLOYEE_MANAGEMENT_DEPARTMENTS = HR_DEPARTMENT_NAMES | {'management', 'managment'}
+
+# Permissions that expose other employees' records. Only members of the
+# Management or Human Resources departments may hold these.
+EMPLOYEE_RECORD_PERMISSIONS = {
+    'view_employees', 'manage_employees', 'bulk_import',
+    'approve_access', 'manage_faces',
+}
+
+
+def _department_name(employee):
+    return (getattr(getattr(employee, 'department', None), 'name', '') or '').strip().lower()
+
+
+def in_employee_management_department(employee):
+    return _department_name(employee) in EMPLOYEE_MANAGEMENT_DEPARTMENTS
 
 
 def _words(text):
@@ -116,10 +131,12 @@ def permission_group(employee):
 
 def permissions_for(employee):
     perms = set(PERMISSION_GROUPS[permission_group(employee)])
-    department_name = (getattr(getattr(employee, 'department', None), 'name', '') or '').strip().lower()
-    perms.discard('manage_employees')
-    if department_name in EMPLOYEE_MANAGEMENT_DEPARTMENTS:
-        perms.add('manage_employees')
+    # Employee records are company-wide data: gate them on the department,
+    # not on a manager designation, so managers of other departments cannot
+    # browse, approve or edit employees outside their own record.
+    perms.difference_update(EMPLOYEE_RECORD_PERMISSIONS)
+    if in_employee_management_department(employee):
+        perms.update(EMPLOYEE_RECORD_PERMISSIONS)
     team = (getattr(employee, 'support_team', '') or '').strip().lower()
     if team in ('networks', 'software', 'hardware'):
         perms.add('resolve_' + team)
@@ -137,11 +154,13 @@ def permissions_for(employee):
         from django.utils import timezone
         from .models import AccessGrant
         now = timezone.now()
-        grants = AccessGrant.objects.filter(
+        grants = set(AccessGrant.objects.filter(
             expires_at__gt=now,
         ).filter(
             Q(employee=employee) | Q(department=employee.department)
-        ).values_list('permission', flat=True)
+        ).values_list('permission', flat=True))
+        if not in_employee_management_department(employee):
+            grants -= EMPLOYEE_RECORD_PERMISSIONS
         perms.update(grants)
     return perms
 
@@ -167,11 +186,10 @@ def can_manage_employee_records(user):
         return True
     from .models import Employee
     try:
-        employee = Employee.objects.get(user=user)
+        employee = Employee.objects.select_related('department').get(user=user)
     except Employee.DoesNotExist:
         return False
-    department_name = (getattr(getattr(employee, 'department', None), 'name', '') or '').strip().lower()
-    return department_name in EMPLOYEE_MANAGEMENT_DEPARTMENTS
+    return in_employee_management_department(employee)
 
 
 class Perms:

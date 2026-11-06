@@ -10,6 +10,7 @@ from django.contrib import messages
 from employees.models import Employee
 from employees.decorators import permission_required
 from employees.permissions import can_manage_employee_records
+from employees.views import employee_scope
 from leaves.models import Leave, LeaveType
 from attendance.models import Attendance
 from payroll.models import Payroll
@@ -29,8 +30,9 @@ def _audit_export(request, model_name, count):
 @permission_required('view_reports')
 def reports_dashboard(request):
     today = date.today()
-
-    active = Employee.objects.filter(status='active')
+    visible, _, _ = employee_scope(request.user)
+    team_ids = list(visible.values_list('pk', flat=True))
+    active = visible.filter(status='active')
 
     headcount = list(
         active.values('department__name')
@@ -62,14 +64,16 @@ def reports_dashboard(request):
     for i in range(5, -1, -1):
         d = today.replace(day=1) - timedelta(days=28 * i)
         total = Payroll.objects.filter(
-            month=d.month, year=d.year, status__in=['processed', 'paid']
+            employee_id__in=team_ids, month=d.month, year=d.year,
+            status__in=['processed', 'paid']
         ).aggregate(s=Sum('net_salary'))['s'] or 0
         payroll_months.append({'label': d.strftime('%b %y'), 'value': float(total)})
 
     attendance_trend = []
     trend_start = today - timedelta(days=13)
     trend_rows = (
-        Attendance.objects.filter(date__gte=trend_start, date__lte=today)
+        Attendance.objects.filter(
+            employee_id__in=team_ids, date__gte=trend_start, date__lte=today)
         .values('date', 'status').annotate(c=Count('id'))
     )
     trend_map = {}
@@ -86,7 +90,8 @@ def reports_dashboard(request):
         })
 
     leaves_by_type = list(
-        Leave.objects.filter(status='approved', start_date__year=today.year)
+        Leave.objects.filter(
+            employee_id__in=team_ids, status='approved', start_date__year=today.year)
         .values('leave_type__name')
         .annotate(value=Count('id'))
         .order_by('-value')
@@ -96,8 +101,7 @@ def reports_dashboard(request):
     if not leaves_by_type:
         leaves_by_type = [{'label': lt.name, 'value': 0} for lt in LeaveType.objects.all()]
 
-    upcoming_birthdays = Employee.objects.filter(
-        status='active',
+    upcoming_birthdays = active.filter(
         date_of_birth__isnull=False,
     ).select_related('department').order_by('date_of_birth')[:100]
     bday_list = []
@@ -128,10 +132,12 @@ def reports_dashboard(request):
     month_total = sum(pm['value'] for pm in payroll_months)
     active_count = active.count()
     avg_salary = active.aggregate(a=Avg('salary'))['a'] or 0
-    pending_leaves = Leave.objects.filter(status='pending').count()
+    pending_leaves = Leave.objects.filter(
+        employee_id__in=team_ids, status='pending').count()
     approved_leave_days = sum(
         (l.end_date - l.start_date).days + 1
-        for l in Leave.objects.filter(status='approved', start_date__year=today.year)
+        for l in Leave.objects.filter(
+            employee_id__in=team_ids, status='approved', start_date__year=today.year)
     )
 
     return render(request, 'reports/reports_dashboard.html', {
@@ -152,7 +158,7 @@ def reports_dashboard(request):
 
 
 @login_required
-@permission_required('view_reports')
+@permission_required('manage_employees')
 def export_employees_csv(request):
     if not can_manage_employee_records(request.user):
         messages.error(request, 'Only HR can export employee records.')
@@ -195,7 +201,7 @@ def export_attendance_csv(request):
 
 
 @login_required
-@permission_required('view_reports')
+@permission_required('manage_payroll')
 def export_payroll_csv(request):
     rows = list(Payroll.objects.select_related('employee').order_by('-year', '-month'))
     response = HttpResponse(content_type='text/csv')

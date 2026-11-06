@@ -5,13 +5,27 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
 from datetime import date, timedelta
+import os
+
+MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
+
+from django.core.exceptions import PermissionDenied
 
 from employees.decorators import permission_required, collab_access_required
 from employees.permissions import permissions_for_user
+from employees.views import get_employee, team_employee_ids
 from .emails import send_ticket_email, email_team_members
 
 def has_any_permission(user, *perms):
     return user.is_superuser or bool(perms and permissions_for_user(user) & set(perms))
+
+
+def can_review_employee(user, employee_id):
+    """Company-wide reviewers, or a manager reviewing their own team only."""
+    if user.is_superuser or 'manage_employees' in permissions_for_user(user):
+        return True
+    emp = get_employee(user)
+    return emp is not None and employee_id in team_employee_ids(emp)
 
 
 def create_notification(employee, title, message, notif_type='info', link=''):
@@ -86,14 +100,18 @@ def notification_mark_all_read(request):
 # ============ EMPLOYEE DOCUMENTS ============
 @login_required
 def document_list(request):
-    from employees.models import Employee
     from .models import EmployeeDocument
-    emp = Employee.objects.filter(user=request.user).first()
-    if has_any_permission(request.user, 'manage_documents'):
+    emp = get_employee(request.user)
+    perms = permissions_for_user(request.user)
+    company_wide = request.user.is_superuser or 'manage_employees' in perms
+    if company_wide:
         docs = EmployeeDocument.objects.all()
         emp_filter = request.GET.get('employee')
         if emp_filter:
             docs = docs.filter(employee__employee_id=emp_filter)
+    elif emp and has_any_permission(request.user, 'manage_documents'):
+        docs = EmployeeDocument.objects.filter(
+            employee_id__in=team_employee_ids(emp))
     elif emp:
         docs = EmployeeDocument.objects.filter(employee=emp)
     else:
@@ -112,10 +130,15 @@ def document_upload(request):
         if not target_emp:
             messages.error(request, 'Employee not found.')
             return redirect('document_list')
+        if not can_review_employee(request.user, target_emp.pk):
+            raise PermissionDenied
         if not (request.user.is_superuser or has_any_permission(request.user, 'manage_documents') or (emp and target_emp.pk == emp.pk)):
             messages.error(request, 'You can only upload documents for yourself.')
             return redirect('document_list')
         uploaded_file = request.FILES.get('file')
+        if uploaded_file and uploaded_file.size > MAX_DOCUMENT_BYTES:
+            messages.error(request, 'File is too large (maximum 10 MB).')
+            return redirect('document_list')
         if uploaded_file:
             import base64
             file_data = base64.b64encode(uploaded_file.read()).decode('utf-8')
@@ -139,18 +162,34 @@ def document_upload(request):
 def document_download(request, pk):
     import base64
     from django.http import HttpResponse
+    from employees.models import Employee
     from .models import EmployeeDocument
     doc = get_object_or_404(EmployeeDocument, pk=pk)
+    emp = Employee.objects.filter(user=request.user).first()
+    if not (request.user.is_superuser or has_any_permission(request.user, 'manage_documents')
+            or (emp and doc.employee_id == emp.pk)):
+        messages.error(request, 'You do not have access to that document.')
+        return redirect('document_list')
     file_bytes = base64.b64decode(doc.file_data)
+    safe_name = os.path.basename(doc.file_name or 'document')
+    safe_name = safe_name.replace('"', '').replace('\r', '').replace('\n', '')
     response = HttpResponse(file_bytes, content_type='application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{doc.file_name}"'
+    response['Content-Disposition'] = f'attachment; filename="{safe_name}"'
     return response
 
 
 @login_required
 def document_delete(request, pk):
+    from employees.models import Employee
     from .models import EmployeeDocument
     doc = get_object_or_404(EmployeeDocument, pk=pk)
+    emp = Employee.objects.filter(user=request.user).first()
+    if not (request.user.is_superuser or
+            (has_any_permission(request.user, 'manage_documents')
+             and can_review_employee(request.user, doc.employee_id))
+            or (emp and doc.employee_id == emp.pk)):
+        messages.error(request, 'You do not have access to that document.')
+        return redirect('document_list')
     if request.method == 'POST':
         doc.delete()
         messages.success(request, 'Document deleted.')
@@ -311,11 +350,15 @@ def training_detail(request, pk):
 # ============ TRAVEL & REIMBURSEMENT ============
 @login_required
 def travel_list(request):
-    from employees.models import Employee
     from .models import TravelRequest
-    emp = Employee.objects.filter(user=request.user).first()
-    if has_any_permission(request.user, 'view_all_travel'):
+    emp = get_employee(request.user)
+    perms = permissions_for_user(request.user)
+    company_wide = request.user.is_superuser or 'manage_employees' in perms
+    if company_wide:
         travels = TravelRequest.objects.all()
+    elif emp and has_any_permission(request.user, 'view_all_travel'):
+        travels = TravelRequest.objects.filter(
+            employee_id__in=team_employee_ids(emp))
     elif emp:
         travels = TravelRequest.objects.filter(employee=emp)
     else:
@@ -359,6 +402,8 @@ def travel_create(request):
 def travel_action(request, pk):
     from .models import TravelRequest
     travel = get_object_or_404(TravelRequest, pk=pk)
+    if not can_review_employee(request.user, travel.employee_id):
+        raise PermissionDenied
     if request.method == 'POST':
         from employees.models import Employee
         action = request.POST.get('action')
@@ -377,11 +422,15 @@ def travel_action(request, pk):
 # ============ OVERTIME TRACKING ============
 @login_required
 def overtime_list(request):
-    from employees.models import Employee
     from .models import OvertimeRecord
-    emp = Employee.objects.filter(user=request.user).first()
-    if has_any_permission(request.user, 'view_all_overtime'):
+    emp = get_employee(request.user)
+    perms = permissions_for_user(request.user)
+    company_wide = request.user.is_superuser or 'manage_employees' in perms
+    if company_wide:
         records = OvertimeRecord.objects.all()
+    elif emp and has_any_permission(request.user, 'view_all_overtime'):
+        records = OvertimeRecord.objects.filter(
+            employee_id__in=team_employee_ids(emp))
     elif emp:
         records = OvertimeRecord.objects.filter(employee=emp)
     else:
@@ -419,6 +468,8 @@ def overtime_create(request):
 def overtime_action(request, pk):
     from .models import OvertimeRecord
     ot = get_object_or_404(OvertimeRecord, pk=pk)
+    if not can_review_employee(request.user, ot.employee_id):
+        raise PermissionDenied
     if request.method == 'POST':
         from employees.models import Employee
         action = request.POST.get('action')

@@ -116,7 +116,7 @@ def payroll_anomaly_detection():
         basic = float(p.basic_salary)
 
         if p.employee.salary > 0:
-            expected_basic = float(p.employee.salary) / 12
+            expected_basic = float(p.employee.salary)
             deviation_pct = abs(basic - expected_basic) / expected_basic * 100 if expected_basic > 0 else 0
             if deviation_pct > 20:
                 anomalies.append({
@@ -389,7 +389,12 @@ def natural_language_report(query):
         active = Employee.objects.filter(status='active').count()
         inactive = Employee.objects.filter(status='inactive').count()
         terminated = Employee.objects.filter(status='terminated').count()
-        by_dept = dict(Employee.objects.filter(status='active').values_list('department__name').annotate(c=Count('id')).values_list('name', 'c'))
+        by_dept = dict(
+            Employee.objects.filter(status='active', department__isnull=False)
+            .values('department__name')
+            .annotate(c=Count('id'))
+            .values_list('department__name', 'c')
+        )
         result['type'] = 'employee_report'
         result['data'] = {'active': active, 'inactive': inactive, 'terminated': terminated, 'by_department': by_dept}
         result['message'] = f'Headcount: {active} active, {inactive} inactive, {terminated} terminated'
@@ -425,7 +430,7 @@ def natural_language_report(query):
     return result
 
 
-def chatbot_response(message, user=None):
+def chatbot_response(message, user=None, can_view_all=False):
     msg = message.lower().strip()
     today = date.today()
 
@@ -472,6 +477,10 @@ def chatbot_response(message, user=None):
                 '- "Who is late today?"\n'
                 '- "Top performers"\n'
                 '- "Show [employee name]"')
+
+    if not can_view_all:
+        return ('For confidentiality I can only show your own data. '
+                'Try "my salary", "my attendance" or "my leaves".')
 
     if any(w in msg for w in ['how many employee', 'total employee', 'headcount', 'employee count']):
         active = Employee.objects.filter(status='active').count()

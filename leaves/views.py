@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -6,7 +7,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from .models import Leave, LeaveType, LeaveBalance, count_business_days
 from .forms import LeaveForm, LeaveTypeForm, LeaveApprovalForm
-from employees.views import get_employee
+from employees.views import get_employee, team_employee_ids
 from employees.decorators import permission_required
 from employees.permissions import permissions_for_user
 from employees.ajax import is_ajax, json_ok, json_err
@@ -40,6 +41,13 @@ def _balance_problem(employee, leave):
     return None
 
 
+def _can_manage_leave(user, leave):
+    if user.is_superuser or 'manage_employees' in permissions_for_user(user):
+        return True
+    employee = get_employee(user)
+    return employee is not None and leave.employee_id in team_employee_ids(employee)
+
+
 def _locked_balance_problem(employee, leave):
     """Check balances while holding their rows for an approval transaction."""
     if employee is None:
@@ -60,10 +68,15 @@ def _locked_balance_problem(employee, leave):
 @login_required
 def leave_list(request):
     employee = get_employee(request.user)
-    can_view_all = (request.user.is_superuser
-                    or bool(permissions_for_user(request.user) & {'manage_leaves', 'view_reports'}))
-    if can_view_all:
+    perms = permissions_for_user(request.user)
+    company_wide = (request.user.is_superuser
+                    or 'manage_employees' in perms)
+    can_view_all = company_wide or bool(perms & {'manage_leaves', 'view_reports'})
+    if company_wide:
         leaves = Leave.objects.select_related('employee', 'leave_type').all()
+    elif employee and can_view_all:
+        leaves = Leave.objects.filter(
+            employee_id__in=team_employee_ids(employee)).select_related('employee', 'leave_type')
     elif employee:
         leaves = Leave.objects.filter(employee=employee)
     else:
@@ -147,6 +160,8 @@ def leave_create(request):
 @permission_required('manage_leaves')
 def leave_approve(request, pk):
     leave = get_object_or_404(Leave, pk=pk)
+    if not _can_manage_leave(request.user, leave):
+        raise PermissionDenied
     if request.method == 'POST':
         if is_ajax(request):
             status = request.POST.get('status', '')
@@ -215,6 +230,8 @@ def leave_approve(request, pk):
 @permission_required('manage_leaves')
 def leave_delete(request, pk):
     leave = get_object_or_404(Leave, pk=pk)
+    if not _can_manage_leave(request.user, leave):
+        raise PermissionDenied
     if request.method == 'POST':
         leave.delete()
         if is_ajax(request):
