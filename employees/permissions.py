@@ -77,6 +77,8 @@ MANAGER_PERMISSIONS = {
 
 EMPLOYEE_PERMISSIONS = set()
 
+EMPLOYEE_MANAGEMENT_DEPARTMENTS = {'human resources', 'management', 'managment'}
+
 PERMISSION_GROUPS = {
     'executive': EXECUTIVE_PERMISSIONS,
     'hr': HR_PERMISSIONS,
@@ -115,7 +117,8 @@ def permission_group(employee):
 def permissions_for(employee):
     perms = set(PERMISSION_GROUPS[permission_group(employee)])
     department_name = (getattr(getattr(employee, 'department', None), 'name', '') or '').strip().lower()
-    if department_name in {'human resources', 'management', 'managment'}:
+    perms.discard('manage_employees')
+    if department_name in EMPLOYEE_MANAGEMENT_DEPARTMENTS:
         perms.add('manage_employees')
     team = (getattr(employee, 'support_team', '') or '').strip().lower()
     if team in ('networks', 'software', 'hardware'):
@@ -168,7 +171,7 @@ def can_manage_employee_records(user):
     except Employee.DoesNotExist:
         return False
     department_name = (getattr(getattr(employee, 'department', None), 'name', '') or '').strip().lower()
-    return department_name in {'human resources', 'management', 'managment'}
+    return department_name in EMPLOYEE_MANAGEMENT_DEPARTMENTS
 
 
 class Perms:
