@@ -93,18 +93,20 @@ def permission_group(employee):
     if employee is None:
         return 'employee'
     from .models import is_chief_designation
-    if is_chief_designation(employee.designation):
-        return 'executive'
     if employee.role == 'hr' or employee.in_hr_department:
         return 'hr'
-    if employee.role == 'manager':
-        return 'manager'
     if (getattr(employee, 'support_team', '') or '').strip().lower() in (
             'networks', 'software', 'hardware'):
         return 'employee'
     words = _words(employee.designation)
     if words & set(HR_KEYWORDS):
         return 'hr'
+    if {'general', 'manager'} <= words:
+        return 'manager'
+    if is_chief_designation(employee.designation):
+        return 'executive'
+    if employee.role == 'manager':
+        return 'manager'
     if words & set(MANAGER_KEYWORDS):
         return 'manager'
     return 'employee'
