@@ -114,6 +114,9 @@ def permission_group(employee):
 
 def permissions_for(employee):
     perms = set(PERMISSION_GROUPS[permission_group(employee)])
+    department_name = (getattr(getattr(employee, 'department', None), 'name', '') or '').strip().lower()
+    if department_name in {'human resources', 'management', 'managment'}:
+        perms.add('manage_employees')
     team = (getattr(employee, 'support_team', '') or '').strip().lower()
     if team in ('networks', 'software', 'hardware'):
         perms.add('resolve_' + team)
@@ -154,7 +157,7 @@ def permissions_for_user(user):
 
 
 def can_manage_employee_records(user):
-    """Only HR, executives and superusers may administer employee records."""
+    """Only HR and Management department users may administer employee records."""
     if user is None:
         return False
     if user.is_superuser:
@@ -164,7 +167,8 @@ def can_manage_employee_records(user):
         employee = Employee.objects.get(user=user)
     except Employee.DoesNotExist:
         return False
-    return permission_group(employee) in ('hr', 'executive')
+    department_name = (getattr(getattr(employee, 'department', None), 'name', '') or '').strip().lower()
+    return department_name in {'human resources', 'management', 'managment'}
 
 
 class Perms:
