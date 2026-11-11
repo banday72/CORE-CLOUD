@@ -45,20 +45,22 @@
             <li>To send service notifications (e.g. leave decisions, password resets) as configured by your organization.</li>
         </ul>
 
-        <h2>4. Security</h2>
-        <p>We protect data in transit with HTTPS, restrict access to authorized users, maintain an audit trail of sensitive actions, and apply automated security controls (lockouts, session revocation, IP/user blacklisting) to detect abuse.</p>
+        <h2>4. Face recognition consent and alternatives</h2>
+        <p>Face login is optional. Before registration, the organization must explain the purpose and obtain any consent required by applicable law. A person may decline or withdraw consent without losing access to password login or another available authentication method.</p>
+        <p>Registration converts the camera capture into a mathematical face descriptor. The source camera image is not intended to be retained as a profile image by the face-registration flow. Face descriptors are used only to compare a login attempt with the enrolled employee record.</p>
 
-        <h2>5. Data Sharing</h2>
+        <h2>5. Security and encryption</h2>
+        <p>Production traffic must use HTTPS. Access to face descriptors is limited to the authentication and authorized face-management workflows, and sensitive actions are recorded in the audit trail. The application protects database credentials and encryption-related secrets through deployment environment variables; operators must configure encryption at rest with the selected database and hosting providers.</p>
+        <p>No security measure is absolute. Organizations must restrict administrator access, use strong passwords and MFA where available, and review audit events.</p>
+
+        <h2>6. Data Sharing</h2>
         <p>We do not sell personal data. Data is accessible to your organization's administrators and is processed by hosting and infrastructure providers (application hosting and database services) strictly to run the Service.</p>
 
-        <h2>6. Retention</h2>
-        <p>Data is retained for as long as your organization maintains its account, or as required by applicable law. Administrators can request deletion of employee records through the portal's administration functions.</p>
+        <h2>7. Retention and deletion</h2>
+        <p>Organizations should define a written retention schedule for HR, payroll, audit and biometric data. Face descriptors should be deleted promptly when consent is withdrawn, an employee leaves, or the descriptor is no longer needed, subject to legal obligations. Authorized administrators can remove an employee's face registration through the face-management screen; deletion requests for other records should be sent to the organization's administrator.</p>
 
-        <h2>7. Your Rights</h2>
+        <h2>8. Your Rights</h2>
         <p>Depending on your jurisdiction, you may have rights to access, correct, delete or export your personal data. Requests should be directed to your organization's administrator, who controls the data in CoreCloud.</p>
-
-        <h2>8. Face Login Data</h2>
-        <p>Face templates are used only for authentication. You may request removal of your face registration at any time through the face management screen or by contacting your administrator, and can use password login instead.</p>
 
         <h2>9. Cookies</h2>
         <p>The Service uses strictly necessary session and CSRF cookies to keep you signed in and protect against cross-site request forgery. These are not used for advertising.</p>

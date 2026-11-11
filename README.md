@@ -84,6 +84,11 @@ Set these in your Vercel project settings (and never commit them to Git):
 | `DATABASE_URL` | Full Postgres connection string, e.g. `postgres://user:pass@host/db` |
 | `SEED_DEMO` | `True` only to load the demo org chart once |
 | `CRON_SECRET` | Secret for the `/cron/soc/` SOC scan endpoint (used by the Vercel cron) |
+| `DEMO_MODE` | `True` to enable the guarded live product demo |
+| `DEMO_EMPLOYEE_ID` | Authorized seeded employee used by the demo (default `CEO001`) |
+| `SUPPORT_EMAIL` | Public onboarding/support contact shown on the landing page |
+| `STATUS_URL` | Public status page URL shown on the landing page |
+| `COMPANY_NAME` | Company name shown on the landing page (default `CoreCloud`) |
 
 Optional but recommended for password reset emails:
 `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL`.

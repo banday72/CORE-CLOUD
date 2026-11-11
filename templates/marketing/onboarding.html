@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Onboarding - CoreCloud</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<main class="container py-5">
+    <a href="{% url 'landing' %}" class="text-decoration-none">&larr; CoreCloud</a>
+    <article class="card shadow-sm mt-4"><div class="card-body p-4 p-md-5">
+        <h1>CoreCloud onboarding</h1>
+        <ol class="mt-4">
+            <li class="mb-3"><strong>Configure the environment:</strong> set a production secret key, database URL, allowed hosts and HTTPS deployment settings.</li>
+            <li class="mb-3"><strong>Create the administrator:</strong> run <code>python manage.py createsuperuser</code> and sign in at <code>/admin/</code>.</li>
+            <li class="mb-3"><strong>Set the organization:</strong> create departments, a payroll policy, roles and approval responsibilities.</li>
+            <li class="mb-3"><strong>Import employees:</strong> add employees individually or use the CSV import, then verify authorization and initial password changes.</li>
+            <li class="mb-3"><strong>Validate payroll:</strong> record test attendance and leave, generate a test payroll, review the breakdown, then approve a country-specific policy.</li>
+            <li class="mb-3"><strong>Review privacy choices:</strong> face login is optional; collect consent before registration and provide password login as an alternative.</li>
+        </ol>
+        <p class="text-secondary mb-0">Do not use the demo account or sample data for production payroll. Replace all sample organization and contact details before launch.</p>
+    </div></article>
+</main>
+</body>
+</html>

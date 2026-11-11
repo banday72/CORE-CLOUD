@@ -65,6 +65,8 @@
                     <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
                     <li class="nav-item"><a class="nav-link" href="#how">How it works</a></li>
                     <li class="nav-item"><a class="nav-link" href="#security">Security</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'pricing' %}">Pricing</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'demo' %}">Live demo</a></li>
                     <li class="nav-item ms-lg-2"><a class="btn btn-sm btn-hero-ghost" href="{% url 'login' %}">Sign in</a></li>
                 </ul>
             </div>
@@ -79,6 +81,7 @@
             runs on a single, secure system.
         </p>
         <div class="d-flex flex-wrap gap-3">
+            <a href="{% url 'demo' %}" class="btn btn-hero-primary"><i class="fas fa-play me-2"></i>See live demo</a>
             <a href="{% url 'login' %}" class="btn btn-hero-primary"><i class="fas fa-sign-in-alt me-2"></i>Sign in to your portal</a>
             <a href="{% url 'face_login' %}" class="btn btn-hero-ghost"><i class="fas fa-fingerprint me-2"></i>Login with Face</a>
         </div>
@@ -227,12 +230,40 @@
     </div>
 </section>
 
+<section class="section section-alt" id="proof">
+    <div class="container">
+        <h2 class="section-title">Evidence before commitment</h2>
+        <p class="section-sub">Review the product flow, pricing boundaries, payroll methodology and privacy controls before you contact us.</p>
+        <div class="row g-4">
+            <div class="col-md-3"><a class="feature-card d-block text-decoration-none text-dark" href="{% url 'demo' %}"><h5><i class="fas fa-play-circle text-primary me-2"></i>Live product demo</h5><p>Use the actual dashboard and test the core HR-to-payslip flow.</p></a></div>
+            <div class="col-md-3"><a class="feature-card d-block text-decoration-none text-dark" href="{% url 'pricing' %}"><h5><i class="fas fa-tags text-primary me-2"></i>Transparent pricing</h5><p>Compare employee limits and feature differences across plans.</p></a></div>
+            <div class="col-md-3"><a class="feature-card d-block text-decoration-none text-dark" href="{% url 'payroll_methodology' %}"><h5><i class="fas fa-calculator text-primary me-2"></i>Payroll proof</h5><p>See the inputs, formula, breakdown and compliance boundary.</p></a></div>
+            <div class="col-md-3"><a class="feature-card d-block text-decoration-none text-dark" href="{% url 'onboarding' %}"><h5><i class="fas fa-book text-primary me-2"></i>Onboarding guide</h5><p>Follow the deployment, setup, privacy and validation checklist.</p></a></div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" id="trust">
+    <div class="container">
+        <h2 class="section-title">Clear answers before you buy</h2>
+        <p class="section-sub">We do not replace evidence with vague promises. Use the live demo, review the controls, and contact the configured support team.</p>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="feature-card"><h5><i class="fas fa-building text-primary me-2"></i>Company information</h5><p>{{ company_name }} operates CoreCloud as an HR, payroll and security operations portal.</p></div></div>
+            <div class="col-md-4"><div class="feature-card"><h5><i class="fas fa-headset text-primary me-2"></i>Support</h5>{% if support_email %}<p>Contact <a href="mailto:{{ support_email }}">{{ support_email }}</a> for onboarding and support.</p>{% else %}<p>Support contact is configured per deployment. Set <code>SUPPORT_EMAIL</code> before publishing.</p>{% endif %}</div></div>
+            <div class="col-md-4"><div class="feature-card"><h5><i class="fas fa-heartbeat text-primary me-2"></i>Service status</h5>{% if status_url %}<p><a href="{{ status_url }}">View current service status and incidents.</a></p>{% else %}<p>Publish a monitored status page and set <code>STATUS_URL</code> before launch.</p>{% endif %}</div></div>
+        </div>
+        <p class="small text-secondary mt-4 mb-0">Customer testimonials and uptime percentages should be published only after they are verified and attributable. No fabricated claims are shown here.</p>
+    </div>
+</section>
+
 <section class="section pt-0">
     <div class="container">
         <div class="cta-band">
             <h3>Ready to run your company on one portal?</h3>
-            <p>Sign in to your CoreCloud workspace or try passwordless face login.</p>
+            <p>Review the live demo, pricing, payroll controls and onboarding guide before signing in.</p>
             <div class="d-flex flex-wrap gap-3 justify-content-center">
+                <a href="{% url 'demo' %}" class="btn btn-hero-primary"><i class="fas fa-play me-2"></i>Live demo</a>
+                <a href="{% url 'pricing' %}" class="btn btn-hero-ghost"><i class="fas fa-tags me-2"></i>Pricing</a>
                 <a href="{% url 'login' %}" class="btn btn-hero-primary"><i class="fas fa-sign-in-alt me-2"></i>Sign in</a>
                 <a href="{% url 'face_login' %}" class="btn btn-hero-ghost"><i class="fas fa-fingerprint me-2"></i>Face Login</a>
             </div>
@@ -245,6 +276,10 @@
         <div class="footer-links">
             <a href="#features">Features</a>
             <a href="#security">Security</a>
+            <a href="{% url 'pricing' %}">Pricing</a>
+            <a href="{% url 'demo' %}">Live demo</a>
+            <a href="{% url 'onboarding' %}">Onboarding</a>
+            <a href="{% url 'payroll_methodology' %}">Payroll methodology</a>
             <a href="{% url 'terms' %}">Terms of Service</a>
             <a href="{% url 'privacy' %}">Privacy Policy</a>
             <a href="{% url 'login' %}">Sign in</a>

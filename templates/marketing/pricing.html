@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pricing - CoreCloud</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<main class="container py-5">
+    <a href="{% url 'landing' %}" class="text-decoration-none">&larr; CoreCloud</a>
+    <div class="text-center my-5">
+        <h1>Simple plan structure</h1>
+        <p class="lead text-secondary">Compare employee limits and features. Monetary prices are not published until the commercial terms are confirmed.</p>
+    </div>
+    <div class="row g-4">
+        <div class="col-lg-4"><div class="card h-100 shadow-sm"><div class="card-body p-4">
+            <h2 class="h4">Starter</h2><p class="text-secondary">For small teams getting organized.</p>
+            <h3 class="display-6">Up to 25 employees</h3><p class="text-secondary">Price: to be configured</p>
+            <hr><ul><li>Employee directory</li><li>Attendance and leave</li><li>Basic payroll and payslips</li><li>Email support</li></ul>
+        </div></div></div>
+        <div class="col-lg-4"><div class="card h-100 border-primary shadow-sm"><div class="card-body p-4">
+            <span class="badge text-bg-primary mb-2">Most popular</span><h2 class="h4">Business</h2><p class="text-secondary">For growing organizations with HR workflows.</p>
+            <h3 class="display-6">Up to 250 employees</h3><p class="text-secondary">Price: to be configured</p>
+            <hr><ul><li>Everything in Starter</li><li>Configurable payroll policies</li><li>Reports, exports and approvals</li><li>Collaboration and HR modules</li><li>Priority support</li></ul>
+        </div></div></div>
+        <div class="col-lg-4"><div class="card h-100 shadow-sm"><div class="card-body p-4">
+            <h2 class="h4">Enterprise</h2><p class="text-secondary">For complex teams and higher assurance requirements.</p>
+            <h3 class="display-6">251+ employees</h3><p class="text-secondary">Price: to be configured</p>
+            <hr><ul><li>Everything in Business</li><li>Custom employee limits</li><li>SOC/SIEM controls and audit support</li><li>Onboarding and compliance review</li><li>Dedicated support contact</li></ul>
+        </div></div></div>
+    </div>
+    <p class="text-secondary mt-4 small">Employee limits are plan boundaries, not a claim that payroll or tax compliance is automatic. Confirm country-specific requirements during onboarding. Add approved currency and prices before calling this page final pricing.</p>
+    <p class="mt-4"><a href="{% url 'onboarding' %}">Read onboarding documentation</a> · <a href="{% url 'privacy' %}">Privacy and biometric data</a></p>
+</main>
+</body>
+</html>

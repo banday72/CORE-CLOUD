@@ -148,6 +148,11 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_IDLE_TIMEOUT = int(os.environ.get('SESSION_IDLE_TIMEOUT', '120'))
+DEMO_MODE = os.environ.get('DEMO_MODE', 'False') == 'True'
+DEMO_EMPLOYEE_ID = os.environ.get('DEMO_EMPLOYEE_ID', 'CEO001')
+SUPPORT_EMAIL = os.environ.get('SUPPORT_EMAIL', '')
+COMPANY_NAME = os.environ.get('COMPANY_NAME', 'CoreCloud')
+STATUS_URL = os.environ.get('STATUS_URL', '')
 
 # Security headers. On Vercel TLS terminates at the edge, so Django must
 # trust X-Forwarded-Proto to know the original request was HTTPS.
