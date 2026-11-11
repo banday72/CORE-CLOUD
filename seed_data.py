@@ -247,22 +247,22 @@ print("\n" + "=" * 60)
 print("ORGANIZATION HIERARCHY")
 print("=" * 60)
 print("CEO001 - Ahmed Banday (CEO)")
-print(f"├── COO001 - Ali Raza (Chief Operating Officer)")
+print(f"|-- COO001 - Ali Raza (Chief Operating Officer)")
 for eid in ['EMP001', 'EMP002', 'EMP003']:
     e = employees[eid]
-    print(f"│   ├── {eid} - {e.first_name} {e.last_name} ({e.designation})")
-print(f"├── CIO001 - Zainab Ahmed (Chief Information Officer)")
+    print(f"|   |-- {eid} - {e.first_name} {e.last_name} ({e.designation})")
+print(f"|-- CIO001 - Zainab Ahmed (Chief Information Officer)")
 for eid in ['EMP004', 'EMP005', 'EMP006']:
     e = employees[eid]
-    print(f"│   ├── {eid} - {e.first_name} {e.last_name} ({e.designation})")
-print(f"├── CSO001 - Bilal Sheikh (Chief Strategic Officer)")
+    print(f"|   |-- {eid} - {e.first_name} {e.last_name} ({e.designation})")
+print(f"|-- CSO001 - Bilal Sheikh (Chief Strategic Officer)")
 for eid in ['EMP007', 'EMP008', 'EMP009']:
     e = employees[eid]
-    print(f"│   ├── {eid} - {e.first_name} {e.last_name} ({e.designation})")
-print(f"└── CFO001 - Usman Tariq (Chief Financial Officer)")
+    print(f"|   |-- {eid} - {e.first_name} {e.last_name} ({e.designation})")
+print(f"`-- CFO001 - Usman Tariq (Chief Financial Officer)")
 for eid in ['EMP010', 'EMP011', 'EMP012']:
     e = employees[eid]
-    print(f"    ├── {eid} - {e.first_name} {e.last_name} ({e.designation})")
+    print(f"    |-- {eid} - {e.first_name} {e.last_name} ({e.designation})")
 print("=" * 60)
 print(f"\nLogins:")
 print(f"Superadmin: {admin_username}")
